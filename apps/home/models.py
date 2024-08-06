@@ -7,7 +7,6 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import FileExtensionValidator
 
-# Create your models here.
 class REGION(models.Model):
     RG_CNOMBRE = models.CharField(("nombre region"), max_length=128, null=False)
     RG_CCODIGO = models.CharField(("codigo region"), max_length=128, null=False)
@@ -436,7 +435,6 @@ class FACTURA_DETALLE(models.Model):
         verbose_name_plural = 'Detalles de Facturas'
         unique_together = ('FAD_FACTURA', 'FAD_PRODUCTO')
 
-
 class EMPLEADO(models.Model):
     EM_CCODIGO = models.CharField(max_length=20, unique=True, verbose_name='Código de empleado')
     EM_CNOMBRE = models.CharField(max_length=100, verbose_name='Nombre')
@@ -766,7 +764,11 @@ class TAREA_GENERAL(models.Model):
     TG_FFECHA_MODIFICACION = models.DateTimeField(auto_now=True, verbose_name='Fecha de modificación')
     TG_CUSUARIO_CREADOR = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='tareas_generales_creadas', verbose_name='Usuario creador')
     TG_CUSUARIO_MODIFICADOR = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='tareas_generales_modificadas', verbose_name='Usuario modificador')
-
+    TG_BMILESTONE = models.BooleanField(default=False, verbose_name='Es un hito')
+    TG_NPROGRESO = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name='Progreso (%)')
+    TG_NDURACION_PLANIFICADA = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Duración planificada (horas)')
+    TG_NDURACION_REAL = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='Duración real (horas)')
+    TG_BCRITICA = models.BooleanField(default=False, verbose_name='En la ruta crítica')
     def __str__(self):
         return f"Tarea General {self.TG_CCODIGO} - {self.TG_CNOMBRE} ({self.TG_ETAPA.ET_CNOMBRE})"
 
@@ -790,7 +792,11 @@ class TAREA_INGENIERIA(models.Model):
     TI_FFECHA_MODIFICACION = models.DateTimeField(auto_now=True, verbose_name='Fecha de modificación')
     TI_CUSUARIO_CREADOR = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='tareas_ingenieria_creadas', verbose_name='Usuario creador')
     TI_CUSUARIO_MODIFICADOR = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='tareas_ingenieria_modificadas', verbose_name='Usuario modificador')
-
+    TI_BMILESTONE = models.BooleanField(default=False, verbose_name='Es un hito')
+    TI_NPROGRESO = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name='Progreso (%)')
+    TI_NDURACION_PLANIFICADA = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Duración planificada (horas)')
+    TI_NDURACION_REAL = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='Duración real (horas)')
+    TG_BCRITICA = models.BooleanField(default=False, verbose_name='En la ruta crítica')
     def __str__(self):
         return f"Tarea de Ingeniería {self.TI_CCODIGO} - {self.TI_CNOMBRE} ({self.TI_ETAPA.ET_CNOMBRE})"
 
@@ -815,7 +821,11 @@ class TAREA_FINANCIERA(models.Model):
     TF_FFECHA_MODIFICACION = models.DateTimeField(auto_now=True, verbose_name='Fecha de modificación')
     TF_CUSUARIO_CREADOR = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='tareas_financieras_creadas', verbose_name='Usuario creador')
     TF_CUSUARIO_MODIFICADOR = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='tareas_financieras_modificadas', verbose_name='Usuario modificador')
-
+    TF_BMILESTONE = models.BooleanField(default=False, verbose_name='Es un hito')
+    TF_NPROGRESO = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name='Progreso (%)')
+    TF_NDURACION_PLANIFICADA = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Duración planificada (horas)')
+    TF_NDURACION_REAL = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='Duración real (horas)')
+    TG_BCRITICA = models.BooleanField(default=False, verbose_name='En la ruta crítica')
     def __str__(self):
         return f"Tarea Financiera {self.TF_CCODIGO} - {self.TF_CNOMBRE} ({self.TF_ETAPA.ET_CNOMBRE})"
 
@@ -1159,3 +1169,57 @@ class BOLETA_GARANTIA(models.Model):
         verbose_name = 'Boleta de Garantía'
         verbose_name_plural = 'Boletas de Garantía'
         ordering = ['-BG_FFECHA_EMISION']
+
+class TAREA_GENERAL_DEPENDENCIA(models.Model):
+    TD_TAREA_PREDECESORA = models.ForeignKey('TAREA_GENERAL', on_delete=models.CASCADE, related_name='sucesoras')
+    TD_TAREA_SUCESORA = models.ForeignKey('TAREA_GENERAL', on_delete=models.CASCADE, related_name='predecesoras')
+    TD_TIPO_DEPENDENCIA = models.CharField(max_length=20, choices=[
+        ('FS', 'Finish-to-Start'),
+        ('SS', 'Start-to-Start'),
+        ('FF', 'Finish-to-Finish'),
+        ('SF', 'Start-to-Finish')
+    ])
+
+    def __str__(self):
+        return f"Tarea {self.TD_TAREA_PREDECESORA} - {self.TD_TAREA_SUCESORA}"
+
+    class Meta:
+        db_table = 'TAREA_GENERAL_DEPENDENCIA'
+        verbose_name = 'Dependencia de Tarea General'
+        verbose_name_plural = 'Dependencias de Tareas Generales'
+
+class TAREA_FINANCIERA_DEPENDENCIA(models.Model):
+    TD_TAREA_PREDECESORA = models.ForeignKey('TAREA_FINANCIERA', on_delete=models.CASCADE, related_name='sucesoras')
+    TD_TAREA_SUCESORA = models.ForeignKey('TAREA_FINANCIERA', on_delete=models.CASCADE, related_name='predecesoras')
+    TD_TIPO_DEPENDENCIA = models.CharField(max_length=20, choices=[
+        ('FS', 'Finish-to-Start'),
+        ('SS', 'Start-to-Start'),
+        ('FF', 'Finish-to-Finish'),
+        ('SF', 'Start-to-Finish')
+    ])
+
+    def __str__(self):
+        return f"Tarea {self.TD_TAREA_PREDECESORA} - {self.TD_TAREA_SUCESORA}"
+
+    class Meta:
+        db_table = 'TAREA_FINANCIERA_DEPENDENCIA'
+        verbose_name = 'Dependencia de Tarea Financiera'
+        verbose_name_plural = 'Dependencias de Tareas Financieras'
+
+class TAREA_INGENIERIA_DEPENDENCIA(models.Model):
+    TD_TAREA_PREDECESORA = models.ForeignKey('TAREA_INGENIERIA', on_delete=models.CASCADE, related_name='sucesoras')
+    TD_TAREA_SUCESORA = models.ForeignKey('TAREA_INGENIERIA', on_delete=models.CASCADE, related_name='predecesoras')
+    TD_TIPO_DEPENDENCIA = models.CharField(max_length=20, choices=[
+        ('FS', 'Finish-to-Start'),
+        ('SS', 'Start-to-Start'),
+        ('FF', 'Finish-to-Finish'),
+        ('SF', 'Start-to-Finish')
+    ])
+
+    def __str__(self):
+        return f"Tarea {self.TD_TAREA_PREDECESORA} - {self.TD_TAREA_SUCESORA}"
+
+    class Meta:
+        db_table = 'TAREA_INGENIERIA_DEPENDENCIA'
+        verbose_name = 'Dependencia de Tarea de Ingeniería'
+        verbose_name_plural = 'Dependencias de Tareas de Ingeniería'
