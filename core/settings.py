@@ -72,7 +72,7 @@ WSGI_APPLICATION = 'core.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'TERRAMAR',
+        'NAME': 'SH_PROJECT',
         'USER': 'postgres',
         'PASSWORD': 'admin',
         'HOST': 'localhost',
@@ -125,6 +125,7 @@ STATICFILES_DIRS = (
     os.path.join(CORE_DIR, 'apps/static'),
 )
 
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 #############################################################
 #############################################################
