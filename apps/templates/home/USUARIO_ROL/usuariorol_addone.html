@@ -1,6 +1,6 @@
 {% extends "layouts/base.html" %}
 
-{% block title %} Región {% endblock %} 
+{% block title %} Usuario Rol {% endblock %} 
 
 <!-- Specific CSS goes HERE -->
 {% block stylesheets %}{% endblock stylesheets %}
@@ -15,12 +15,12 @@
                     <div class="row align-items-center">
                         <div class="col-md-12">
                             <div class="page-header-title">
-                                <h5 class="m-b-10">Regiones</h5>
+                                <h5 class="m-b-10">Usuarios y Roles</h5>
                             </div>
                             <ul class="breadcrumb">
                                 <li class="breadcrumb-item"><a href="/"><i class="feather icon-home"></i></a></li>
-                                <li class="breadcrumb-item"><a href="{% url 'reg_listall' %}">Regiones</a></li>
-                                <li class="breadcrumb-item"><a href="#!">Agregar región</a></li>
+                                <li class="breadcrumb-item"><a href="{% url 'usuariorol_listall' %}">Usuarios y Roles</a></li>
+                                <li class="breadcrumb-item"><a href="#!">Agregar Usuario Rol</a></li>
                             </ul>
                         </div>
                     </div>
@@ -33,7 +33,7 @@
                 <div class="col-sm-12">
                     <div class="card">
                         <div class="card-header">
-                            <h5>Región</h5>
+                            <h5>Usuario Rol</h5>
                         </div>
                         <div class="card-body">
                             <h5>Ingrese datos</h5>

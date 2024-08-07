@@ -132,13 +132,15 @@ class formROL(forms.ModelForm):
         widgets = {
             'RO_CNOMBRE': forms.TextInput(attrs={'class': 'form-control'}),
             'RO_CDESCRIPCION': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'RO_BACTIVO': forms.CheckboxInput(attrs={'class': 'form-check-input'})
+            'RO_BACTIVO': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'}),
         }
 
     def __init__(self, *args, **kwargs):
         super(formROL, self).__init__(*args, **kwargs)
-        self.fields['RO_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['RO_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
+        if 'RO_FFECHA_CREACION' in self.fields:
+            self.fields['RO_FFECHA_CREACION'].widget = forms.HiddenInput()
+        if 'RO_FFECHA_MODIFICACION' in self.fields:
+            self.fields['RO_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
 
 class formCATEGORIA_PROYECTO(forms.ModelForm):
     class Meta:
@@ -152,13 +154,15 @@ class formCATEGORIA_PROYECTO(forms.ModelForm):
         widgets = {
             'CA_CNOMBRE': forms.TextInput(attrs={'class': 'form-control'}),
             'CA_CDESCRIPCION': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'CA_BACTIVA': forms.CheckboxInput(attrs={'class': 'form-check-input'})
+            'CA_BACTIVA': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'})
         }
 
     def __init__(self, *args, **kwargs):
         super(formCATEGORIA_PROYECTO, self).__init__(*args, **kwargs)
-        self.fields['CA_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['CA_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
+        if 'CA_FFECHA_CREACION' in self.fields:
+            self.fields['CA_FFECHA_CREACION'].widget = forms.HiddenInput()
+        if 'CA_FFECHA_MODIFICACION' in self.fields:
+            self.fields['CA_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
 
 class formCATEGORIA_CLIENTE(forms.ModelForm):
     class Meta:
@@ -172,13 +176,15 @@ class formCATEGORIA_CLIENTE(forms.ModelForm):
         widgets = {
             'CA_CNOMBRE': forms.TextInput(attrs={'class': 'form-control'}),
             'CA_CDESCRIPCION': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'CA_BACTIVA': forms.CheckboxInput(attrs={'class': 'form-check-input'})
+            'CA_BACTIVA': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'})
         }
 
     def __init__(self, *args, **kwargs):
         super(formCATEGORIA_CLIENTE, self).__init__(*args, **kwargs)
-        self.fields['CA_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['CA_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
+        if 'CA_FFECHA_CREACION' in self.fields:
+            self.fields['CA_FFECHA_CREACION'].widget = forms.HiddenInput()
+        if 'CA_FFECHA_MODIFICACION' in self.fields:
+            self.fields['CA_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
 
 class formTIPO_PROYECTO(forms.ModelForm):
     class Meta:
@@ -192,13 +198,15 @@ class formTIPO_PROYECTO(forms.ModelForm):
         widgets = {
             'TP_CNOMBRE': forms.TextInput(attrs={'class': 'form-control'}),
             'TP_CDESCRIPCION': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'TP_BACTIVO': forms.CheckboxInput(attrs={'class': 'form-check-input'})
+            'TP_BACTIVO': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'})
         }
 
     def __init__(self, *args, **kwargs):
         super(formTIPO_PROYECTO, self).__init__(*args, **kwargs)
-        self.fields['TP_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['TP_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
+        if 'TP_FFECHA_CREACION' in self.fields:
+            self.fields['TP_FFECHA_CREACION'].widget = forms.HiddenInput()
+        if 'TP_FFECHA_MODIFICACION' in self.fields:
+            self.fields['TP_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
 
 class formPERMISO(forms.ModelForm):
     class Meta:
@@ -212,13 +220,15 @@ class formPERMISO(forms.ModelForm):
         widgets = {
             'PE_CNOMBRE': forms.TextInput(attrs={'class': 'form-control'}),
             'PE_CDESCRIPCION': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'PE_BACTIVO': forms.CheckboxInput(attrs={'class': 'form-check-input'})
+            'PE_BACTIVO': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'})
         }
 
     def __init__(self, *args, **kwargs):
         super(formPERMISO, self).__init__(*args, **kwargs)
-        self.fields['PE_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['PE_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
+        if 'PE_FFECHA_CREACION' in self.fields:
+            self.fields['PE_FFECHA_CREACION'].widget = forms.HiddenInput()
+        if 'PE_FFECHA_MODIFICACION' in self.fields:
+            self.fields['PE_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
 
 class formPERMISO_ROL(forms.ModelForm):
     class Meta:
@@ -232,13 +242,15 @@ class formPERMISO_ROL(forms.ModelForm):
         widgets = {
             'PR_CPERMISO': forms.Select(attrs={'class': 'form-control'}),
             'PR_CROL': forms.Select(attrs={'class': 'form-control'}),
-            'PR_BACTIVO': forms.CheckboxInput(attrs={'class': 'form-check-input'})
+            'PR_BACTIVO': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'})
         }
 
     def __init__(self, *args, **kwargs):
         super(formPERMISO_ROL, self).__init__(*args, **kwargs)
-        self.fields['PR_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['PR_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
+        if 'PR_FFECHA_CREACION' in self.fields:
+            self.fields['PR_FFECHA_CREACION'].widget = forms.HiddenInput()
+        if 'PR_FFECHA_MODIFICACION' in self.fields:
+            self.fields['PR_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
 
 class formUSUARIO_ROL(forms.ModelForm):
     class Meta:
@@ -252,13 +264,15 @@ class formUSUARIO_ROL(forms.ModelForm):
         widgets = {
             'UR_CUSUARIO': forms.Select(attrs={'class': 'form-control'}),
             'UR_CROL': forms.Select(attrs={'class': 'form-control'}),
-            'UR_BACTIVO': forms.CheckboxInput(attrs={'class': 'form-check-input'})
+            'UR_BACTIVO': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'})
         }
 
     def __init__(self, *args, **kwargs):
         super(formUSUARIO_ROL, self).__init__(*args, **kwargs)
-        self.fields['UR_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['UR_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
+        if 'UR_FFECHA_CREACION' in self.fields:
+            self.fields['UR_FFECHA_CREACION'].widget = forms.HiddenInput()
+        if 'UR_FFECHA_MODIFICACION' in self.fields:
+            self.fields['UR_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
 
 class formCLIENTE(forms.ModelForm):
     class Meta:
@@ -298,52 +312,51 @@ class formCLIENTE(forms.ModelForm):
             'CL_CPERSONA_CONTACTO': forms.TextInput(attrs={'class': 'form-control'}),
             'CL_CSITIO_WEB': forms.URLInput(attrs={'class': 'form-control'}),
             'CL_CRUBRO': forms.TextInput(attrs={'class': 'form-control'}),
-            'CL_BACTIVO': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'CL_BPROSPECTO': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'CL_BACTIVO': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'}),
+            'CL_BPROSPECTO': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'}),
             'CL_CCATEGORIA': forms.Select(attrs={'class': 'form-control'}),
             'CL_CUSUARIO_GESTOR': forms.Select(attrs={'class': 'form-control'})
         }
 
     def __init__(self, *args, **kwargs):
         super(formCLIENTE, self).__init__(*args, **kwargs)
-        self.fields['CL_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['CL_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['CL_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
-        self.fields['CL_CUSUARIO_MODIFICADOR'].widget = forms.HiddenInput()
+        for field in ['CL_FFECHA_CREACION', 'CL_FFECHA_MODIFICACION', 'CL_CUSUARIO_CREADOR', 'CL_CUSUARIO_MODIFICADOR']:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
-        # Form for CONTACTO_CLIENTE model
-        class formCONTACTO_CLIENTE(forms.ModelForm):
-            class Meta:
-                model = CONTACTO_CLIENTE
-                fields = [
-                    'CC_CLIENTE', 'CC_CNOMBRE', 'CC_CAPELLIDO', 'CC_CCARGO',
-                    'CC_CTELEFONO', 'CC_CEMAIL', 'CC_BACTIVO'
-                ]
-                labels = {
-                    'CC_CLIENTE': 'Cliente',
-                    'CC_CNOMBRE': 'Nombre del contacto',
-                    'CC_CAPELLIDO': 'Apellido del contacto',
-                    'CC_CCARGO': 'Cargo',
-                    'CC_CTELEFONO': 'Teléfono',
-                    'CC_CEMAIL': 'Correo electrónico',
-                    'CC_BACTIVO': 'Activo'
-                }
-                widgets = {
-                    'CC_CLIENTE': forms.Select(attrs={'class': 'form-control'}),
-                    'CC_CNOMBRE': forms.TextInput(attrs={'class': 'form-control'}),
-                    'CC_CAPELLIDO': forms.TextInput(attrs={'class': 'form-control'}),
-                    'CC_CCARGO': forms.TextInput(attrs={'class': 'form-control'}),
-                    'CC_CTELEFONO': forms.TextInput(attrs={'class': 'form-control'}),
-                    'CC_CEMAIL': forms.EmailInput(attrs={'class': 'form-control'}),
-                    'CC_BACTIVO': forms.CheckboxInput(attrs={'class': 'form-check-input'})
-                }
+# Form for CONTACTO_CLIENTE model
+class formCONTACTO_CLIENTE(forms.ModelForm):
+    class Meta:
+        model = CONTACTO_CLIENTE
+        fields = [
+            'CC_CLIENTE', 'CC_CNOMBRE', 'CC_CAPELLIDO', 'CC_CCARGO',
+            'CC_CTELEFONO', 'CC_CEMAIL', 'CC_BACTIVO'
+        ]
+        labels = {
+            'CC_CLIENTE': 'Cliente',
+            'CC_CNOMBRE': 'Nombre del contacto',
+            'CC_CAPELLIDO': 'Apellido del contacto',
+            'CC_CCARGO': 'Cargo',
+            'CC_CTELEFONO': 'Teléfono',
+            'CC_CEMAIL': 'Correo electrónico',
+            'CC_BACTIVO': 'Activo'
+        }
+        widgets = {
+            'CC_CLIENTE': forms.Select(attrs={'class': 'form-control'}),
+            'CC_CNOMBRE': forms.TextInput(attrs={'class': 'form-control'}),
+            'CC_CAPELLIDO': forms.TextInput(attrs={'class': 'form-control'}),
+            'CC_CCARGO': forms.TextInput(attrs={'class': 'form-control'}),
+            'CC_CTELEFONO': forms.TextInput(attrs={'class': 'form-control'}),
+            'CC_CEMAIL': forms.EmailInput(attrs={'class': 'form-control'}),
+            'CC_BACTIVO': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'})
+        }
 
-            def __init__(self, *args, **kwargs):
-                super(formCONTACTO_CLIENTE, self).__init__(*args, **kwargs)
-                self.fields['CC_FFECHA_CREACION'].widget = forms.HiddenInput()
-                self.fields['CC_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-                self.fields['CC_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
-                self.fields['CC_CUSUARIO_MODIFICADOR'].widget = forms.HiddenInput()
+    def __init__(self, *args, **kwargs):
+        super(formCONTACTO_CLIENTE, self).__init__(*args, **kwargs)
+        for field in ['CC_FFECHA_CREACION', 'CC_FFECHA_MODIFICACION', 'CC_CUSUARIO_CREADOR', 'CC_CUSUARIO_MODIFICADOR']:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
+
 
 # Form for DIRECCION_CLIENTE model
 class formDIRECCION_CLIENTE(forms.ModelForm):
@@ -369,15 +382,14 @@ class formDIRECCION_CLIENTE(forms.ModelForm):
             'DR_CPROVINCIA': forms.Select(attrs={'class': 'form-control'}),
             'DR_CCOMUNA': forms.Select(attrs={'class': 'form-control'}),
             'DR_CTIPO': forms.TextInput(attrs={'class': 'form-control'}),
-            'DR_BACTIVA': forms.CheckboxInput(attrs={'class': 'form-check-input'})
+            'DR_BACTIVA': forms.CheckboxInput(attrs={'class': 'form-check-input','style': 'margin-left: 5px;'})
         }
 
     def __init__(self, *args, **kwargs):
         super(formDIRECCION_CLIENTE, self).__init__(*args, **kwargs)
-        self.fields['DR_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['DR_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['DR_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
-        self.fields['DR_CUSUARIO_MODIFICADOR'].widget = forms.HiddenInput()
+        for field in ['DR_FFECHA_CREACION', 'DR_FFECHA_MODIFICACION', 'DR_CUSUARIO_CREADOR', 'DR_CUSUARIO_MODIFICADOR']:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for PRODUCTO model
 class formPRODUCTO(forms.ModelForm):
@@ -390,21 +402,20 @@ class formPRODUCTO(forms.ModelForm):
             'PR_CNOMBRE': 'Nombre del producto',
             'PR_CDESCRIPCION': 'Descripción',
             'PR_BACTIVO': 'Activo',
-            'PR_BSERVICIO': 'Tipo de producto'
+            'PR_BSERVICIO': 'Es servicio'
         }
         widgets = {
             'PR_CNOMBRE': forms.TextInput(attrs={'class': 'form-control'}),
             'PR_CDESCRIPCION': forms.Textarea(attrs={'class': 'form-control'}),
-            'PR_BACTIVO': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'PR_BSERVICIO': forms.CheckboxInput(attrs={'class': 'form-check-input'})
+            'PR_BACTIVO': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'}),
+            'PR_BSERVICIO': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'})
         }
 
     def __init__(self, *args, **kwargs):
         super(formPRODUCTO, self).__init__(*args, **kwargs)
-        self.fields['PR_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['PR_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['PR_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
-        self.fields['PR_CUSUARIO_MODIFICADOR'].widget = forms.HiddenInput()
+        for field in ['PR_FFECHA_CREACION', 'PR_FFECHA_MODIFICACION', 'PR_CUSUARIO_CREADOR', 'PR_CUSUARIO_MODIFICADOR']:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for COTIZACION model
 class formCOTIZACION(forms.ModelForm):
@@ -437,10 +448,9 @@ class formCOTIZACION(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(formCOTIZACION, self).__init__(*args, **kwargs)
-        self.fields['CO_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['CO_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['CO_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
-        self.fields['CO_CUSUARIO_MODIFICADOR'].widget = forms.HiddenInput()
+        for field in ['CO_FFECHA_CREACION', 'CO_FFECHA_MODIFICACION', 'CO_CUSUARIO_CREADOR', 'CO_CUSUARIO_MODIFICADOR']:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for COTIZACION_DETALLE model
 class formCOTIZACION_DETALLE(forms.ModelForm):
@@ -471,10 +481,9 @@ class formCOTIZACION_DETALLE(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(formCOTIZACION_DETALLE, self).__init__(*args, **kwargs)
-        self.fields['CD_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['CD_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['CD_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
-        self.fields['CD_CUSUARIO_MODIFICADOR'].widget = forms.HiddenInput()
+        for field in ['CD_FFECHA_CREACION', 'CD_FFECHA_MODIFICACION', 'CD_CUSUARIO_CREADOR', 'CD_CUSUARIO_MODIFICADOR']:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for ORDEN_VENTA model
 class formORDEN_VENTA(forms.ModelForm):
@@ -510,10 +519,9 @@ class formORDEN_VENTA(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(formORDEN_VENTA, self).__init__(*args, **kwargs)
-        self.fields['OV_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['OV_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['OV_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
-        self.fields['OV_CUSUARIO_MODIFICADOR'].widget = forms.HiddenInput()
+        for field in ['OV_FFECHA_CREACION', 'OV_FFECHA_MODIFICACION', 'OV_CUSUARIO_CREADOR', 'OV_CUSUARIO_MODIFICADOR']:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for ORDEN_VENTA_DETALLE model
 class formORDEN_VENTA_DETALLE(forms.ModelForm):
@@ -544,10 +552,9 @@ class formORDEN_VENTA_DETALLE(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(formORDEN_VENTA_DETALLE, self).__init__(*args, **kwargs)
-        self.fields['OVD_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['OVD_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['OVD_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
-        self.fields['OVD_CUSUARIO_MODIFICADOR'].widget = forms.HiddenInput()
+        for field in ['OVD_FFECHA_CREACION', 'OVD_FFECHA_MODIFICACION', 'OVD_CUSUARIO_CREADOR', 'OVD_CUSUARIO_MODIFICADOR']:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for FACTURA model
 class formFACTURA(forms.ModelForm):
@@ -585,10 +592,9 @@ class formFACTURA(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(formFACTURA, self).__init__(*args, **kwargs)
-        self.fields['FA_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['FA_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['FA_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
-        self.fields['FA_CUSUARIO_MODIFICADOR'].widget = forms.HiddenInput()
+        for field in ['FA_FFECHA_CREACION', 'FA_FFECHA_MODIFICACION', 'FA_CUSUARIO_CREADOR', 'FA_CUSUARIO_MODIFICADOR']:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for FACTURA_DETALLE model
 class formFACTURA_DETALLE(forms.ModelForm):
@@ -619,10 +625,9 @@ class formFACTURA_DETALLE(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(formFACTURA_DETALLE, self).__init__(*args, **kwargs)
-        self.fields['FAD_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['FAD_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['FAD_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
-        self.fields['FAD_CUSUARIO_MODIFICADOR'].widget = forms.HiddenInput()
+        for field in ['FAD_FFECHA_CREACION', 'FAD_FFECHA_MODIFICACION', 'FAD_CUSUARIO_CREADOR', 'FAD_CUSUARIO_MODIFICADOR']:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for EMPLEADO model
 class formEMPLEADO(forms.ModelForm):
@@ -650,10 +655,9 @@ class formEMPLEADO(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(formEMPLEADO, self).__init__(*args, **kwargs)
-        self.fields['EM_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['EM_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['EM_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
-        self.fields['EM_CUSUARIO_MODIFICADOR'].widget = forms.HiddenInput()
+        for field in ['EM_FFECHA_CREACION', 'EM_FFECHA_MODIFICACION', 'EM_CUSUARIO_CREADOR', 'EM_CUSUARIO_MODIFICADOR']:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for EMPLEADO_ADJUNTO model
 class formEMPLEADO_ADJUNTO(forms.ModelForm):
@@ -672,10 +676,9 @@ class formEMPLEADO_ADJUNTO(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(formEMPLEADO_ADJUNTO, self).__init__(*args, **kwargs)
-        self.fields['EA_FFECHA_SUBIDA'].widget = forms.HiddenInput()
-        self.fields['EA_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['EA_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
-        self.fields['EA_CUSUARIO_MODIFICADOR'].widget = forms.HiddenInput()
+        for field in ['EA_FFECHA_SUBIDA', 'EA_FFECHA_MODIFICACION', 'EA_CUSUARIO_CREADOR', 'EA_CUSUARIO_MODIFICADOR']:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for CONTRATISTA model
 class formCONTRATISTA(forms.ModelForm):
@@ -698,10 +701,9 @@ class formCONTRATISTA(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(formCONTRATISTA, self).__init__(*args, **kwargs)
-        self.fields['CO_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['CO_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['CO_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
-        self.fields['CO_CUSUARIO_MODIFICADOR'].widget = forms.HiddenInput()
+        for field in ['CO_FFECHA_CREACION', 'CO_FFECHA_MODIFICACION', 'CO_CUSUARIO_CREADOR', 'CO_CUSUARIO_MODIFICADOR']:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for CONTRATISTA_ADJUNTO model
 class formCONTRATISTA_ADJUNTO(forms.ModelForm):
@@ -720,10 +722,9 @@ class formCONTRATISTA_ADJUNTO(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(formCONTRATISTA_ADJUNTO, self).__init__(*args, **kwargs)
-        self.fields['CA_FFECHA_SUBIDA'].widget = forms.HiddenInput()
-        self.fields['CA_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['CA_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
-        self.fields['CA_CUSUARIO_MODIFICADOR'].widget = forms.HiddenInput()
+        for field in ['CA_FFECHA_SUBIDA', 'CA_FFECHA_MODIFICACION', 'CA_CUSUARIO_CREADOR', 'CA_CUSUARIO_MODIFICADOR']:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for EMPLEADO_CONTRATISTA model
 class formEMPLEADO_CONTRATISTA(forms.ModelForm):
@@ -751,10 +752,9 @@ class formEMPLEADO_CONTRATISTA(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(formEMPLEADO_CONTRATISTA, self).__init__(*args, **kwargs)
-        self.fields['EC_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['EC_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['EC_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
-        self.fields['EC_CUSUARIO_MODIFICADOR'].widget = forms.HiddenInput()
+        for field in ['EC_FFECHA_CREACION', 'EC_FFECHA_MODIFICACION', 'EC_CUSUARIO_CREADOR', 'EC_CUSUARIO_MODIFICADOR']:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for EMPLEADO_CONTRATISTA_ADJUNTO model
 class formEMPLEADO_CONTRATISTA_ADJUNTO(forms.ModelForm):
@@ -773,10 +773,9 @@ class formEMPLEADO_CONTRATISTA_ADJUNTO(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(formEMPLEADO_CONTRATISTA_ADJUNTO, self).__init__(*args, **kwargs)
-        self.fields['ECA_FFECHA_SUBIDA'].widget = forms.HiddenInput()
-        self.fields['ECA_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['ECA_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
-        self.fields['ECA_CUSUARIO_MODIFICADOR'].widget = forms.HiddenInput()
+        for field in ['ECA_FFECHA_SUBIDA', 'ECA_FFECHA_MODIFICACION', 'ECA_CUSUARIO_CREADOR', 'ECA_CUSUARIO_MODIFICADOR']:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for CONTRATO_CLIENTE model
 class formCONTRATO_CLIENTE(forms.ModelForm):
@@ -799,10 +798,9 @@ class formCONTRATO_CLIENTE(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(formCONTRATO_CLIENTE, self).__init__(*args, **kwargs)
-        self.fields['CC_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['CC_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['CC_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
-        self.fields['CC_CUSUARIO_MODIFICADOR'].widget = forms.HiddenInput()
+        for field in ['CC_FFECHA_CREACION', 'CC_FFECHA_MODIFICACION', 'CC_CUSUARIO_CREADOR', 'CC_CUSUARIO_MODIFICADOR']:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for ANEXO model
 class formANEXO(forms.ModelForm):
@@ -863,10 +861,10 @@ class formPROYECTO_CLIENTE(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(formPROYECTO_CLIENTE, self).__init__(*args, **kwargs)
-        self.fields['PC_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['PC_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['PC_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
-        self.fields['PC_CUSUARIO_MODIFICADOR'].widget = forms.HiddenInput()
+        for field in ['PC_FFECHA_CREACION', 'PC_FFECHA_MODIFICACION', 
+                      'PC_CUSUARIO_CREADOR', 'PC_CUSUARIO_MODIFICADOR']:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for ETAPA model
 class formETAPA(forms.ModelForm):
@@ -892,10 +890,10 @@ class formETAPA(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(formETAPA, self).__init__(*args, **kwargs)
-        self.fields['ET_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['ET_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['ET_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
-        self.fields['ET_CUSUARIO_MODIFICADOR'].widget = forms.HiddenInput()
+        for field in ['ET_FFECHA_CREACION', 'ET_FFECHA_MODIFICACION',  
+                      'ET_CUSUARIO_CREADOR', 'ET_CUSUARIO_MODIFICADOR']:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for TAREA_GENERAL model
 class formTAREA_GENERAL(forms.ModelForm):
@@ -927,10 +925,9 @@ class formTAREA_GENERAL(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(formTAREA_GENERAL, self).__init__(*args, **kwargs)
-        self.fields['TG_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['TG_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['TG_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
-        self.fields['TG_CUSUARIO_MODIFICADOR'].widget = forms.HiddenInput()
+        for field in ['TG_FFECHA_CREACION', 'TG_FFECHA_MODIFICACION', 
+                      'TG_CUSUARIO_CREADOR', 'TG_CUSUARIO_MODIFICADOR']:
+            self.fields[field].widget = forms.HiddenInput()
 
 # Form for TAREA_INGENIERIA model
 class formTAREA_INGENIERIA(forms.ModelForm):
@@ -962,11 +959,9 @@ class formTAREA_INGENIERIA(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(formTAREA_INGENIERIA, self).__init__(*args, **kwargs)
-        self.fields['TI_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['TI_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-
-        self.fields['TI_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
-        self.fields['TI_CUSUARIO_MODIFICADOR'].widget = forms.HiddenInput()
+        for field in ['TI_FFECHA_CREACION', 'TI_FFECHA_MODIFICACION', 
+                      'TI_CUSUARIO_CREADOR', 'TI_CUSUARIO_MODIFICADOR']:
+            self.fields[field].widget = forms.HiddenInput()
 
 # Form for ADJUNTO_TAREA_GENERAL model
 class formADJUNTO_TAREA_GENERAL(forms.ModelForm):
@@ -982,9 +977,10 @@ class formADJUNTO_TAREA_GENERAL(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(formADJUNTO_TAREA_GENERAL, self).__init__(*args, **kwargs)
-        self.fields['AT_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['AT_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['AT_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
+        hidden_fields = ['AT_FFECHA_CREACION', 'AT_FFECHA_MODIFICACION', 'AT_CUSUARIO_CREADOR', 'AT_CUSUARIO_MODIFICADOR']
+        for field in hidden_fields:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for ADJUNTO_TAREA_INGENIERIA model
 class formADJUNTO_TAREA_INGENIERIA(forms.ModelForm):
@@ -999,10 +995,11 @@ class formADJUNTO_TAREA_INGENIERIA(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        super(formADJUNTO_TAREA_INGENIERIA, self).__init__(*args, **kwargs)
-        self.fields['ATI_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['ATI_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['ATI_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
+        super().__init__(*args, **kwargs)
+        hidden_fields = ['ATI_FFECHA_CREACION', 'ATI_FFECHA_MODIFICACION', 'ATI_CUSUARIO_CREADOR']
+        for field in hidden_fields:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for ADJUNTO_TAREA_FINANCIERA model
 class formADJUNTO_TAREA_FINANCIERA(forms.ModelForm):
@@ -1017,10 +1014,11 @@ class formADJUNTO_TAREA_FINANCIERA(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        super(formADJUNTO_TAREA_FINANCIERA, self).__init__(*args, **kwargs)
-        self.fields['ATF_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['ATF_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['ATF_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
+        super().__init__(*args, **kwargs)
+        hidden_fields = ['ATF_FFECHA_CREACION', 'ATF_FFECHA_MODIFICACION', 'ATF_CUSUARIO_CREADOR']
+        for field in hidden_fields:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for ADJUNTO_ETAPA model
 class formADJUNTO_ETAPA(forms.ModelForm):
@@ -1035,10 +1033,11 @@ class formADJUNTO_ETAPA(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        super(formADJUNTO_ETAPA, self).__init__(*args, **kwargs)
-        self.fields['AE_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['AE_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['AE_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
+        super().__init__(*args, **kwargs)
+        hidden_fields = ['AE_FFECHA_CREACION', 'AE_FFECHA_MODIFICACION', 'AE_CUSUARIO_CREADOR']
+        for field in hidden_fields:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for ASIGNACION_EMPLEADO_TAREA_INGENIERIA model
 class formASIGNACION_EMPLEADO_TAREA_INGENIERIA(forms.ModelForm):
@@ -1052,10 +1051,11 @@ class formASIGNACION_EMPLEADO_TAREA_INGENIERIA(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        super(formASIGNACION_EMPLEADO_TAREA_INGENIERIA, self).__init__(*args, **kwargs)
-        self.fields['AE_FFECHA_ASIGNACION'].widget = forms.HiddenInput()
-        self.fields['AE_FFECHA_FINALIZACION'].widget = forms.HiddenInput()
-        self.fields['AE_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
+        super().__init__(*args, **kwargs)
+        hidden_fields = ['AE_FFECHA_ASIGNACION', 'AE_FFECHA_FINALIZACION', 'AE_CUSUARIO_CREADOR']
+        for field in hidden_fields:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for ASIGNACION_EMPLEADO_TAREA_FINANCIERA model
 class formASIGNACION_EMPLEADO_TAREA_FINANCIERA(forms.ModelForm):
@@ -1069,10 +1069,11 @@ class formASIGNACION_EMPLEADO_TAREA_FINANCIERA(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        super(formASIGNACION_EMPLEADO_TAREA_FINANCIERA, self).__init__(*args, **kwargs)
-        self.fields['AE_FFECHA_ASIGNACION'].widget = forms.HiddenInput()
-        self.fields['AE_FFECHA_FINALIZACION'].widget = forms.HiddenInput()
-        self.fields['AE_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
+        super().__init__(*args, **kwargs)
+        hidden_fields = ['AE_FFECHA_ASIGNACION', 'AE_FFECHA_FINALIZACION', 'AE_CUSUARIO_CREADOR']
+        for field in hidden_fields:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for ASIGNACION_EMPLEADO_TAREA_GENERAL model
 class formASIGNACION_EMPLEADO_TAREA_GENERAL(forms.ModelForm):
@@ -1086,10 +1087,11 @@ class formASIGNACION_EMPLEADO_TAREA_GENERAL(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        super(formASIGNACION_EMPLEADO_TAREA_GENERAL, self).__init__(*args, **kwargs)
-        self.fields['AE_FFECHA_ASIGNACION'].widget = forms.HiddenInput()
-        self.fields['AE_FFECHA_FINALIZACION'].widget = forms.HiddenInput()
-        self.fields['AE_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
+        super().__init__(*args, **kwargs)
+        hidden_fields = ['AE_FFECHA_ASIGNACION', 'AE_FFECHA_FINALIZACION', 'AE_CUSUARIO_CREADOR']
+        for field in hidden_fields:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA model
 class formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA(forms.ModelForm):
@@ -1103,10 +1105,11 @@ class formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        super(formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA, self).__init__(*args, **kwargs)
-        self.fields['AEC_FFECHA_ASIGNACION'].widget = forms.HiddenInput()
-        self.fields['AEC_FFECHA_FINALIZACION'].widget = forms.HiddenInput()
-        self.fields['AEC_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
+        super().__init__(*args, **kwargs)
+        hidden_fields = ['AEC_FFECHA_ASIGNACION', 'AEC_FFECHA_FINALIZACION', 'AEC_CUSUARIO_CREADOR']
+        for field in hidden_fields:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_FINANCIERA model
 class formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_FINANCIERA(forms.ModelForm):
@@ -1120,10 +1123,11 @@ class formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_FINANCIERA(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        super(formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_FINANCIERA, self).__init__(*args, **kwargs)
-        self.fields['AEC_FFECHA_ASIGNACION'].widget = forms.HiddenInput()
-        self.fields['AEC_FFECHA_FINALIZACION'].widget = forms.HiddenInput()
-        self.fields['AEC_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
+        super().__init__(*args, **kwargs)
+        hidden_fields = ['AEC_FFECHA_ASIGNACION', 'AEC_FFECHA_FINALIZACION', 'AEC_CUSUARIO_CREADOR']
+        for field in hidden_fields:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL model
 class formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL(forms.ModelForm):
@@ -1137,10 +1141,11 @@ class formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        super(formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL, self).__init__(*args, **kwargs)
-        self.fields['AEC_FFECHA_ASIGNACION'].widget = forms.HiddenInput()
-        self.fields['AEC_FFECHA_FINALIZACION'].widget = forms.HiddenInput()
-        self.fields['AEC_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
+        super().__init__(*args, **kwargs)
+        hidden_fields = ['AEC_FFECHA_ASIGNACION', 'AEC_FFECHA_FINALIZACION', 'AEC_CUSUARIO_CREADOR']
+        for field in hidden_fields:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for ASIGNACION_RECURSO_TAREA_GENERAL model
 class formASIGNACION_RECURSO_TAREA_GENERAL(forms.ModelForm):
@@ -1155,10 +1160,11 @@ class formASIGNACION_RECURSO_TAREA_GENERAL(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        super(formASIGNACION_RECURSO_TAREA_GENERAL, self).__init__(*args, **kwargs)
-        self.fields['ART_COSTO_TOTAL'].widget = forms.HiddenInput()
-        self.fields['ART_FFECHA_ASIGNACION'].widget = forms.HiddenInput()
-        self.fields['ART_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
+        super().__init__(*args, **kwargs)
+        hidden_fields = ['ART_COSTO_TOTAL', 'ART_FFECHA_ASIGNACION', 'ART_CUSUARIO_CREADOR']
+        for field in hidden_fields:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for ASIGNACION_RECURSO_TAREA_INGENIERIA model
 class formASIGNACION_RECURSO_TAREA_INGENIERIA(forms.ModelForm):
@@ -1173,10 +1179,11 @@ class formASIGNACION_RECURSO_TAREA_INGENIERIA(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        super(formASIGNACION_RECURSO_TAREA_INGENIERIA, self).__init__(*args, **kwargs)
-        self.fields['ART_COSTO_TOTAL'].widget = forms.HiddenInput()
-        self.fields['ART_FFECHA_ASIGNACION'].widget = forms.HiddenInput()
-        self.fields['ART_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
+        super().__init__(*args, **kwargs)
+        hidden_fields = ['ART_COSTO_TOTAL', 'ART_FFECHA_ASIGNACION', 'ART_CUSUARIO_CREADOR']
+        for field in hidden_fields:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for ASIGNACION_RECURSO_TAREA_FINANCIERA model
 class formASIGNACION_RECURSO_TAREA_FINANCIERA(forms.ModelForm):
@@ -1191,10 +1198,11 @@ class formASIGNACION_RECURSO_TAREA_FINANCIERA(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        super(formASIGNACION_RECURSO_TAREA_FINANCIERA, self).__init__(*args, **kwargs)
-        self.fields['ART_COSTO_TOTAL'].widget = forms.HiddenInput()
-        self.fields['ART_FFECHA_ASIGNACION'].widget = forms.HiddenInput()
-        self.fields['ART_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
+        super().__init__(*args, **kwargs)
+        hidden_fields = ['ART_COSTO_TOTAL', 'ART_FFECHA_ASIGNACION', 'ART_CUSUARIO_CREADOR']
+        for field in hidden_fields:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for ACTA_REUNION model
 class formACTA_REUNION(forms.ModelForm):
@@ -1215,10 +1223,15 @@ class formACTA_REUNION(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(formACTA_REUNION, self).__init__(*args, **kwargs)
-        self.fields['AR_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['AR_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['AR_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
-        self.fields['AR_CUSUARIO_MODIFICADOR'].widget = forms.HiddenInput()
+        hidden_fields = [
+            'AR_FFECHA_CREACION',
+            'AR_FFECHA_MODIFICACION', 
+            'AR_CUSUARIO_CREADOR',
+            'AR_CUSUARIO_MODIFICADOR'
+        ]
+        for field in hidden_fields:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for PROYECTO_ADJUNTO model
 class formPROYECTO_ADJUNTO(forms.ModelForm):
@@ -1235,10 +1248,8 @@ class formPROYECTO_ADJUNTO(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(formPROYECTO_ADJUNTO, self).__init__(*args, **kwargs)
-        self.fields['PA_FFECHA_SUBIDA'].widget = forms.HiddenInput()
-        self.fields['PA_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['PA_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
-        self.fields['PA_CUSUARIO_MODIFICADOR'].widget = forms.HiddenInput()
+        for field in ['PA_FFECHA_SUBIDA', 'PA_FFECHA_MODIFICACION', 'PA_CUSUARIO_CREADOR', 'PA_CUSUARIO_MODIFICADOR']:
+            self.fields[field].widget = forms.HiddenInput()
 
 # Form for BOLETA_GARANTIA model
 class formBOLETA_GARANTIA(forms.ModelForm):
@@ -1259,10 +1270,8 @@ class formBOLETA_GARANTIA(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(formBOLETA_GARANTIA, self).__init__(*args, **kwargs)
-        self.fields['BG_FFECHA_CREACION'].widget = forms.HiddenInput()
-        self.fields['BG_FFECHA_MODIFICACION'].widget = forms.HiddenInput()
-        self.fields['BG_CUSUARIO_CREADOR'].widget = forms.HiddenInput()
-        self.fields['BG_CUSUARIO_MODIFICADOR'].widget = forms.HiddenInput()
+        for field in ['BG_FFECHA_CREACION', 'BG_FFECHA_MODIFICACION', 'BG_CUSUARIO_CREADOR', 'BG_CUSUARIO_MODIFICADOR']:
+            self.fields[field].widget = forms.HiddenInput()
 
 # Form for TAREA_GENERAL_DEPENDENCIA model
 class formTAREA_GENERAL_DEPENDENCIA(forms.ModelForm):

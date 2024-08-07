@@ -1,8 +1,68 @@
 
     <ul class="nav pcoded-inner-navbar ">
         <li class="nav-item pcoded-menu-caption">
-            <label>Navigation</label>
+            <label>GESTIÓN DE PROYECTOS</label>
         </li>
+        <li class="nav-item pcoded-hasmenu">
+            <a href="#!" class="nav-link "><span class="pcoded-micon"><i class="fas fa-globe"></i></span><span class="pcoded-mtext">Globales</span></a>
+            <ul class="pcoded-submenu">
+                <li><a href="#!"><i class="fas fa-map fa-xs mr-2"></i>Ubicaciones</a>
+                    <ul class="pcoded-submenu">
+                        <li><a href="{% url 'reg_listall' %}">Lista de Regiones</a></li>
+                        <li><a href="{% url 'prov_listall' %}">Lista de Provincias</a></li>
+                        <li><a href="{% url 'com_listall' %}">Lista de Comunas</a></li>
+                    </ul>
+                </li>
+                <li><a href="#!"><i class="fas fa-wrench fa-xs mr-2"></i>Configuraciones</a>
+                    <ul class="pcoded-submenu">
+                        <li><a href="{% url 'param_listall' %}">Parámetros</a></li>
+                        <li><a href="{% url 'rol_listall' %}">Roles</a></li>
+                        <li><a href="{% url 'catproy_listall' %}">Categorías de Proyecto</a></li>
+                        <li><a href="{% url 'catcli_listall' %}">Categorías de Cliente</a></li>
+                        <li><a href="{% url 'tipoproy_listall' %}">Tipos de Proyecto</a></li>
+                        
+                    </ul>
+                </li>
+                <li><a href="#!"><i class="fas fa-check-square fa-xs mr-2"></i>Autorizaciones</a>
+                    <ul class="pcoded-submenu">
+                        <li><a href="{% url 'permiso_listall' %}">Maestro de Permisos</a></li>
+                        <li><a href="{% url 'permisorol_listall' %}">Permisos de Roles</a></li>
+                        <li><a href="{% url 'usuariorol_listall' %}">Usuarios de Roles</a></li>
+                    </ul>
+                </li>
+                <li><a href="#!"><i class="fas fa-user-tie fa-xs mr-2"></i>Clientes</a>
+                    <ul class="pcoded-submenu">
+                        <li><a href="{% url 'cliente_listall' %}">Lista de Clientes</a></li>
+                        <li><a href="{% url 'contactocli_listall' %}">Lista de Contactos de Clientes</a></li>
+                        <li><a href="{% url 'direccioncli_listall' %}">Lista de Direcciones de Clientes</a></li>
+                    </ul>
+                </li>
+                <li><a href="#!"><i class="fas fa-box fa-xs mr-2"></i>Productos</a>
+                    <ul class="pcoded-submenu">
+                        <li><a href="{% url 'producto_listall' %}">Lista de Productos</a></li>
+                    </ul>
+                </li>
+                <li><a href="#!"><i class="fas fa-users fa-xs mr-2"></i>Personas</a>
+                    <ul class="pcoded-submenu">
+                        <li><a href="{% url 'empleado_listall' %}">Lista de Empleados Internos</a></li>
+                        <li><a href="{% url 'contratista_listall' %}">Lista de Contratistas</a></li>
+                    </ul>
+                </li>
+                
+            </ul>
+        </li>
+        <li class="nav-item pcoded-hasmenu">
+            <a href="#!" class="nav-link "><span class="pcoded-micon"><i class="fas fa-calculator"></i></span><span class="pcoded-mtext">Proyectos</span></a>
+            <ul class="pcoded-submenu">
+                <li><a href="#!"><i class="fas fa-ruler fa-xs mr-2"></i>Proyectos</a>
+                    <ul class="pcoded-submenu">
+                        <li><a href="{% url 'proycli_listall' %}">Proyectos de Cliente</a></li>
+                        <li><a href="{% url 'etapa_listall' %}">Etapas de Proyecto</a></li>
+                        <li><a href="{% url 'actareunion_listall' %}">Actas de Reunión</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </li>       
         <li class="nav-item pcoded-hasmenu">
             <a href="#!" class="nav-link "><span class="pcoded-micon"><i class="feather icon-home"></i></span><span class="pcoded-mtext">Dashboard</span></a>
             <ul class="pcoded-submenu">

@@ -29,7 +29,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'apps.home'  # Enable the inner home (home)
+    'django.contrib.sites',
+    'django.contrib.humanize',
+    'apps.home'
 ]
 
 MIDDLEWARE = [
