@@ -373,7 +373,56 @@
                             <h5>Unique Visitor</h5>
                         </div>
                         <div class="card-body pl-0 pb-0">
-                            <div id="unique-visitor-chart"></div>
+                            <div id="prueba_chart" style="width: 100%; height: 400px;"></div>
+                            <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+                            <script>
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    var chartDom = document.getElementById('prueba_chart');
+                                    var myChart = echarts.init(chartDom);
+                                    var option = {
+                                        xAxis: {
+                                            type: 'category',
+                                            data: ['Value 1', 'Value 2', 'Value 3', 'Value 4', 'Value 5', 'Value 6', 'Value 7', 'Value 8', 'Value 9', 'Value 10']
+                                        },
+                                        yAxis: {
+                                            type: 'value',
+                                            splitLine: {
+                                                show: true
+                                            }
+                                        },
+                                        series: [
+                                            {
+                                                name: 'Part 1',
+                                                type: 'bar',
+                                                stack: 'total',
+                                                itemStyle: {
+                                                    color: 'red'
+                                                },
+                                                data: [45, 30, 50, 50, 50, 40, 50, 20, 50, 10]
+                                            },
+                                            {
+                                                name: 'Part 2',
+                                                type: 'bar',
+                                                stack: 'total',
+                                                itemStyle: {
+                                                    color: 'green'
+                                                },
+                                                data: [0, 0, 20, 35, 10, 0, 40, 0, 0, 0]
+                                            },
+                                            {
+                                                name: 'Constant Line',
+                                                type: 'line',
+                                                data: [50, 50, 50, 50, 50, 50, 50, 50, 50, 50],
+                                                itemStyle: {
+                                                    color: 'black'
+                                                }
+                                            }
+                                        ]
+                                    };
+                                    myChart.setOption(option);
+                                });
+                            </script>
+                        </div>
                         </div>
                     </div>
                 </div>
