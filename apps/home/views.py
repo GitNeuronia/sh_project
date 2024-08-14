@@ -984,6 +984,179 @@ def PROYECTO_CLIENTE_UPDATE(request, pk):
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
+#--------------------------------------
+#----------------TAREAS----------------
+#--------------------------------------
+
+# ----------TAREA GENERAL--------------
+
+def TAREA_GENERAL_LISTALL(request):
+    try:
+        tareas_generales = TAREA_GENERAL.objects.all()
+        ctx = {
+            'tareas_generales': tareas_generales
+        }
+        return render(request, 'home/TAREA/GENERAL/tarea_general_listall.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def TAREA_GENERAL_ADDONE(request):
+    try:
+        if request.method == 'POST':
+            form = formTAREA_GENERAL(request.POST)
+            if form.is_valid():
+                tarea = form.save(commit=False)
+                tarea.TG_CUSUARIO_CREADOR = request.user
+                tarea.save()
+                messages.success(request, 'Tarea general guardada correctamente')
+                return redirect('/tarea_general_listall/')
+        form = formTAREA_GENERAL()
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/TAREA/GENERAL/tarea_general_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def TAREA_GENERAL_UPDATE(request, pk):
+    try:
+        tarea = TAREA_GENERAL.objects.get(id=pk)
+        if request.method == 'POST':
+            form = formTAREA_GENERAL(request.POST, instance=tarea)
+            if form.is_valid():
+                tarea = form.save(commit=False)
+                tarea.TG_CUSUARIO_MODIFICADOR = request.user
+                tarea.save()
+                messages.success(request, 'Tarea general actualizada correctamente')
+                return redirect('/tarea_general_listall/')
+        form = formTAREA_GENERAL(instance=tarea)
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/TAREA/GENERAL/tarea_general_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+# ----------TAREA INGENIERIA--------------
+
+def TAREA_INGENIERIA_LISTALL(request):
+    try:
+        tareas_ingenieria = TAREA_INGENIERIA.objects.all()
+        ctx = {
+            'tareas_ingenieria': tareas_ingenieria
+        }
+        return render(request, 'home/TAREA/INGENIERIA/tarea_ingenieria_listall.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def TAREA_INGENIERIA_ADDONE(request):
+    try:
+        if request.method == 'POST':
+            form = formTAREA_INGENIERIA(request.POST)
+            if form.is_valid():
+                tarea = form.save(commit=False)
+                tarea.TI_CUSUARIO_CREADOR = request.user
+                tarea.save()
+                messages.success(request, 'Tarea de ingeniería guardada correctamente')
+                return redirect('/tarea_ingenieria_listall/')
+        form = formTAREA_INGENIERIA()
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/TAREA/INGENIERIA/tarea_ingenieria_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def TAREA_INGENIERIA_UPDATE(request, pk):
+    try:
+        tarea = TAREA_INGENIERIA.objects.get(id=pk)
+        if request.method == 'POST':
+            form = formTAREA_INGENIERIA(request.POST, instance=tarea)
+            if form.is_valid():
+                tarea = form.save(commit=False)
+                tarea.TI_CUSUARIO_MODIFICADOR = request.user
+                tarea.save()
+                messages.success(request, 'Tarea de ingeniería actualizada correctamente')
+                return redirect('/tarea_ingenieria_listall/')
+        form = formTAREA_INGENIERIA(instance=tarea)
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/TAREA/INGENIERIA/tarea_ingenieria_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+# ----------TAREA FINANCIERA--------------
+
+def TAREA_FINANCIERA_LISTALL(request):
+    try:
+        tareas_financiera = TAREA_FINANCIERA.objects.all()
+        ctx = {
+            'tareas_financiera': tareas_financiera
+        }
+        return render(request, 'home/TAREA/FINANCIERA/tarea_financiera_listall.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def TAREA_FINANCIERA_ADDONE(request):
+    try:
+        if request.method == 'POST':
+            form = formTAREA_FINANCIERA(request.POST)
+            if form.is_valid():
+                tarea = form.save(commit=False)
+                tarea.TF_CUSUARIO_CREADOR = request.user
+                tarea.save()
+                messages.success(request, 'Tarea financiera guardada correctamente')
+                return redirect('/tarea_financiera_listall/')
+        form = formTAREA_FINANCIERA()
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/TAREA/FINANCIERA/tarea_financiera_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def TAREA_FINANCIERA_UPDATE(request, pk):
+    try:
+        tarea = TAREA_FINANCIERA.objects.get(id=pk)
+        if request.method == 'POST':
+            form = formTAREA_FINANCIERA(request.POST, instance=tarea)
+            if form.is_valid():
+                tarea = form.save(commit=False)
+                tarea.TF_CUSUARIO_MODIFICADOR = request.user
+                tarea.save()
+                messages.success(request, 'Tarea financiera actualizada correctamente')
+                return redirect('/tarea_financiera_listall/')
+        form = formTAREA_FINANCIERA(instance=tarea)
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/TAREA/FINANCIERA/tarea_financiera_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+#--------------------------------------
+#----------------TAREAS----------------
+#--------------------------------------
+
 def ACTA_REUNION_LISTALL(request):
     try:
         object_list = ACTA_REUNION.objects.all()
