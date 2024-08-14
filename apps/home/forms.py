@@ -916,18 +916,19 @@ class formTAREA_GENERAL(forms.ModelForm):
             'TG_CESTADO': forms.TextInput(attrs={'class': 'form-control'}),
             'TG_NPRESUPUESTO': forms.NumberInput(attrs={'class': 'form-control'}),
             'TG_COBSERVACIONES': forms.Textarea(attrs={'class': 'form-control'}),
-            'TG_BMILESTONE': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'TG_BMILESTONE': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'}),
             'TG_NPROGRESO': forms.NumberInput(attrs={'class': 'form-control'}),
             'TG_NDURACION_PLANIFICADA': forms.NumberInput(attrs={'class': 'form-control'}),
             'TG_NDURACION_REAL': forms.NumberInput(attrs={'class': 'form-control'}),
-            'TG_BCRITICA': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'TG_BCRITICA': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'}),
         }
 
     def __init__(self, *args, **kwargs):
         super(formTAREA_GENERAL, self).__init__(*args, **kwargs)
         for field in ['TG_FFECHA_CREACION', 'TG_FFECHA_MODIFICACION', 
                       'TG_CUSUARIO_CREADOR', 'TG_CUSUARIO_MODIFICADOR']:
-            self.fields[field].widget = forms.HiddenInput()
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for TAREA_INGENIERIA model
 class formTAREA_INGENIERIA(forms.ModelForm):
@@ -950,18 +951,56 @@ class formTAREA_INGENIERIA(forms.ModelForm):
             'TI_CESTADO': forms.TextInput(attrs={'class': 'form-control'}),
             'TI_NPRESUPUESTO': forms.NumberInput(attrs={'class': 'form-control'}),
             'TI_COBSERVACIONES': forms.Textarea(attrs={'class': 'form-control'}),
-            'TI_BMILESTONE': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'TI_BMILESTONE': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'}),
             'TI_NPROGRESO': forms.NumberInput(attrs={'class': 'form-control'}),
             'TI_NDURACION_PLANIFICADA': forms.NumberInput(attrs={'class': 'form-control'}),
             'TI_NDURACION_REAL': forms.NumberInput(attrs={'class': 'form-control'}),
-            'TG_BCRITICA': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'TG_BCRITICA': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'}),
         }
 
     def __init__(self, *args, **kwargs):
         super(formTAREA_INGENIERIA, self).__init__(*args, **kwargs)
         for field in ['TI_FFECHA_CREACION', 'TI_FFECHA_MODIFICACION', 
                       'TI_CUSUARIO_CREADOR', 'TI_CUSUARIO_MODIFICADOR']:
-            self.fields[field].widget = forms.HiddenInput()
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
+
+# Formulario para TAREA_FINANCIERA
+class formTAREA_FINANCIERA(forms.ModelForm):
+    class Meta:
+        model = TAREA_FINANCIERA
+        fields = [
+            'TF_CCODIGO', 'TF_CNOMBRE', 'TF_CDESCRIPCION', 'TF_ETAPA', 'TF_FFECHA_INICIO',
+            'TF_FFECHA_FIN_ESTIMADA', 'TF_FFECHA_FIN_REAL', 'TF_CESTADO', 'TF_NMONTO',
+            'TF_CTIPO_TRANSACCION', 'TF_COBSERVACIONES', 'TF_BMILESTONE', 'TF_NPROGRESO', 
+            'TF_NDURACION_PLANIFICADA', 'TF_NDURACION_REAL', 'TG_BCRITICA'
+        ]
+        widgets = {
+            'TF_CCODIGO': forms.TextInput(attrs={'class': 'form-control'}),
+            'TF_CNOMBRE': forms.TextInput(attrs={'class': 'form-control'}),
+            'TF_CDESCRIPCION': forms.Textarea(attrs={'class': 'form-control'}),
+            'TF_ETAPA': forms.Select(attrs={'class': 'form-control'}),
+            'TF_FFECHA_INICIO': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'TF_FFECHA_FIN_ESTIMADA': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'TF_FFECHA_FIN_REAL': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'TF_CESTADO': forms.TextInput(attrs={'class': 'form-control'}),
+            'TF_NMONTO': forms.NumberInput(attrs={'class': 'form-control'}),
+            'TF_CTIPO_TRANSACCION': forms.TextInput(attrs={'class': 'form-control'}),
+            'TF_COBSERVACIONES': forms.Textarea(attrs={'class': 'form-control'}),
+            'TF_BMILESTONE': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'}),
+            'TF_NPROGRESO': forms.NumberInput(attrs={'class': 'form-control'}),
+            'TF_NDURACION_PLANIFICADA': forms.NumberInput(attrs={'class': 'form-control'}),
+            'TF_NDURACION_REAL': forms.NumberInput(attrs={'class': 'form-control'}),
+            'TG_BCRITICA': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super(formTAREA_FINANCIERA, self).__init__(*args, **kwargs)
+        for field in ['TF_FFECHA_CREACION', 'TF_FFECHA_MODIFICACION', 
+                      'TF_CUSUARIO_CREADOR', 'TF_CUSUARIO_MODIFICADOR']:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
+
 
 # Form for ADJUNTO_TAREA_GENERAL model
 class formADJUNTO_TAREA_GENERAL(forms.ModelForm):
