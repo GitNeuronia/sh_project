@@ -1,0 +1,326 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} {{ cotizacion.CO_CNUMERO }} {% endblock %} 
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}
+    <!-- data tables css -->
+    <link rel="stylesheet" href="/static/assets/css/plugins/dataTables.bootstrap4.min.css">
+    {% load humanize %}
+    {% load i18n %}
+    {% load l10n %}
+{% endblock stylesheets %}
+
+{% block content %}	
+    <!-- [ Main Content ] start -->   
+    <section class="pcoded-main-container">
+        <div class="pcoded-content">
+            <!-- [ breadcrumb ] start -->
+            <div class="page-header">
+                <div class="page-block">
+                    <div class="row align-items-center">
+                        <div class="col-md-12">
+                            <div class="page-header-title">
+                                <h5 class="m-b-10">Cotización {{ cotizacion.CO_CNUMERO }}</h5>
+                            </div>
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="/"><i class="feather icon-home"></i></a></li>
+                                <li class="breadcrumb-item"><a href="/">Gestión de Cotizaciones</a></li>
+                                <li class="breadcrumb-item"><a href="{% url 'cotizacion_listall' %}">Cotizaciones</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- [ breadcrumb ] end -->
+            <!-- [ Main Content ] start -->
+            <div class="container-fluid row">
+                <!-- HTML5 Export Buttons table start -->
+                <div class="col-sm-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-end mb-3">
+                                <a class="btn btn-primary mr-2" href="{% url 'cotizacion_listall' %}">
+                                    <svg fill="#ffffff" width="16px" height="16px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21.92,11.6C19.9,6.91,16.1,4,12,4S4.1,6.91,2.08,11.6a1,1,0,0,0,0,.8C4.1,17.09,7.9,20,12,20s7.9-2.91,9.92-7.6A1,1,0,0,0,21.92,11.6ZM12,18c-3.17,0-6.17-2.29-7.9-6C5.83,8.29,8.83,6,12,6s6.17,2.29,7.9,6C18.17,15.71,15.17,18,12,18ZM12,8a4,4,0,1,0,4,4A4,4,0,0,0,12,8Zm0,6a2,2,0,1,1,2-2A2,2,0,0,1,12,14Z"/></svg> Ver Todos
+                                </a>
+                                <a class="btn btn-primary mr-2" href="{% url 'cotizacion_update' cotizacion.id %}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+                                        <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                                        <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
+                                    </svg> Editar
+                                </a>
+                                <a class="btn btn-primary mr-2" href="{% url 'cotizacion_listone_format' cotizacion.id %}">
+                                    <i class="fas fa-file-alt"></i> Ver Formato
+                                </a>
+                                <button class="btn btn-success" id="addLineModal">
+                                    <i class="feather icon-plus"></i> Agregar Línea
+                                </button>
+                            </div>
+                            
+                            <table class="table table-bordered">
+                                <tbody>
+                                  <tr>
+                                    <th>ID:</th>
+                                    <td>{{cotizacion.id}}</td>
+                                  </tr>
+                                  <tr>
+                                    <th>Cliente:</th>
+                                    <td>{{cotizacion.CO_CLIENTE}}</td>
+                                  </tr>
+                                  <tr>
+                                    <th>Número:</th>
+                                    <td>{{cotizacion.CO_CNUMERO}}</td>
+                                  </tr>
+                                  <tr>
+                                    <th>Fecha:</th>
+                                    <td>{{cotizacion.CO_FFECHA}}</td>
+                                  </tr>
+                                  <tr>
+                                    <th>Válido hasta:</th>
+                                    <td>{{cotizacion.CO_CVALIDO_HASTA}}</td>
+                                  </tr>
+                                  <tr>
+                                    <th>Estado:</th>
+                                    <td>{{cotizacion.CO_CESTADO}}</td>
+                                  </tr>
+                                  <tr>
+                                    <th>Total:</th>
+                                    <td>{{cotizacion.CO_NTOTAL}}</td>
+                                  </tr>
+                                  <tr>
+                                    <th>Observaciones:</th>
+                                    <td style="white-space: pre-wrap;">{{cotizacion.CO_COBSERVACIONES}}</td>
+                                  </tr>
+                                  <tr>
+                                    <th>Comentarios generales:</th>
+                                    <td style="white-space: pre-wrap;">{{cotizacion.CO_CCOMENTARIO}}</td>
+                                  </tr>
+                                </tbody>
+                            </table>
+                            
+                            <h5 class="mt-4">Líneas de Cotización</h5>
+                            <div class="mb-3">
+                                <button class="btn btn-success" id="addLineModal2">
+                                    <i class="feather icon-plus"></i> Agregar Línea
+                                </button>
+                                <button class="btn btn-secondary" id="importLines">
+                                    <i class="feather icon-upload"></i> Importar Líneas
+                                </button>
+                            </div>
+                            <table id="cotizacion-lines" class="table table-striped table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Acciones</th>
+                                        <th>Producto</th>
+                                        <th>Cantidad</th>
+                                        <th>Precio Unitario</th>
+                                        <th>Subtotal</th>
+                                        <th>Descuento</th>
+                                        <th>Total</th>
+                                        
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for detalle in cotizacion.detalles.all %}
+                                    <tr>
+                                        <td>
+                                            <button class="btn btn-sm btn-primary edit-line" data-id="{{ detalle.id }}"><i class="fas fa-pencil-alt"></i></button>
+                                            <button class="btn btn-sm btn-danger delete-line" data-id="{{ detalle.id }}"><i class="fas fa-trash-alt"></i></button>
+                                        </td>
+                                        <td>{{ detalle.CD_PRODUCTO }}</td>
+                                        <td>{{ detalle.CD_NCANTIDAD }}</td>
+                                        <td>{{ detalle.CD_NPRECIO_UNITARIO }}</td>
+                                        <td>{{ detalle.CD_NSUBTOTAL }}</td>
+                                        <td>{{ detalle.CD_NDESCUENTO }}</td>
+                                        <td>{{ detalle.CD_NTOTAL }}</td>
+                                        
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- [ Main Content ] end -->
+
+    <!-- Add/Edit Line Modal -->
+    <div class="modal fade" id="lineModal" tabindex="-1" role="dialog" aria-labelledby="lineModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="lineModalLabel">Agregar/Editar Línea</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="lineForm">
+                        {% csrf_token %}
+                        <input type="hidden" id="lineId" name="lineId">
+                        <div class="form-group">
+                            <label for="producto">Producto</label>
+                            <select class="form-control" id="producto" name="producto" required>
+                                {% for product in product_list %}
+                                    <option value="{{ product.0 }}">{{ product.1 }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="cantidad">Cantidad</label>
+                            <input type="number" class="form-control" id="cantidad" name="cantidad" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="precioUnitario">Precio Unitario</label>
+                            <input type="number" step="0.01" class="form-control" id="precioUnitario" name="precioUnitario" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="descuento">Descuento</label>
+                            <input type="number" step="0.01" class="form-control" id="descuento" name="descuento" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-primary" id="saveLine">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}
+    <!-- datatable Js -->
+    <script src="/static/assets/js/plugins/jquery.dataTables.min.js"></script>
+    <script src="/static/assets/js/plugins/dataTables.bootstrap4.min.js"></script>
+    <script src="/static/assets/js/plugins/buttons.colVis.min.js"></script>
+    <script src="/static/assets/js/plugins/buttons.print.min.js"></script>
+    <script src="/static/assets/js/plugins/pdfmake.min.js"></script>
+    <script src="/static/assets/js/plugins/jszip.min.js"></script>
+    <script src="/static/assets/js/plugins/dataTables.buttons.min.js"></script>
+    <script src="/static/assets/js/plugins/buttons.html5.min.js"></script>
+    <script src="/static/assets/js/plugins/buttons.bootstrap4.min.js"></script>
+    <script src="/static/assets/js/pages/data-export-custom.js"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+    $(document).ready(function() {
+        var table = $('#cotizacion-lines').DataTable();
+
+        
+        // Add line
+        $('#addLineModal, #addLineModal2').on('click', function() {
+            $('#lineForm')[0].reset();
+            $('#lineId').val('');
+            $('#lineModal').modal('show');
+        });
+
+        // Edit line
+        $('.edit-line').on('click', function() {
+            var lineId = $(this).data('id');
+            // Fetch line data and populate form
+            $.ajax({
+                url: "{% url 'cotizacion_getline' 0 %}".replace('0', lineId),
+                method: 'GET',
+                success: function(data) {
+                    $('#lineId').val(data.id);
+                    $('#producto').val(data.producto);
+                    $('#cantidad').val(data.cantidad);
+                    $('#precioUnitario').val(data.precioUnitario);
+                    $('#descuento').val(data.descuento);
+                    $('#lineModal').modal('show');
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error fetching line data:", error);
+                    var errorMessage = xhr.responseJSON && xhr.responseJSON.error ? xhr.responseJSON.error : 'Error desconocido al obtener los datos de la línea.';
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: errorMessage,
+                    });
+                }
+            });
+        });
+
+        // Save line
+        $('#saveLine').on('click', function() {
+            var formData = $('#lineForm').serialize();
+            formData += '&cotizacion_id={{ cotizacion.id }}';  // Add the cotizacion id to the form data
+            $.ajax({
+                url: '/cotizacion_addline/',
+                method: 'POST',
+                data: formData,
+                success: function(response) {
+                    $('#lineModal').modal('hide');
+                    // Refresh table or update row
+                    location.reload();
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error saving line:", error);
+                    $('#lineModal').modal('hide');
+                    var errorMessage = xhr.responseJSON && xhr.responseJSON.error ? xhr.responseJSON.error : 'Error desconocido al agregar la línea de cotización.';
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: errorMessage,
+                    });
+                }
+            });
+        });
+
+        // Delete line
+        $('.delete-line').on('click', function() {
+            var lineId = $(this).data('id');
+            Swal.fire({
+                title: '¿Está seguro?',
+                text: "¿Desea eliminar esta línea de la cotización?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: "{% url 'cotizacion_deleteline' 0 %}".replace('0', lineId),
+                        method: 'POST',
+                        data: {
+                            csrfmiddlewaretoken: '{{ csrf_token }}'
+                        },
+                        success: function(response) {
+                            if(response.success) {
+                                Swal.fire(
+                                    'Eliminado',
+                                    'La línea ha sido eliminada.',
+                                    'success'
+                                ).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire(
+                                    'Error',
+                                    'No se pudo eliminar la línea.',
+                                    'error'
+                                );
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error("Error deleting line:", error);
+                            Swal.fire(
+                                'Error',
+                                'Ocurrió un error al eliminar la línea.',
+                                'error'
+                            );
+                        }
+                    });
+                }
+            });
+        });
+    });
+    </script>
+{% endblock javascripts %}

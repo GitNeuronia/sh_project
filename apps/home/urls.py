@@ -132,6 +132,15 @@ urlpatterns = [
     # path('boletagarantia_addone/', login_required(views.BOLETA_GARANTIA_ADDONE), name='boletagarantia_addone'),
     # path('boletagarantia_update/<int:pk>/', login_required(views.BOLETA_GARANTIA_UPDATE), name='boletagarantia_update'),
 
+    path('cotizacion_listall/', login_required(views.COTIZACION_LISTALL), name='cotizacion_listall'),
+    path('cotizacion_addone/', login_required(views.COTIZACION_ADDONE), name='cotizacion_addone'),
+    path('cotizacion_update/<int:pk>/', login_required(views.COTIZACION_UPDATE), name='cotizacion_update'),
+    path('cotizacion_listone/<int:pk>', login_required(views.COTIZACION_LISTONE), name='cotizacion_listone'),
+    path('cotizacion_listone_format/<int:pk>', login_required(views.COTIZACION_LISTONE_FORMAT), name='cotizacion_listone_format'),
+    path('cotizacion_getline/<int:pk>', login_required(views.COTIZACION_GET_LINE), name='cotizacion_getline'),
+    path('cotizacion_deleteline/<int:pk>', login_required(views.COTIZACION_DELETE_LINE), name='cotizacion_deleteline'),
+    path('cotizacion_addline/', login_required(views.COTIZACION_ADD_LINE), name='cotizacion_addline'),
+
 
     # Coincide con cualquier archivo html
     re_path(r'^.*\.*', views.pages, name='pages'),

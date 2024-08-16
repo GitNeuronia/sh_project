@@ -3,9 +3,10 @@
 Copyright (c) 2019 - present AppSeed.us
 """
 
+from decimal import Decimal
 from django import template
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.template import loader
 from django.urls import reverse
 from apps.home.models import * 
@@ -1206,6 +1207,175 @@ def ACTA_REUNION_UPDATE(request, pk):
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
+
+def COTIZACION_LISTALL(request):
+    try:
+        object_list = COTIZACION.objects.all()
+        ctx = {
+            'object_list': object_list
+        }
+        return render(request, 'home/COTIZACION/cotizacion_listall.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def COTIZACION_ADDONE(request):
+    try:
+        if request.method == 'POST':
+            form = formCOTIZACION(request.POST)
+            if form.is_valid():
+                cotizacion = form.save(commit=False)
+                cotizacion.CO_CUSUARIO_CREADOR = request.user
+                cotizacion.save()
+                messages.success(request, 'Cotización guardada correctamente')
+                return redirect('/cotizacion_listall/')
+        form = formCOTIZACION()
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/COTIZACION/cotizacion_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def COTIZACION_ADD_LINE(request):
+    try:
+        if request.method == 'POST':
+
+            cotizacion_id = request.POST.get('cotizacion_id')
+            producto_id = request.POST.get('producto')
+            cantidad = request.POST.get('cantidad')
+            precio_unitario = request.POST.get('precioUnitario')
+            descuento = request.POST.get('descuento')
+
+            # Ensure cantidad and precio_unitario are at least 1
+            cantidad = max(1, int(cantidad or 0))
+            precio_unitario = max(Decimal('1'), Decimal(precio_unitario or '0'))
+
+            # Recalculate subtotal
+            subtotal = Decimal(cantidad) * precio_unitario
+
+            # Ensure descuento is non-negative and not greater than subtotal
+            descuento = max(Decimal('0'), min(Decimal(descuento or '0'), subtotal))
+
+            cotizacion = COTIZACION.objects.get(id=cotizacion_id)
+            producto = PRODUCTO.objects.get(id=producto_id)
+
+            subtotal = Decimal(cantidad) * Decimal(precio_unitario)
+            total = subtotal - Decimal(descuento)
+
+            # Verificar si la combinación de cotización y producto ya existe
+            existing_detail = COTIZACION_DETALLE.objects.filter(CD_COTIZACION=cotizacion, CD_PRODUCTO=producto).first()
+            if existing_detail:
+                existing_detail.delete()
+
+            # Recalculate total
+            total = subtotal - descuento
+
+            detalle = COTIZACION_DETALLE(
+                CD_COTIZACION=cotizacion,
+                CD_PRODUCTO=producto,
+                CD_NCANTIDAD=cantidad,
+                CD_NPRECIO_UNITARIO=precio_unitario,
+                CD_NSUBTOTAL=subtotal,
+                CD_NDESCUENTO=descuento,
+                CD_NTOTAL=total,
+                CD_CUSUARIO_CREADOR=request.user
+            )
+            detalle.save()
+
+            messages.success(request, 'Línea de cotización agregada correctamente')
+            return redirect(f'/cotizacion_listone/{cotizacion_id}')
+        
+        return redirect('/cotizacion_listall/')
+    except Exception as e:
+        errMsg=print(f"Error al agregar línea de cotización: {str(e)}")
+        messages.error(request, errMsg)
+        return JsonResponse({'error': str(errMsg)}, status=400)
+
+
+def COTIZACION_UPDATE(request, pk):
+    try:
+        cotizacion = COTIZACION.objects.get(id=pk)
+        if request.method == 'POST':
+            form = formCOTIZACION(request.POST, instance=cotizacion)
+            if form.is_valid():
+                cotizacion = form.save(commit=False)
+                cotizacion.CO_CUSUARIO_MODIFICADOR = request.user
+                cotizacion.save()
+                messages.success(request, 'Cotización actualizada correctamente')
+                return redirect('/cotizacion_listall/')
+        form = formCOTIZACION(instance=cotizacion)
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/COTIZACION/cotizacion_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def COTIZACION_LISTONE(request, pk):
+    try:
+        cotizacion = COTIZACION.objects.get(id=pk)
+        product_list = list(PRODUCTO.objects.filter(PR_BACTIVO=True).values_list('id', 'PR_CNOMBRE'))
+        
+        ctx = {
+            'cotizacion': cotizacion,
+            'product_list': product_list,
+        }
+        return render(request, 'home/COTIZACION/cotizacion_listone.html', ctx)
+    except Exception as e:
+        print("ERROR:", e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/cotizacion_listall/')
+def COTIZACION_LISTONE_FORMAT(request, pk):
+    try:
+        cotizacion = COTIZACION.objects.get(id=pk)
+        product_list = list(PRODUCTO.objects.filter(PR_BACTIVO=True).values_list('id', 'PR_CNOMBRE'))
+        
+        ctx = {
+            'cotizacion': cotizacion,
+            'product_list': product_list,
+        }
+        return render(request, 'home/COTIZACION/cotizacion_listone_format.html', ctx)
+    except Exception as e:
+        print("ERROR:", e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/cotizacion_listall/')
+
+def COTIZACION_GET_LINE(request, pk):
+    try:
+        print("id linea:", pk)
+        detalle = COTIZACION_DETALLE.objects.get(id=pk)
+        
+        data = {
+            'id': detalle.id,
+            'producto': detalle.CD_PRODUCTO.id,
+            'cantidad': detalle.CD_NCANTIDAD,
+            'precioUnitario': detalle.CD_NPRECIO_UNITARIO,
+            'descuento': detalle.CD_NDESCUENTO
+        }
+        return JsonResponse(data)
+    except COTIZACION_DETALLE.DoesNotExist:
+        return JsonResponse({'error': 'Línea de cotización no encontrada'}, status=404)
+    except Exception as e:
+        print("ERROR:", e)
+        return JsonResponse({'error': str(e)}, status=500)
+
+def COTIZACION_DELETE_LINE(request, pk):
+    try:
+        detalle = COTIZACION_DETALLE.objects.get(id=pk)
+        cotizacion_id = detalle.CD_COTIZACION.id
+        detalle.delete()
+        return JsonResponse({'success': 'Línea de cotización eliminada correctamente', 'cotizacion_id': cotizacion_id})
+    except COTIZACION_DETALLE.DoesNotExist:
+        return JsonResponse({'error': 'Línea de cotización no encontrada'}, status=404)
+    except Exception as e:
+        print("ERROR:", e)
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 # def BOLETA_GARANTIA_LISTALL(request):
