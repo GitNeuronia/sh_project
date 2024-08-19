@@ -897,16 +897,18 @@ class formETAPA(forms.ModelForm):
 
 # Form for TAREA_GENERAL model
 class formTAREA_GENERAL(forms.ModelForm):
+    TG_CCODIGO = forms.CharField(widget=forms.HiddenInput(), required=False, label='')
+
     class Meta:
         model = TAREA_GENERAL
         fields = [
-            'TG_CCODIGO', 'TG_CNOMBRE', 'TG_CDESCRIPCION', 'TG_ETAPA', 'TG_FFECHA_INICIO',
+            'TG_CCODIGO', 'TG_PROYECTO_CLIENTE', 'TG_ETAPA', 'TG_CNOMBRE', 'TG_CDESCRIPCION', 'TG_FFECHA_INICIO',
             'TG_FFECHA_FIN_ESTIMADA', 'TG_FFECHA_FIN_REAL', 'TG_CESTADO', 'TG_NPRESUPUESTO',
             'TG_COBSERVACIONES', 'TG_BMILESTONE', 'TG_NPROGRESO', 'TG_NDURACION_PLANIFICADA',
             'TG_NDURACION_REAL', 'TG_BCRITICA'
         ]
         widgets = {
-            'TG_CCODIGO': forms.TextInput(attrs={'class': 'form-control'}),
+            'TG_PROYECTO_CLIENTE': forms.Select(attrs={'class': 'form-control'}),
             'TG_CNOMBRE': forms.TextInput(attrs={'class': 'form-control'}),
             'TG_CDESCRIPCION': forms.Textarea(attrs={'class': 'form-control'}),
             'TG_ETAPA': forms.Select(attrs={'class': 'form-control'}),
@@ -929,18 +931,41 @@ class formTAREA_GENERAL(forms.ModelForm):
                       'TG_CUSUARIO_CREADOR', 'TG_CUSUARIO_MODIFICADOR']:
             if field in self.fields:
                 self.fields[field].widget = forms.HiddenInput()
+        
+        # Generamos el código automáticamente si es una nueva instancia
+        if not self.instance.pk:
+            self.generate_code()
+
+    def generate_code(self):
+        if self.data.get('TG_PROYECTO_CLIENTE') and self.data.get('TG_ETAPA'):
+            proyecto = PROYECTO_CLIENTE.objects.get(id=self.data['TG_PROYECTO_CLIENTE'])
+            etapa = ETAPA.objects.get(id=self.data['TG_ETAPA'])
+            tarea_count = TAREA_GENERAL.objects.filter(TG_PROYECTO_CLIENTE=proyecto, TG_ETAPA=etapa).count() + 1
+            self.initial['TG_CCODIGO'] = f"{proyecto.PC_CCODIGO}-{etapa.ET_CCODIGO}-TG{tarea_count:03d}"
+
+    def save(self, commit=True):
+        instance = super(formTAREA_GENERAL, self).save(commit=False)
+        
+        if not instance.TG_CCODIGO:
+            self.generate_code()
+            instance.TG_CCODIGO = self.initial['TG_CCODIGO']
+        
+        if commit:
+            instance.save()
+        return instance
 
 # Form for TAREA_INGENIERIA model
 class formTAREA_INGENIERIA(forms.ModelForm):
     class Meta:
         model = TAREA_INGENIERIA
         fields = [
-            'TI_CCODIGO', 'TI_CNOMBRE', 'TI_CDESCRIPCION', 'TI_ETAPA', 'TI_FFECHA_INICIO',
+            'TI_PROYECTO_CLIENTE', 'TI_CCODIGO', 'TI_CNOMBRE', 'TI_CDESCRIPCION', 'TI_ETAPA', 'TI_FFECHA_INICIO',
             'TI_FFECHA_FIN_ESTIMADA', 'TI_FFECHA_FIN_REAL', 'TI_CESTADO', 'TI_NPRESUPUESTO',
             'TI_COBSERVACIONES', 'TI_BMILESTONE', 'TI_NPROGRESO', 'TI_NDURACION_PLANIFICADA',
             'TI_NDURACION_REAL', 'TG_BCRITICA'
         ]
         widgets = {
+            'TI_PROYECTO_CLIENTE': forms.Select(attrs={'class': 'form-control'}),
             'TI_CCODIGO': forms.TextInput(attrs={'class': 'form-control'}),
             'TI_CNOMBRE': forms.TextInput(attrs={'class': 'form-control'}),
             'TI_CDESCRIPCION': forms.Textarea(attrs={'class': 'form-control'}),
@@ -970,12 +995,13 @@ class formTAREA_FINANCIERA(forms.ModelForm):
     class Meta:
         model = TAREA_FINANCIERA
         fields = [
-            'TF_CCODIGO', 'TF_CNOMBRE', 'TF_CDESCRIPCION', 'TF_ETAPA', 'TF_FFECHA_INICIO',
+            'TF_PROYECTO_CLIENTE', 'TF_CCODIGO', 'TF_CNOMBRE', 'TF_CDESCRIPCION', 'TF_ETAPA', 'TF_FFECHA_INICIO',
             'TF_FFECHA_FIN_ESTIMADA', 'TF_FFECHA_FIN_REAL', 'TF_CESTADO', 'TF_NMONTO',
             'TF_CTIPO_TRANSACCION', 'TF_COBSERVACIONES', 'TF_BMILESTONE', 'TF_NPROGRESO', 
             'TF_NDURACION_PLANIFICADA', 'TF_NDURACION_REAL', 'TG_BCRITICA'
         ]
         widgets = {
+            'TF_PROYECTO_CLIENTE': forms.Select(attrs={'class': 'form-control'}),
             'TF_CCODIGO': forms.TextInput(attrs={'class': 'form-control'}),
             'TF_CNOMBRE': forms.TextInput(attrs={'class': 'form-control'}),
             'TF_CDESCRIPCION': forms.Textarea(attrs={'class': 'form-control'}),

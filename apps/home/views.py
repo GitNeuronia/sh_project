@@ -964,7 +964,7 @@ def PROYECTO_CLIENTE_ADDONE(request):
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
-def PROYECTO_CLIENTE_UPDATE(request, pk):
+def PROYECTO_CLIENTE_UPDATE(request, pk, page):
     try:
         proyecto = PROYECTO_CLIENTE.objects.get(id=pk)
         if request.method == 'POST':
@@ -974,8 +974,16 @@ def PROYECTO_CLIENTE_UPDATE(request, pk):
                 proyecto.PC_CUSUARIO_MODIFICADOR = request.user
                 proyecto.save()
                 messages.success(request, 'Proyecto de cliente actualizado correctamente')
-                return redirect('/proycli_listall/')
-        form = formPROYECTO_CLIENTE(instance=proyecto)
+                if page == 1:
+                    return redirect('/proycli_listone/'+str(proyecto.id)+'/')
+                else:
+                    return redirect('/proycli_listall/')
+        else:
+            # Convertir las fechas a formato de cadena para el formulario
+            proyecto.PC_FFECHA_INICIO = proyecto.PC_FFECHA_INICIO.strftime('%Y-%m-%d') if proyecto.PC_FFECHA_INICIO else None
+            proyecto.PC_FFECHA_FIN_ESTIMADA = proyecto.PC_FFECHA_FIN_ESTIMADA.strftime('%Y-%m-%d') if proyecto.PC_FFECHA_FIN_ESTIMADA else None
+            proyecto.PC_FFECHA_FIN_REAL = proyecto.PC_FFECHA_FIN_REAL.strftime('%Y-%m-%d') if proyecto.PC_FFECHA_FIN_REAL else None
+            form = formPROYECTO_CLIENTE(instance=proyecto)
         ctx = {
             'form': form
         }
@@ -985,6 +993,29 @@ def PROYECTO_CLIENTE_UPDATE(request, pk):
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
+def PROYECTO_CLIENTE_LISTONE(request, pk):
+    try:
+        proyecto = PROYECTO_CLIENTE.objects.get(id=pk)
+        tareas_general = TAREA_GENERAL.objects.filter(TG_PROYECTO_CLIENTE=proyecto)
+        tareas_ingenieria = TAREA_INGENIERIA.objects.filter(TI_PROYECTO_CLIENTE=proyecto)
+        tareas_financiera = TAREA_FINANCIERA.objects.filter(TF_PROYECTO_CLIENTE=proyecto)
+        for tarea in tareas_general:
+            tarea.TG_NPROGRESO = int(round(float(tarea.TG_NPROGRESO)))
+        for tarea in tareas_ingenieria:
+            tarea.TI_NPROGRESO = int(round(float(tarea.TI_NPROGRESO)))
+        for tarea in tareas_financiera:
+            tarea.TF_NPROGRESO = int(round(float(tarea.TF_NPROGRESO)))
+        ctx = {
+            'proyecto': proyecto,
+            'tareas_general': tareas_general,
+            'tareas_ingenieria': tareas_ingenieria,
+            'tareas_financiera': tareas_financiera
+        }
+        return render(request, 'home/PROYECTO_CLIENTE/proycli_listone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
 #--------------------------------------
 #----------------TAREAS----------------
 #--------------------------------------
@@ -1023,7 +1054,7 @@ def TAREA_GENERAL_ADDONE(request):
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
-def TAREA_GENERAL_UPDATE(request, pk):
+def TAREA_GENERAL_UPDATE(request, pk, page):
     try:
         tarea = TAREA_GENERAL.objects.get(id=pk)
         if request.method == 'POST':
@@ -1033,10 +1064,21 @@ def TAREA_GENERAL_UPDATE(request, pk):
                 tarea.TG_CUSUARIO_MODIFICADOR = request.user
                 tarea.save()
                 messages.success(request, 'Tarea general actualizada correctamente')
-                return redirect('/tarea_general_listall/')
-        form = formTAREA_GENERAL(instance=tarea)
+                if page == 1:
+                    return redirect('/proycli_listone/'+str(tarea.TG_PROYECTO_CLIENTE.id)+'/')
+                else:
+                    return redirect('/tarea_general_listall/')
+        else:
+            # Asegúrate de que las fechas se carguen correctamente en el formulario
+            initial_data = {
+                'TG_FFECHA_INICIO': tarea.TG_FFECHA_INICIO.strftime('%Y-%m-%d') if tarea.TG_FFECHA_INICIO else None,
+                'TG_FFECHA_FIN_ESTIMADA': tarea.TG_FFECHA_FIN_ESTIMADA.strftime('%Y-%m-%d') if tarea.TG_FFECHA_FIN_ESTIMADA else None,
+            }
+            form = formTAREA_GENERAL(instance=tarea, initial=initial_data)
+        
         ctx = {
-            'form': form
+            'form': form,
+            'tarea': tarea
         }
         return render(request, 'home/TAREA/GENERAL/tarea_general_addone.html', ctx)
     except Exception as e:
@@ -1078,7 +1120,7 @@ def TAREA_INGENIERIA_ADDONE(request):
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
-def TAREA_INGENIERIA_UPDATE(request, pk):
+def TAREA_INGENIERIA_UPDATE(request, pk, page):
     try:
         tarea = TAREA_INGENIERIA.objects.get(id=pk)
         if request.method == 'POST':
@@ -1088,10 +1130,20 @@ def TAREA_INGENIERIA_UPDATE(request, pk):
                 tarea.TI_CUSUARIO_MODIFICADOR = request.user
                 tarea.save()
                 messages.success(request, 'Tarea de ingeniería actualizada correctamente')
-                return redirect('/tarea_ingenieria_listall/')
-        form = formTAREA_INGENIERIA(instance=tarea)
+                if page == 1:
+                    return redirect('/proycli_listone/'+str(tarea.TI_PROYECTO_CLIENTE.id)+'/')
+                else:
+                    return redirect('/tarea_ingenieria_listall/')
+        else:
+            initial_data = {
+                'TI_FFECHA_INICIO': tarea.TI_FFECHA_INICIO.strftime('%Y-%m-%d') if tarea.TI_FFECHA_INICIO else None,
+                'TI_FFECHA_FIN_ESTIMADA': tarea.TI_FFECHA_FIN_ESTIMADA.strftime('%Y-%m-%d') if tarea.TI_FFECHA_FIN_ESTIMADA else None,
+            }
+            form = formTAREA_INGENIERIA(instance=tarea, initial=initial_data)
+        
         ctx = {
-            'form': form
+            'form': form,
+            'tarea': tarea
         }
         return render(request, 'home/TAREA/INGENIERIA/tarea_ingenieria_addone.html', ctx)
     except Exception as e:
@@ -1133,7 +1185,7 @@ def TAREA_FINANCIERA_ADDONE(request):
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
-def TAREA_FINANCIERA_UPDATE(request, pk):
+def TAREA_FINANCIERA_UPDATE(request, pk, page):
     try:
         tarea = TAREA_FINANCIERA.objects.get(id=pk)
         if request.method == 'POST':
@@ -1143,10 +1195,21 @@ def TAREA_FINANCIERA_UPDATE(request, pk):
                 tarea.TF_CUSUARIO_MODIFICADOR = request.user
                 tarea.save()
                 messages.success(request, 'Tarea financiera actualizada correctamente')
-                return redirect('/tarea_financiera_listall/')
-        form = formTAREA_FINANCIERA(instance=tarea)
+                if page == 1:
+                    return redirect('/proycli_listone/'+str(tarea.TF_PROYECTO_CLIENTE.id)+'/')
+                else:
+                    return redirect('/tarea_financiera_listall/')
+        else:
+            # Asegúrate de que las fechas se carguen correctamente en el formulario
+            initial_data = {
+                'TF_FFECHA_INICIO': tarea.TF_FFECHA_INICIO.strftime('%Y-%m-%d') if tarea.TF_FFECHA_INICIO else None,
+                'TF_FFECHA_FIN_ESTIMADA': tarea.TF_FFECHA_FIN_ESTIMADA.strftime('%Y-%m-%d') if tarea.TF_FFECHA_FIN_ESTIMADA else None,
+            }
+            form = formTAREA_FINANCIERA(instance=tarea, initial=initial_data)
+        
         ctx = {
-            'form': form
+            'form': form,
+            'tarea': tarea
         }
         return render(request, 'home/TAREA/FINANCIERA/tarea_financiera_addone.html', ctx)
     except Exception as e:
@@ -1156,6 +1219,126 @@ def TAREA_FINANCIERA_UPDATE(request, pk):
 
 #--------------------------------------
 #----------------TAREAS----------------
+#--------------------------------------
+
+
+#--------------------------------------
+#----------------RECURSOS--------------
+#--------------------------------------
+
+
+# ---------- PERSONAL EXTERNO----------
+
+# def RECURSOS_PERSONAL_EXTERNO_LISTALL(request):
+#     try:
+#         personal_externo = RECURSOS_PERSONAL_EXTERNO.objects.all()
+#         ctx = {
+#             'personal_externo': personal_externo
+#         }
+#         return render(request, 'home/RECURSOS/PERSONAL_EXTERNO/recursos_personal_externo_listall.html', ctx)
+#     except Exception as e:
+#         print(e)
+#         messages.error(request, f'Error, {str(e)}')
+#         return redirect('/')
+
+# def RECURSOS_PERSONAL_EXTERNO_ADDONE(request):
+#     try:
+#         if request.method == 'POST':
+#             form = formRECURSOS_PERSONAL_EXTERNO(request.POST)
+#             if form.is_valid():
+#                 personal = form.save(commit=False)
+#                 personal.RPE_CUSUARIO_CREADOR = request.user
+#                 personal.save()
+#                 messages.success(request, 'Personal externo guardado correctamente')
+#                 return redirect('/recursos_personal_externo_listall/')
+#         form = formRECURSOS_PERSONAL_EXTERNO()
+#         ctx = {
+#             'form': form
+#         }
+#         return render(request, 'home/RECURSOS/PERSONAL_EXTERNO/recursos_personal_externo_addone.html', ctx)
+#     except Exception as e:
+#         print(e)
+#         messages.error(request, f'Error, {str(e)}')
+#         return redirect('/')
+
+# def RECURSOS_PERSONAL_EXTERNO_UPDATE(request, pk):
+#     try:
+#         personal = RECURSOS_PERSONAL_EXTERNO.objects.get(id=pk)
+#         if request.method == 'POST':
+#             form = formRECURSOS_PERSONAL_EXTERNO(request.POST, instance=personal)
+#             if form.is_valid():
+#                 personal = form.save(commit=False)
+#                 personal.RPE_CUSUARIO_MODIFICADOR = request.user
+#                 personal.save()
+#                 messages.success(request, 'Personal externo actualizado correctamente')
+#                 return redirect('/recursos_personal_externo_listall/')
+#         form = formRECURSOS_PERSONAL_EXTERNO(instance=personal)
+#         ctx = {
+#             'form': form
+#         }
+#         return render(request, 'home/RECURSOS/PERSONAL_EXTERNO/recursos_personal_externo_addone.html', ctx)
+#     except Exception as e:
+#         print(e)
+#         messages.error(request, f'Error, {str(e)}')
+#         return redirect('/')
+
+# # ---------- MATERIALES----------------
+
+# def RECURSOS_MATERIALES_LISTALL(request):
+#     try:
+#         materiales = RECURSOS_MATERIALES.objects.all()
+#         ctx = {
+#             'materiales': materiales
+#         }
+#         return render(request, 'home/RECURSOS/MATERIALES/recursos_materiales_listall.html', ctx)
+#     except Exception as e:
+#         print(e)
+#         messages.error(request, f'Error, {str(e)}')
+#         return redirect('/')
+
+# def RECURSOS_MATERIALES_ADDONE(request):
+#     try:
+#         if request.method == 'POST':
+#             form = formRECURSOS_MATERIALES(request.POST)
+#             if form.is_valid():
+#                 material = form.save(commit=False)
+#                 material.RM_CUSUARIO_CREADOR = request.user
+#                 material.save()
+#                 messages.success(request, 'Material guardado correctamente')
+#                 return redirect('/recursos_materiales_listall/')
+#         form = formRECURSOS_MATERIALES()
+#         ctx = {
+#             'form': form
+#         }
+#         return render(request, 'home/RECURSOS/MATERIALES/recursos_materiales_addone.html', ctx)
+#     except Exception as e:
+#         print(e)
+#         messages.error(request, f'Error, {str(e)}')
+#         return redirect('/')
+
+# def RECURSOS_MATERIALES_UPDATE(request, pk):
+#     try:
+#         material = RECURSOS_MATERIALES.objects.get(id=pk)
+#         if request.method == 'POST':
+#             form = formRECURSOS_MATERIALES(request.POST, instance=material)
+#             if form.is_valid():
+#                 material = form.save(commit=False)
+#                 material.RM_CUSUARIO_MODIFICADOR = request.user
+#                 material.save()
+#                 messages.success(request, 'Material actualizado correctamente')
+#                 return redirect('/recursos_materiales_listall/')
+#         form = formRECURSOS_MATERIALES(instance=material)
+#         ctx = {
+#             'form': form
+#         }
+#         return render(request, 'home/RECURSOS/MATERIALES/recursos_materiales_addone.html', ctx)
+#     except Exception as e:
+#         print(e)
+#         messages.error(request, f'Error, {str(e)}')
+#         return redirect('/')
+
+#--------------------------------------
+#----------------RECURSOS--------------
 #--------------------------------------
 
 def ACTA_REUNION_LISTALL(request):

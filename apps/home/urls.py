@@ -81,7 +81,7 @@ urlpatterns = [
     path('direccioncli_listall/', login_required(views.DIRECCION_CLIENTE_LISTALL), name='direccioncli_listall'),
     path('direccioncli_addone/', login_required(views.DIRECCION_CLIENTE_ADDONE), name='direccioncli_addone'),
     path('direccioncli_update/<int:pk>/', login_required(views.DIRECCION_CLIENTE_UPDATE), name='direccioncli_update'),
- 
+
     # URLs para la gestión de productos
     path('producto_listall/', login_required(views.PRODUCTO_LISTALL), name='producto_listall'),
     path('producto_addone/', login_required(views.PRODUCTO_ADDONE), name='producto_addone'),
@@ -101,22 +101,26 @@ urlpatterns = [
     path('proycli_listall/', login_required(views.PROYECTO_CLIENTE_LISTALL), name='proycli_listall'),
     path('proycli_addone/', login_required(views.PROYECTO_CLIENTE_ADDONE), name='proycli_addone'),
     path('proycli_update/<int:pk>/', login_required(views.PROYECTO_CLIENTE_UPDATE), name='proycli_update'),
-    
+    path('proycli_update/<int:pk>/<int:page>/', login_required(views.PROYECTO_CLIENTE_UPDATE), name='proycli_update'),
+    path('proycli_listone/<int:pk>/', login_required(views.PROYECTO_CLIENTE_LISTONE), name='proycli_listone'),    
+
     # URLs para la gestión de tareas generales
     path('tarea_general_listall/', login_required(views.TAREA_GENERAL_LISTALL), name='tarea_general_listall'),
     path('tarea_general_addone/', login_required(views.TAREA_GENERAL_ADDONE), name='tarea_general_addone'),
     path('tarea_general_update/<int:pk>/', login_required(views.TAREA_GENERAL_UPDATE), name='tarea_general_update'),
+    path('tarea_general_update/<int:pk>/<int:page>/', login_required(views.TAREA_GENERAL_UPDATE), name='tarea_general_update'),
 
     # URLs para la gestión de tareas de ingeniería
     path('tarea_ingenieria_listall/', login_required(views.TAREA_INGENIERIA_LISTALL), name='tarea_ingenieria_listall'),
     path('tarea_ingenieria_addone/', login_required(views.TAREA_INGENIERIA_ADDONE), name='tarea_ingenieria_addone'),
     path('tarea_ingenieria_update/<int:pk>/', login_required(views.TAREA_INGENIERIA_UPDATE), name='tarea_ingenieria_update'),
+    path('tarea_ingenieria_update/<int:pk>/<int:page>/', login_required(views.TAREA_INGENIERIA_UPDATE), name='tarea_ingenieria_update'),
 
     # URLs para la gestión de tareas financieras
     path('tarea_financiera_listall/', login_required(views.TAREA_FINANCIERA_LISTALL), name='tarea_financiera_listall'),
     path('tarea_financiera_addone/', login_required(views.TAREA_FINANCIERA_ADDONE), name='tarea_financiera_addone'),
     path('tarea_financiera_update/<int:pk>/', login_required(views.TAREA_FINANCIERA_UPDATE), name='tarea_financiera_update'),
-
+    path('tarea_financiera_update/<int:pk>/<int:page>/', login_required(views.TAREA_FINANCIERA_UPDATE), name='tarea_financiera_update'),
     # URLs para la gestión de etapas
     path('etapa_listall/', login_required(views.ETAPA_LISTALL), name='etapa_listall'),
     path('etapa_addone/', login_required(views.ETAPA_ADDONE), name='etapa_addone'),

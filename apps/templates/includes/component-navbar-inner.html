@@ -67,16 +67,21 @@
                         
                     </ul>
                 </li>
+                <li><a href="#!"><i class="fas fa-tasks"></i>Tareas</a>
+                    <ul class="pcoded-submenu">            
+                        <li><a href="{% url 'tarea_general_listall' %}">Tareas Generales</a></li>
+                        <li><a href="{% url 'tarea_ingenieria_listall' %}">Tareas Ingeniería</a></li>                        
+                        <li><a href="{% url 'tarea_financiera_listall' %}">Tareas Financieras</a></li>                        
+                    </ul>
+                </li>
+                <li><a href="#!"><i class="fas fa-toolbox fa-xs mr-2"></i>Recursos</a>
+                    <ul class="pcoded-submenu">                                    
+                        <li><a href=""></i>Personal Externo</a></li>                        
+                        <li><a href=""></i>Materiales</a></li>                                             
+                    </ul>
+                </li>
             </ul>
-        </li>       
-        <li class="nav-item pcoded-hasmenu">
-            <a href="#!" class="nav-link "><span class="pcoded-micon"><i class="fas fa-tasks"></i></span><span class="pcoded-mtext">Tareas</span></a>
-            <ul class="pcoded-submenu">            
-                <li><a href="{% url 'tarea_general_listall' %}">Tareas Generales</a></li>
-                <li><a href="{% url 'tarea_ingenieria_listall' %}">Tareas Ingeniería</a></li>                        
-                <li><a href="{% url 'tarea_financiera_listall' %}">Tareas Financieras</a></li>                        
-            </ul>
-        </li>       
+        </li>                      
         <li class="nav-item pcoded-hasmenu">
             <a href="#!" class="nav-link "><span class="pcoded-micon"><i class="feather icon-home"></i></span><span class="pcoded-mtext">Dashboard</span></a>
             <ul class="pcoded-submenu">
