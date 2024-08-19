@@ -692,7 +692,7 @@ class ANEXO(models.Model):
         verbose_name_plural = 'Anexos'
 
 class PROYECTO_CLIENTE(models.Model):
-    PC_CCODIGO = models.CharField(max_length=20, unique=True, verbose_name='Código de proyecto')
+    PC_CCODIGO = models.CharField(max_length=100, unique=True, verbose_name='Código de proyecto')
     PC_CNOMBRE = models.CharField(max_length=255, verbose_name='Nombre del proyecto')
     PC_CDESCRIPCION = models.TextField(verbose_name='Descripción del proyecto')
     PC_CLIENTE = models.ForeignKey('CLIENTE', on_delete=models.CASCADE, related_name='proyectos', verbose_name='Cliente')
@@ -750,7 +750,7 @@ class ETAPA(models.Model):
         verbose_name_plural = 'Etapas de Proyectos'
 
 class TAREA_GENERAL(models.Model):
-    TG_CCODIGO = models.CharField(max_length=20, unique=True, verbose_name='Código de tarea general')
+    TG_CCODIGO = models.CharField(max_length=100, unique=True, verbose_name='Código de tarea general')
     TG_CNOMBRE = models.CharField(max_length=255, verbose_name='Nombre de la tarea general')
     TG_CDESCRIPCION = models.TextField(verbose_name='Descripción de la tarea general')
     TG_ETAPA = models.ForeignKey(ETAPA, on_delete=models.CASCADE, related_name='tareas_generales', verbose_name='Etapa')
@@ -769,6 +769,7 @@ class TAREA_GENERAL(models.Model):
     TG_NDURACION_PLANIFICADA = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Duración planificada (horas)')
     TG_NDURACION_REAL = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='Duración real (horas)')
     TG_BCRITICA = models.BooleanField(default=False, verbose_name='En la ruta crítica')
+    TG_PROYECTO_CLIENTE = models.ForeignKey(PROYECTO_CLIENTE, on_delete=models.CASCADE, null=True, blank=True, related_name='tareas_generales_proyecto', verbose_name='Proyecto de Cliente')
     def __str__(self):
         return f"Tarea General {self.TG_CCODIGO} - {self.TG_CNOMBRE} ({self.TG_ETAPA.ET_CNOMBRE})"
 
@@ -778,7 +779,7 @@ class TAREA_GENERAL(models.Model):
         verbose_name_plural = 'Tareas Generales'
 
 class TAREA_INGENIERIA(models.Model):
-    TI_CCODIGO = models.CharField(max_length=20, unique=True, verbose_name='Código de tarea de ingeniería')
+    TI_CCODIGO = models.CharField(max_length=100, unique=True, verbose_name='Código de tarea de ingeniería')
     TI_CNOMBRE = models.CharField(max_length=255, verbose_name='Nombre de la tarea de ingeniería')
     TI_CDESCRIPCION = models.TextField(verbose_name='Descripción de la tarea de ingeniería')
     TI_ETAPA = models.ForeignKey(ETAPA, on_delete=models.CASCADE, related_name='tareas_ingenieria', verbose_name='Etapa')
@@ -797,6 +798,7 @@ class TAREA_INGENIERIA(models.Model):
     TI_NDURACION_PLANIFICADA = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Duración planificada (horas)')
     TI_NDURACION_REAL = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='Duración real (horas)')
     TG_BCRITICA = models.BooleanField(default=False, verbose_name='En la ruta crítica')
+    TI_PROYECTO_CLIENTE = models.ForeignKey(PROYECTO_CLIENTE, on_delete=models.CASCADE, null=True, blank=True, related_name='tareas_ingenieria_proyecto', verbose_name='Proyecto de Cliente')
     def __str__(self):
         return f"Tarea de Ingeniería {self.TI_CCODIGO} - {self.TI_CNOMBRE} ({self.TI_ETAPA.ET_CNOMBRE})"
 
@@ -806,7 +808,7 @@ class TAREA_INGENIERIA(models.Model):
         verbose_name_plural = 'Tareas de Ingeniería'
 
 class TAREA_FINANCIERA(models.Model):
-    TF_CCODIGO = models.CharField(max_length=20, unique=True, verbose_name='Código de tarea financiera')
+    TF_CCODIGO = models.CharField(max_length=100, unique=True, verbose_name='Código de tarea financiera')
     TF_CNOMBRE = models.CharField(max_length=255, verbose_name='Nombre de la tarea financiera')
     TF_CDESCRIPCION = models.TextField(verbose_name='Descripción de la tarea financiera')
     TF_ETAPA = models.ForeignKey(ETAPA, on_delete=models.CASCADE, related_name='tareas_financieras', verbose_name='Etapa')
@@ -826,6 +828,7 @@ class TAREA_FINANCIERA(models.Model):
     TF_NDURACION_PLANIFICADA = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Duración planificada (horas)')
     TF_NDURACION_REAL = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='Duración real (horas)')
     TG_BCRITICA = models.BooleanField(default=False, verbose_name='En la ruta crítica')
+    TF_PROYECTO_CLIENTE = models.ForeignKey(PROYECTO_CLIENTE, on_delete=models.CASCADE, null=True, blank=True, related_name='tareas_financieras_proyecto', verbose_name='Proyecto de Cliente')
     def __str__(self):
         return f"Tarea Financiera {self.TF_CCODIGO} - {self.TF_CNOMBRE} ({self.TF_ETAPA.ET_CNOMBRE})"
 

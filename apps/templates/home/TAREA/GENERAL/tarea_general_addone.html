@@ -1,9 +1,16 @@
 {% extends "layouts/base.html" %}
 
-{% block title %} Tarea General {% endblock %} 
+{% block title %} Agregar Tarea General {% endblock %} 
 
-<!-- Specific CSS goes HERE -->
-{% block stylesheets %}{% endblock stylesheets %}
+{% block stylesheets %}
+    {{ block.super }}
+    <style>
+        .error-message {
+            color: red;
+            font-size: 0.9em;
+        }
+    </style>
+{% endblock stylesheets %}
 
 {% block content %}		
     <!-- [ Main Content ] start -->
@@ -33,28 +40,38 @@
                 <div class="col-sm-12">
                     <div class="card">
                         <div class="card-header">
-                            <h5>Tarea General</h5>
+                            <h5>Agregar Tarea General</h5>
                         </div>
                         <div class="card-body">
                             <h5>Ingrese datos de la Tarea General</h5>
                             <hr>
                             <div class="row">
                                 <div class="col-md-12">
-                                    <form method="POST" id="validation-form123" enctype="multipart/form-data">
-                                    {% csrf_token %}
-                                        {{ form.non_field_errors }}
-                                        {% for field in form %}
-                                            <div class="fieldWrapper">
-                                                {{ field.errors }}
-                                                <label class="my-1 me-2" for="{{ field.id_for_label }}">{{ field.label }}:</label>
-                                                {{ field }}
+                                    <form method="POST" id="tarea-general-form" enctype="multipart/form-data">
+                                        {% csrf_token %}
+                                        {% if form.non_field_errors %}
+                                            <div class="alert alert-danger">
+                                                {{ form.non_field_errors }}
                                             </div>
+                                        {% endif %}
+                                        {% for field in form %}
+                                            {% if field.widget_type != 'hidden' %}
+                                                <div class="form-group">
+                                                    <label for="{{ field.id_for_label }}">{{ field.label }}:</label>
+                                                    {{ field }}
+                                                    {% if field.errors %}
+                                                        <div class="error-message">
+                                                            {{ field.errors }}
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                            {% else %}
+                                                {{ field }}
+                                            {% endif %}
                                         {% endfor %}
-                                        {{ form.errors }}
-                                        <br>
                                         <div class="form-group nav justify-content-end">
-                                            <button class="btn btn-success mr-4" type="submit">Guardar</button>
-                                            <a class="btn btn-danger mr-1" onclick="window.history.go(-1); return false;">Volver</a>
+                                            <button class="btn btn-primary mr-2" type="submit">Guardar</button>
+                                            <a class="btn btn-secondary" href="{% url 'tarea_general_listall' %}">Cancelar</a>
                                         </div>
                                     </form>
                                 </div>
@@ -70,14 +87,12 @@
     <!-- [ Main Content ] end -->
 {% endblock content %}
 
-<!-- Specific Page JS goes HERE  -->
 {% block javascripts %}
-    <!-- bootstrap-tagsinput-latest Js -->
+    {{ block.super }}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/typeahead.js/0.11.1/typeahead.bundle.min.js"></script>
     <script src="/static/assets/js/plugins/bootstrap-tagsinput.min.js"></script>
-    <!-- bootstrap-maxlength Js -->
     <script src="/static/assets/js/plugins/bootstrap-maxlength.js"></script>
-    <!-- form-advance custom js -->
     <script src="/static/assets/js/pages/form-advance-custom.js"></script>
+    
     
 {% endblock javascripts %}
