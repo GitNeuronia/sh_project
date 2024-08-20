@@ -1027,6 +1027,18 @@ class formTAREA_FINANCIERA(forms.ModelForm):
             if field in self.fields:
                 self.fields[field].widget = forms.HiddenInput()
 
+    def clean(self):
+        cleaned_data = super().clean()
+        fecha_inicio = cleaned_data.get('TF_FFECHA_INICIO')
+        fecha_fin_estimada = cleaned_data.get('TF_FFECHA_FIN_ESTIMADA')
+
+        if fecha_inicio and not fecha_fin_estimada:
+            cleaned_data['TF_FFECHA_FIN_ESTIMADA'] = fecha_inicio
+        elif fecha_fin_estimada and not fecha_inicio:
+            cleaned_data['TF_FFECHA_INICIO'] = fecha_fin_estimada
+
+        return cleaned_data
+
 
 # Form for ADJUNTO_TAREA_GENERAL model
 class formADJUNTO_TAREA_GENERAL(forms.ModelForm):
@@ -1126,10 +1138,9 @@ class formASIGNACION_EMPLEADO_TAREA_INGENIERIA(forms.ModelForm):
 class formASIGNACION_EMPLEADO_TAREA_FINANCIERA(forms.ModelForm):
     class Meta:
         model = ASIGNACION_EMPLEADO_TAREA_FINANCIERA
-        fields = ['AE_EMPLEADO', 'AE_TAREA', 'AE_CESTADO']
+        fields = ['AE_EMPLEADO', 'AE_CESTADO']
         widgets = {
-            'AE_EMPLEADO': forms.Select(attrs={'class': 'form-control'}),
-            'AE_TAREA': forms.Select(attrs={'class': 'form-control'}),
+            'AE_EMPLEADO': forms.Select(attrs={'class': 'js-example-basic-multiple form-control'}),            
             'AE_CESTADO': forms.Select(attrs={'class': 'form-control'}),
         }
 
@@ -1144,10 +1155,9 @@ class formASIGNACION_EMPLEADO_TAREA_FINANCIERA(forms.ModelForm):
 class formASIGNACION_EMPLEADO_TAREA_GENERAL(forms.ModelForm):
     class Meta:
         model = ASIGNACION_EMPLEADO_TAREA_GENERAL
-        fields = ['AE_EMPLEADO', 'AE_TAREA', 'AE_CESTADO']
+        fields = ['AE_EMPLEADO', 'AE_CESTADO']
         widgets = {
-            'AE_EMPLEADO': forms.Select(attrs={'class': 'form-control'}),
-            'AE_TAREA': forms.Select(attrs={'class': 'form-control'}),
+            'AE_EMPLEADO': forms.Select(attrs={'class': 'js-example-basic-multiple form-control'}),            
             'AE_CESTADO': forms.Select(attrs={'class': 'form-control'}),
         }
 
@@ -1180,10 +1190,9 @@ class formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA(forms.ModelForm):
 class formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_FINANCIERA(forms.ModelForm):
     class Meta:
         model = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_FINANCIERA
-        fields = ['AEC_EMPLEADO', 'AEC_TAREA', 'AEC_CESTADO']
+        fields = ['AEC_EMPLEADO', 'AEC_CESTADO']
         widgets = {
-            'AEC_EMPLEADO': forms.Select(attrs={'class': 'form-control'}),
-            'AEC_TAREA': forms.Select(attrs={'class': 'form-control'}),
+            'AEC_EMPLEADO': forms.Select(attrs={'class': 'js-example-basic-multiple form-control'}),
             'AEC_CESTADO': forms.Select(attrs={'class': 'form-control'}),
         }
 
@@ -1254,9 +1263,8 @@ class formASIGNACION_RECURSO_TAREA_INGENIERIA(forms.ModelForm):
 class formASIGNACION_RECURSO_TAREA_FINANCIERA(forms.ModelForm):
     class Meta:
         model = ASIGNACION_RECURSO_TAREA_FINANCIERA
-        fields = ['ART_TAREA', 'ART_PRODUCTO', 'ART_CANTIDAD', 'ART_COSTO_UNITARIO']
-        widgets = {
-            'ART_TAREA': forms.Select(attrs={'class': 'form-control'}),
+        fields = ['ART_PRODUCTO', 'ART_CANTIDAD', 'ART_COSTO_UNITARIO']
+        widgets = {            
             'ART_PRODUCTO': forms.Select(attrs={'class': 'form-control'}),
             'ART_CANTIDAD': forms.NumberInput(attrs={'class': 'form-control'}),
             'ART_COSTO_UNITARIO': forms.NumberInput(attrs={'class': 'form-control'}),

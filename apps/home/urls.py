@@ -97,6 +97,11 @@ urlpatterns = [
     path('contratista_addone/', login_required(views.CONTRATISTA_ADDONE), name='contratista_addone'),
     path('contratista_update/<int:pk>/', login_required(views.CONTRATISTA_UPDATE), name='contratista_update'),
 
+    # URLs para la gestión de empleados externos
+    path('empleado_externo_listall/', login_required(views.EMPLEADO_EXTERNO_LISTALL), name='empleado_externo_listall'),
+    path('empleado_externo_addone/', login_required(views.EMPLEADO_EXTERNO_ADDONE), name='empleado_externo_addone'),
+    path('empleado_externo_update/<int:pk>/', login_required(views.EMPLEADO_EXTERNO_UPDATE), name='empleado_externo_update'),
+
     # URLs para la gestión de proyectos de clientes
     path('proycli_listall/', login_required(views.PROYECTO_CLIENTE_LISTALL), name='proycli_listall'),
     path('proycli_addone/', login_required(views.PROYECTO_CLIENTE_ADDONE), name='proycli_addone'),
@@ -121,6 +126,7 @@ urlpatterns = [
     path('tarea_financiera_addone/', login_required(views.TAREA_FINANCIERA_ADDONE), name='tarea_financiera_addone'),
     path('tarea_financiera_update/<int:pk>/', login_required(views.TAREA_FINANCIERA_UPDATE), name='tarea_financiera_update'),
     path('tarea_financiera_update/<int:pk>/<int:page>/', login_required(views.TAREA_FINANCIERA_UPDATE), name='tarea_financiera_update'),
+    path('tarea_financiera_update_asignaciones/<int:pk>/', login_required(views.TAREA_FINANCIERA_UPDATE_ASIGNACIONES), name='tarea_financiera_update_asignaciones'),
     # URLs para la gestión de etapas
     path('etapa_listall/', login_required(views.ETAPA_LISTALL), name='etapa_listall'),
     path('etapa_addone/', login_required(views.ETAPA_ADDONE), name='etapa_addone'),
