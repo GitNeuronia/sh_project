@@ -1,0 +1,88 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Editar Tarea Financiera {% endblock %} 
+
+{% block stylesheets %}
+<!-- Agrega aquí cualquier estilo específico si es necesario -->
+{% endblock stylesheets %}
+
+{% block content %}		
+    <!-- [ Main Content ] start -->
+    <section class="pcoded-main-container">
+        <div class="pcoded-content">
+            <!-- [ breadcrumb ] start -->
+            <div class="page-header">
+                <div class="page-block">
+                    <div class="row align-items-center">
+                        <div class="col-md-12">
+                            <div class="page-header-title">
+                                <h5 class="m-b-10">Editar Tarea Financiera</h5>
+                            </div>
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="/"><i class="feather icon-home"></i></a></li>
+                                <li class="breadcrumb-item"><a href="{% url 'tarea_financiera_listall' %}">Tareas Financieras</a></li>
+                                <li class="breadcrumb-item"><a href="#!">Editar Tarea Financiera</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- [ breadcrumb ] end -->
+            <!-- [ Main Content ] start -->
+            <div class="row">
+                <!-- [ form-element ] start -->
+                <div class="col-sm-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Editar Tarea Financiera</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" id="tarea-financiera-form">
+                                {% csrf_token %}
+                                {{ form.non_field_errors }}
+                                {% for field in form %}
+                                    <div class="form-group">
+                                        {{ field.errors }}
+                                        <label for="{{ field.id_for_label }}">{{ field.label }}:</label>
+                                        {{ field }}
+                                    </div>
+                                {% endfor %}
+                                <div class="form-group">
+                                    <button type="submit" class="btn btn-primary">Actualizar</button>
+                                    <a href="{% url 'tarea_financiera_listall' %}" class="btn btn-secondary">Cancelar</a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <!-- [ form-element ] end -->
+            </div>
+            <!-- [ Main Content ] end -->
+        </div>
+    </section>
+    <!-- [ Main Content ] end -->
+{% endblock content %}
+
+{% block javascripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var fechaInicio = document.getElementById('id_TF_FFECHA_INICIO');
+        var fechaFinEstimada = document.getElementById('id_TF_FFECHA_FIN_ESTIMADA');
+    
+        function actualizarFechas(campoModificado) {
+            if (campoModificado === 'inicio') {
+                fechaFinEstimada.value = fechaInicio.value;
+            } else if (campoModificado === 'fin') {
+                fechaInicio.value = fechaFinEstimada.value;
+            }
+        }
+    
+        fechaInicio.addEventListener('change', function() {
+            actualizarFechas('inicio');
+        });
+        fechaFinEstimada.addEventListener('change', function() {
+            actualizarFechas('fin');
+        });
+    });
+</script>
+{% endblock javascripts %}

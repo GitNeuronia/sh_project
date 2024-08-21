@@ -459,7 +459,7 @@ class EMPLEADO(models.Model):
     EM_CUSUARIO_MODIFICADOR = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='empleados_modificados', verbose_name='Usuario modificador')
 
     def __str__(self):
-        return f"{self.EM_NOMBRE} {self.EM_APELLIDO} - {self.EM_CODIGO}"
+        return f"{self.EM_CNOMBRE} {self.EM_CAPELLIDO} - {self.EM_CCODIGO}"
 
     class Meta:
         db_table = 'EMPLEADO'
