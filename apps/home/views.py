@@ -1096,22 +1096,80 @@ def TAREA_GENERAL_LISTALL(request):
 
 def TAREA_GENERAL_ADDONE(request):
     try:
+        form = formTAREA_GENERAL()
+        form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_GENERAL()
+        form_asignacion_contratista = formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL()
+        form_asignacion_recurso = formASIGNACION_RECURSO_TAREA_GENERAL()
+
         if request.method == 'POST':
             form = formTAREA_GENERAL(request.POST)
             if form.is_valid():
                 tarea = form.save(commit=False)
-                tarea.TG_CUSUARIO_CREADOR = request.user
+                tarea.TG_CUSUARIO_CREADOR = request.user                                                
                 tarea.save()
-                messages.success(request, 'Tarea general guardada correctamente')
+
+                # Manejar asignaciones múltiples
+                empleados_ids = request.POST.getlist('empleados')
+                contratistas_ids = request.POST.getlist('contratistas')                
+                recursos_json = request.POST.get('recursos_json')
+
+                # Asignar empleados
+                for empleado_id in empleados_ids:
+                    id_emp = EMPLEADO.objects.get(id=empleado_id)
+                    asignacion = ASIGNACION_EMPLEADO_TAREA_GENERAL(
+                        AE_TAREA=tarea,
+                        AE_EMPLEADO=id_emp,
+                        AE_CESTADO = 'ASIGNADO',
+                        AE_CUSUARIO_CREADOR = request.user,
+                        AE_FFECHA_ASIGNACION=tarea.TG_FFECHA_INICIO,  
+                        AE_FFECHA_FINALIZACION=tarea.TG_FFECHA_FIN_ESTIMADA                      
+                    )
+                    asignacion.save()
+
+                # Asignar contratistas
+                for contratista_id in contratistas_ids:
+                    id_emp = EMPLEADO_CONTRATISTA.objects.get(id=contratista_id)
+                    asignacion = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL(
+                        AEC_TAREA=tarea,
+                        AEC_EMPLEADO=id_emp,
+                        AEC_CESTADO = 'ASIGNADO',
+                        AEC_FFECHA_ASIGNACION=tarea.TG_FFECHA_INICIO,
+                        AEC_FFECHA_FINALIZACION=tarea.TG_FFECHA_FIN_ESTIMADA,
+                        AEC_CUSUARIO_CREADOR=request.user
+                    )
+                    asignacion.save()
+
+                # Procesar recursos                
+                if recursos_json:
+                    recursos = json.loads(recursos_json)
+                    for recurso in recursos:
+                        id_rec = PRODUCTO.objects.get(id=recurso['id'])
+                        asignacion = ASIGNACION_RECURSO_TAREA_GENERAL(
+                            ART_TAREA=tarea,
+                            ART_PRODUCTO=id_rec,
+                            ART_FFECHA_ASIGNACION=tarea.TG_FFECHA_INICIO,
+                            ART_CUSUARIO_CREADOR=request.user,
+                            ART_CANTIDAD=int(recurso['cantidad']),
+                            ART_COSTO_UNITARIO=int(recurso['costo']),
+                            ART_COSTO_TOTAL = int(recurso['costo']) * int(recurso['cantidad'])
+                        )
+                        asignacion.save()
+
+                messages.success(request, 'Tarea general guardada correctamente con las asignaciones seleccionadas')
                 return redirect('/tarea_general_listall/')
-        form = formTAREA_GENERAL()
+            else:
+                messages.error(request, 'Por favor, corrija los errores en el formulario.')
+        
         ctx = {
-            'form': form
+            'form': form,
+            'form_asignacion_empleado': form_asignacion_empleado,
+            'form_asignacion_contratista': form_asignacion_contratista,
+            'form_asignacion_recurso': form_asignacion_recurso
         }
         return render(request, 'home/TAREA/GENERAL/tarea_general_addone.html', ctx)
     except Exception as e:
         print(e)
-        messages.error(request, f'Error, {str(e)}')
+        messages.error(request, f'Error: {str(e)}')
         return redirect('/')
 
 def TAREA_GENERAL_UPDATE(request, pk, page):
@@ -1133,6 +1191,7 @@ def TAREA_GENERAL_UPDATE(request, pk, page):
             initial_data = {
                 'TG_FFECHA_INICIO': tarea.TG_FFECHA_INICIO.strftime('%Y-%m-%d') if tarea.TG_FFECHA_INICIO else None,
                 'TG_FFECHA_FIN_ESTIMADA': tarea.TG_FFECHA_FIN_ESTIMADA.strftime('%Y-%m-%d') if tarea.TG_FFECHA_FIN_ESTIMADA else None,
+                'TG_FFECHA_FIN_REAL': tarea.TG_FFECHA_FIN_REAL.strftime('%Y-%m-%d') if tarea.TG_FFECHA_FIN_REAL else None
             }
             form = formTAREA_GENERAL(instance=tarea, initial=initial_data)
         
@@ -1140,12 +1199,130 @@ def TAREA_GENERAL_UPDATE(request, pk, page):
             'form': form,
             'tarea': tarea
         }
-        return render(request, 'home/TAREA/GENERAL/tarea_general_addone.html', ctx)
+        return render(request, 'home/TAREA/GENERAL/tarea_general_update.html', ctx)
     except Exception as e:
         print(e)
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
+def TAREA_GENERAL_UPDATE_ASIGNACIONES(request, pk, page):
+    try:
+        tarea = TAREA_GENERAL.objects.get(id=pk)
+        form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_GENERAL()
+        form_asignacion_contratista = formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL()
+        form_asignacion_recurso = formASIGNACION_RECURSO_TAREA_GENERAL()
+
+        # Cargar asignaciones existentes
+        empleados_asignados = ASIGNACION_EMPLEADO_TAREA_GENERAL.objects.filter(AE_TAREA=tarea)
+        contratistas_asignados = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL.objects.filter(AEC_TAREA=tarea)
+        recursos_asignados = ASIGNACION_RECURSO_TAREA_GENERAL.objects.filter(ART_TAREA=tarea)
+
+        if request.method == 'POST':
+            # Manejar asignaciones múltiples
+            empleados_ids = request.POST.getlist('empleados')
+            contratistas_ids = request.POST.getlist('contratistas')                
+            recursos_json = request.POST.get('recursos_json')
+
+            # Eliminar asignaciones existentes
+            ASIGNACION_EMPLEADO_TAREA_GENERAL.objects.filter(AE_TAREA=tarea).delete()
+            ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL.objects.filter(AEC_TAREA=tarea).delete()
+            ASIGNACION_RECURSO_TAREA_GENERAL.objects.filter(ART_TAREA=tarea).delete()
+
+            # Asignar empleados
+            for empleado_id in empleados_ids:
+                id_emp = EMPLEADO.objects.get(id=empleado_id)
+                asignacion = ASIGNACION_EMPLEADO_TAREA_GENERAL(
+                    AE_TAREA=tarea,
+                    AE_EMPLEADO=id_emp,
+                    AE_CESTADO = 'ASIGNADO',
+                    AE_CUSUARIO_CREADOR = request.user,
+                    AE_FFECHA_ASIGNACION=tarea.TG_FFECHA_INICIO,  
+                    AE_FFECHA_FINALIZACION=tarea.TG_FFECHA_FIN_ESTIMADA                      
+                )
+                asignacion.save()
+
+            # Asignar contratistas
+            for contratista_id in contratistas_ids:
+                id_emp = EMPLEADO_CONTRATISTA.objects.get(id=contratista_id)
+                asignacion = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL(
+                    AEC_TAREA=tarea,
+                    AEC_EMPLEADO=id_emp,
+                    AEC_CESTADO = 'ASIGNADO',
+                    AEC_FFECHA_ASIGNACION=tarea.TG_FFECHA_INICIO,
+                    AEC_FFECHA_FINALIZACION=tarea.TG_FFECHA_FIN_ESTIMADA,
+                    AEC_CUSUARIO_CREADOR=request.user
+                )
+                asignacion.save()
+
+            # Procesar recursos                
+            if recursos_json:
+                recursos = json.loads(recursos_json)
+                for recurso in recursos:
+                    id_rec = PRODUCTO.objects.get(id=recurso['id'])
+                    asignacion = ASIGNACION_RECURSO_TAREA_GENERAL(
+                        ART_TAREA=tarea,
+                        ART_PRODUCTO=id_rec,
+                        ART_FFECHA_ASIGNACION=tarea.TG_FFECHA_INICIO,
+                        ART_CUSUARIO_CREADOR=request.user,
+                        ART_CANTIDAD=int(float(recurso['cantidad'])),   
+                        ART_COSTO_UNITARIO=int(float(recurso['costo'])),
+                        ART_COSTO_TOTAL = int(float(recurso['costo'])) * int(float(recurso['cantidad']))
+                    )
+                    asignacion.save()
+
+            messages.success(request, 'Asignaciones de la tarea general actualizadas correctamente')
+            if page == 1:
+                return redirect('/proycli_listone/'+str(tarea.TG_PROYECTO_CLIENTE.id)+'/')
+            else:
+                return redirect('/tarea_general_listall/')
+        
+        # Preparar datos para mostrar en el template
+        empleados_asignados_ids = list(empleados_asignados.values_list('AE_EMPLEADO__id', flat=True))
+        contratistas_asignados_ids = list(contratistas_asignados.values_list('AEC_EMPLEADO__id', flat=True))
+        recursos_asignados_data = [
+            {
+                'id': str(recurso.ART_PRODUCTO.id),
+                'nombre': recurso.ART_PRODUCTO.PR_CNOMBRE,
+                'cantidad': str(recurso.ART_CANTIDAD),
+                'costo': str(recurso.ART_COSTO_UNITARIO)
+            } for recurso in recursos_asignados
+        ]
+        
+        ctx = {
+            'form_asignacion_empleado': form_asignacion_empleado,
+            'form_asignacion_contratista': form_asignacion_contratista,
+            'form_asignacion_recurso': form_asignacion_recurso,
+            'tarea': tarea,
+            'empleados_asignados_ids': empleados_asignados_ids,
+            'contratistas_asignados_ids': contratistas_asignados_ids,
+            'recursos_asignados_data': json.dumps(recursos_asignados_data),
+            'page': page
+        }
+        return render(request, 'home/TAREA/GENERAL/tarea_general_update_asignaciones.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error: {str(e)}')
+        return redirect('/')
+
+def TAREA_GENERAL_LISTONE(request, pk, page):
+    try:
+        tarea = TAREA_GENERAL.objects.get(id=pk)
+        empleados_asignados = ASIGNACION_EMPLEADO_TAREA_GENERAL.objects.filter(AE_TAREA=tarea)
+        contratistas_asignados = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL.objects.filter(AEC_TAREA=tarea)
+        recursos_asignados = ASIGNACION_RECURSO_TAREA_GENERAL.objects.filter(ART_TAREA=tarea)
+        tarea.TG_NPROGRESO = int(round(float(tarea.TG_NPROGRESO)))
+        ctx = {
+            'tarea': tarea,
+            'page': page,
+            'empleados_asignados': empleados_asignados,
+            'contratistas_asignados': contratistas_asignados,
+            'recursos_asignados': recursos_asignados
+        }
+        return render(request, 'home/TAREA/GENERAL/tarea_general_listone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error: {str(e)}')
+        return redirect('/')
 # ----------TAREA INGENIERIA--------------
 
 def TAREA_INGENIERIA_LISTALL(request):
@@ -1162,22 +1339,80 @@ def TAREA_INGENIERIA_LISTALL(request):
 
 def TAREA_INGENIERIA_ADDONE(request):
     try:
+        form = formTAREA_INGENIERIA()
+        form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_INGENIERIA()
+        form_asignacion_contratista = formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA()
+        form_asignacion_recurso = formASIGNACION_RECURSO_TAREA_INGENIERIA()
+
         if request.method == 'POST':
             form = formTAREA_INGENIERIA(request.POST)
             if form.is_valid():
                 tarea = form.save(commit=False)
-                tarea.TI_CUSUARIO_CREADOR = request.user
+                tarea.TI_CUSUARIO_CREADOR = request.user                                                
                 tarea.save()
-                messages.success(request, 'Tarea de ingeniería guardada correctamente')
+
+                # Manejar asignaciones múltiples
+                empleados_ids = request.POST.getlist('empleados')
+                contratistas_ids = request.POST.getlist('contratistas')                
+                recursos_json = request.POST.get('recursos_json')
+
+                # Asignar empleados
+                for empleado_id in empleados_ids:
+                    id_emp = EMPLEADO.objects.get(id=empleado_id)
+                    asignacion = ASIGNACION_EMPLEADO_TAREA_INGENIERIA(
+                        AE_TAREA=tarea,
+                        AE_EMPLEADO=id_emp,
+                        AE_CESTADO = 'ASIGNADO',
+                        AE_CUSUARIO_CREADOR = request.user,
+                        AE_FFECHA_ASIGNACION=tarea.TI_FFECHA_INICIO,  
+                        AE_FFECHA_FINALIZACION=tarea.TI_FFECHA_FIN_ESTIMADA                      
+                    )
+                    asignacion.save()
+
+                # Asignar contratistas
+                for contratista_id in contratistas_ids:
+                    id_emp = EMPLEADO_CONTRATISTA.objects.get(id=contratista_id)
+                    asignacion = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA(
+                        AEC_TAREA=tarea,
+                        AEC_EMPLEADO=id_emp,
+                        AEC_CESTADO = 'ASIGNADO',
+                        AEC_FFECHA_ASIGNACION=tarea.TI_FFECHA_INICIO,
+                        AEC_FFECHA_FINALIZACION=tarea.TI_FFECHA_FIN_ESTIMADA,
+                        AEC_CUSUARIO_CREADOR=request.user
+                    )
+                    asignacion.save()
+
+                # Procesar recursos                
+                if recursos_json:
+                    recursos = json.loads(recursos_json)
+                    for recurso in recursos:
+                        id_rec = PRODUCTO.objects.get(id=recurso['id'])
+                        asignacion = ASIGNACION_RECURSO_TAREA_INGENIERIA(
+                            ART_TAREA=tarea,
+                            ART_PRODUCTO=id_rec,
+                            ART_FFECHA_ASIGNACION=tarea.TI_FFECHA_INICIO,
+                            ART_CUSUARIO_CREADOR=request.user,
+                            ART_CANTIDAD=int(recurso['cantidad']),
+                            ART_COSTO_UNITARIO=int(recurso['costo']),
+                            ART_COSTO_TOTAL = int(recurso['costo']) * int(recurso['cantidad'])
+                        )
+                        asignacion.save()
+
+                messages.success(request, 'Tarea de ingeniería guardada correctamente con las asignaciones seleccionadas')
                 return redirect('/tarea_ingenieria_listall/')
-        form = formTAREA_INGENIERIA()
+            else:
+                messages.error(request, 'Por favor, corrija los errores en el formulario.')
+        
         ctx = {
-            'form': form
+            'form': form,
+            'form_asignacion_empleado': form_asignacion_empleado,
+            'form_asignacion_contratista': form_asignacion_contratista,
+            'form_asignacion_recurso': form_asignacion_recurso
         }
         return render(request, 'home/TAREA/INGENIERIA/tarea_ingenieria_addone.html', ctx)
     except Exception as e:
         print(e)
-        messages.error(request, f'Error, {str(e)}')
+        messages.error(request, f'Error: {str(e)}')
         return redirect('/')
 
 def TAREA_INGENIERIA_UPDATE(request, pk, page):
@@ -1205,10 +1440,129 @@ def TAREA_INGENIERIA_UPDATE(request, pk, page):
             'form': form,
             'tarea': tarea
         }
-        return render(request, 'home/TAREA/INGENIERIA/tarea_ingenieria_addone.html', ctx)
+        return render(request, 'home/TAREA/INGENIERIA/tarea_ingenieria_update.html', ctx)
     except Exception as e:
         print(e)
         messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def TAREA_INGENIERIA_UPDATE_ASIGNACIONES(request, pk, page):
+    try:
+        tarea = TAREA_INGENIERIA.objects.get(id=pk)
+        form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_INGENIERIA()
+        form_asignacion_contratista = formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA()
+        form_asignacion_recurso = formASIGNACION_RECURSO_TAREA_INGENIERIA()
+
+        # Cargar asignaciones existentes
+        empleados_asignados = ASIGNACION_EMPLEADO_TAREA_INGENIERIA.objects.filter(AE_TAREA=tarea)
+        contratistas_asignados = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA.objects.filter(AEC_TAREA=tarea)
+        recursos_asignados = ASIGNACION_RECURSO_TAREA_INGENIERIA.objects.filter(ART_TAREA=tarea)
+
+        if request.method == 'POST':
+            # Manejar asignaciones múltiples
+            empleados_ids = request.POST.getlist('empleados')
+            contratistas_ids = request.POST.getlist('contratistas')                
+            recursos_json = request.POST.get('recursos_json')
+
+            # Eliminar asignaciones existentes
+            ASIGNACION_EMPLEADO_TAREA_INGENIERIA.objects.filter(AE_TAREA=tarea).delete()
+            ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA.objects.filter(AEC_TAREA=tarea).delete()
+            ASIGNACION_RECURSO_TAREA_INGENIERIA.objects.filter(ART_TAREA=tarea).delete()
+
+            # Asignar empleados
+            for empleado_id in empleados_ids:
+                id_emp = EMPLEADO.objects.get(id=empleado_id)
+                asignacion = ASIGNACION_EMPLEADO_TAREA_INGENIERIA(
+                    AE_TAREA=tarea,
+                    AE_EMPLEADO=id_emp,
+                    AE_CESTADO = 'ASIGNADO',
+                    AE_CUSUARIO_CREADOR = request.user,
+                    AE_FFECHA_ASIGNACION=tarea.TI_FFECHA_INICIO,  
+                    AE_FFECHA_FINALIZACION=tarea.TI_FFECHA_FIN_ESTIMADA                      
+                )
+                asignacion.save()
+
+            # Asignar contratistas
+            for contratista_id in contratistas_ids:
+                id_emp = EMPLEADO_CONTRATISTA.objects.get(id=contratista_id)
+                asignacion = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA(
+                    AEC_TAREA=tarea,
+                    AEC_EMPLEADO=id_emp,
+                    AEC_CESTADO = 'ASIGNADO',
+                    AEC_FFECHA_ASIGNACION=tarea.TI_FFECHA_INICIO,
+                    AEC_FFECHA_FINALIZACION=tarea.TI_FFECHA_FIN_ESTIMADA,
+                    AEC_CUSUARIO_CREADOR=request.user
+                )
+                asignacion.save()
+
+            # Procesar recursos                
+            if recursos_json:
+                recursos = json.loads(recursos_json)
+                for recurso in recursos:
+                    id_rec = PRODUCTO.objects.get(id=recurso['id'])
+                    asignacion = ASIGNACION_RECURSO_TAREA_INGENIERIA(
+                        ART_TAREA=tarea,
+                        ART_PRODUCTO=id_rec,
+                        ART_FFECHA_ASIGNACION=tarea.TI_FFECHA_INICIO,
+                        ART_CUSUARIO_CREADOR=request.user,
+                        ART_CANTIDAD=int(float(recurso['cantidad'])),
+                        ART_COSTO_UNITARIO=int(float(recurso['costo'])),
+                        ART_COSTO_TOTAL = int(float(recurso['costo'])) * int(float(recurso['cantidad']))
+                    )
+                    asignacion.save()
+
+            messages.success(request, 'Asignaciones de la tarea de ingeniería actualizadas correctamente')
+            if page == 1:
+                return redirect('/proycli_listone/'+str(tarea.TI_PROYECTO_CLIENTE.id)+'/')
+            else:
+                return redirect('/tarea_ingenieria_listall/')
+        
+        # Preparar datos para mostrar en el template
+        empleados_asignados_ids = list(empleados_asignados.values_list('AE_EMPLEADO__id', flat=True))
+        contratistas_asignados_ids = list(contratistas_asignados.values_list('AEC_EMPLEADO__id', flat=True))
+        recursos_asignados_data = [
+            {
+                'id': str(recurso.ART_PRODUCTO.id),
+                'nombre': recurso.ART_PRODUCTO.PR_CNOMBRE,
+                'cantidad': str(recurso.ART_CANTIDAD),
+                'costo': str(recurso.ART_COSTO_UNITARIO)
+            } for recurso in recursos_asignados
+        ]
+        
+        ctx = {
+            'form_asignacion_empleado': form_asignacion_empleado,
+            'form_asignacion_contratista': form_asignacion_contratista,
+            'form_asignacion_recurso': form_asignacion_recurso,
+            'tarea': tarea,
+            'empleados_asignados_ids': empleados_asignados_ids,
+            'contratistas_asignados_ids': contratistas_asignados_ids,
+            'recursos_asignados_data': json.dumps(recursos_asignados_data),
+            'page': page
+        }
+        return render(request, 'home/TAREA/INGENIERIA/tarea_ingenieria_update_asignaciones.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error: {str(e)}')
+        return redirect('/')
+
+def TAREA_INGENIERIA_LISTONE(request, pk, page):
+    try:
+        tarea = TAREA_INGENIERIA.objects.get(id=pk)
+        empleados_asignados = ASIGNACION_EMPLEADO_TAREA_INGENIERIA.objects.filter(AE_TAREA=tarea)
+        contratistas_asignados = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA.objects.filter(AEC_TAREA=tarea)
+        recursos_asignados = ASIGNACION_RECURSO_TAREA_INGENIERIA.objects.filter(ART_TAREA=tarea)
+        tarea.TI_NPROGRESO = int(round(float(tarea.TI_NPROGRESO)))
+        ctx = {
+            'tarea': tarea,
+            'page': page,
+            'empleados_asignados': empleados_asignados,
+            'contratistas_asignados': contratistas_asignados,
+            'recursos_asignados': recursos_asignados
+        }
+        return render(request, 'home/TAREA/INGENIERIA/tarea_ingenieria_listone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error: {str(e)}')
         return redirect('/')
 
 # ----------TAREA FINANCIERA--------------
@@ -1345,6 +1699,7 @@ def TAREA_FINANCIERA_UPDATE(request, pk, page):
             initial_data = {
                 'TF_FFECHA_INICIO': tarea.TF_FFECHA_INICIO.strftime('%Y-%m-%d') if tarea.TF_FFECHA_INICIO else None,
                 'TF_FFECHA_FIN_ESTIMADA': tarea.TF_FFECHA_FIN_ESTIMADA.strftime('%Y-%m-%d') if tarea.TF_FFECHA_FIN_ESTIMADA else None,
+                'TF_FFECHA_FIN_REAL': tarea.TF_FFECHA_FIN_REAL.strftime('%Y-%m-%d') if tarea.TF_FFECHA_FIN_REAL else None
             }
             form = formTAREA_FINANCIERA(instance=tarea, initial=initial_data)
         
@@ -1359,7 +1714,7 @@ def TAREA_FINANCIERA_UPDATE(request, pk, page):
         messages.error(request, f'Error: {str(e)}')
         return redirect('/')
 
-def TAREA_FINANCIERA_UPDATE_ASIGNACIONES(request, pk):
+def TAREA_FINANCIERA_UPDATE_ASIGNACIONES(request, pk, page):
     try:
         tarea = TAREA_FINANCIERA.objects.get(id=pk)
         form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_FINANCIERA()
@@ -1418,14 +1773,17 @@ def TAREA_FINANCIERA_UPDATE_ASIGNACIONES(request, pk):
                         ART_PRODUCTO=id_rec,
                         ART_FFECHA_ASIGNACION=tarea.TF_FFECHA_INICIO,
                         ART_CUSUARIO_CREADOR=request.user,
-                        ART_CANTIDAD=int(recurso['cantidad']),
-                        ART_COSTO_UNITARIO=int(recurso['costo']),
-                        ART_COSTO_TOTAL = int(recurso['costo']) * int(recurso['cantidad'])
+                        ART_CANTIDAD=int(float(recurso['cantidad'])),  # Convert to float first, then to int
+                        ART_COSTO_UNITARIO=int(float(recurso['costo'])),  # Same here
+                        ART_COSTO_TOTAL = int(float(recurso['costo'])) * int(float(recurso['cantidad']))
                     )
                     asignacion.save()
 
             messages.success(request, 'Asignaciones de la tarea financiera actualizadas correctamente')
-            return redirect('/tarea_financiera_listall/')
+            if page == 1:
+                return redirect('/proycli_listone/'+str(tarea.TF_PROYECTO_CLIENTE.id)+'/')
+            else:
+                return redirect('/tarea_financiera_listall/')
         
         # Preparar datos para mostrar en el template
         empleados_asignados_ids = list(empleados_asignados.values_list('AE_EMPLEADO__id', flat=True))
@@ -1447,134 +1805,36 @@ def TAREA_FINANCIERA_UPDATE_ASIGNACIONES(request, pk):
             'empleados_asignados_ids': empleados_asignados_ids,
             'contratistas_asignados_ids': contratistas_asignados_ids,
             'recursos_asignados_data': json.dumps(recursos_asignados_data),
+            'page': page
         }
         return render(request, 'home/TAREA/FINANCIERA/tarea_financiera_update_asignaciones.html', ctx)
     except Exception as e:
         print(e)
         messages.error(request, f'Error: {str(e)}')
         return redirect('/')
+
+def TAREA_FINANCIERA_LISTONE(request, pk, page):
+    try:
+        tarea = TAREA_FINANCIERA.objects.get(id=pk)
+        empleados_asignados = ASIGNACION_EMPLEADO_TAREA_FINANCIERA.objects.filter(AE_TAREA=tarea)
+        contratistas_asignados = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_FINANCIERA.objects.filter(AEC_TAREA=tarea)
+        recursos_asignados = ASIGNACION_RECURSO_TAREA_FINANCIERA.objects.filter(ART_TAREA=tarea)
+        tarea.TF_NPROGRESO = int(round(float(tarea.TF_NPROGRESO)))
+        ctx = {
+            'tarea': tarea,
+            'empleados_asignados': empleados_asignados,
+            'contratistas_asignados': contratistas_asignados,
+            'recursos_asignados': recursos_asignados,
+            'page': page
+        }
+        return render(request, 'home/TAREA/FINANCIERA/tarea_financiera_listone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error: {str(e)}')
+        return redirect('/')
+
 #--------------------------------------
 #----------------TAREAS----------------
-#--------------------------------------
-
-
-#--------------------------------------
-#----------------RECURSOS--------------
-#--------------------------------------
-
-
-# ---------- PERSONAL EXTERNO----------
-
-# def RECURSOS_PERSONAL_EXTERNO_LISTALL(request):
-#     try:
-#         personal_externo = RECURSOS_PERSONAL_EXTERNO.objects.all()
-#         ctx = {
-#             'personal_externo': personal_externo
-#         }
-#         return render(request, 'home/RECURSOS/PERSONAL_EXTERNO/recursos_personal_externo_listall.html', ctx)
-#     except Exception as e:
-#         print(e)
-#         messages.error(request, f'Error, {str(e)}')
-#         return redirect('/')
-
-# def RECURSOS_PERSONAL_EXTERNO_ADDONE(request):
-#     try:
-#         if request.method == 'POST':
-#             form = formRECURSOS_PERSONAL_EXTERNO(request.POST)
-#             if form.is_valid():
-#                 personal = form.save(commit=False)
-#                 personal.RPE_CUSUARIO_CREADOR = request.user
-#                 personal.save()
-#                 messages.success(request, 'Personal externo guardado correctamente')
-#                 return redirect('/recursos_personal_externo_listall/')
-#         form = formRECURSOS_PERSONAL_EXTERNO()
-#         ctx = {
-#             'form': form
-#         }
-#         return render(request, 'home/RECURSOS/PERSONAL_EXTERNO/recursos_personal_externo_addone.html', ctx)
-#     except Exception as e:
-#         print(e)
-#         messages.error(request, f'Error, {str(e)}')
-#         return redirect('/')
-
-# def RECURSOS_PERSONAL_EXTERNO_UPDATE(request, pk):
-#     try:
-#         personal = RECURSOS_PERSONAL_EXTERNO.objects.get(id=pk)
-#         if request.method == 'POST':
-#             form = formRECURSOS_PERSONAL_EXTERNO(request.POST, instance=personal)
-#             if form.is_valid():
-#                 personal = form.save(commit=False)
-#                 personal.RPE_CUSUARIO_MODIFICADOR = request.user
-#                 personal.save()
-#                 messages.success(request, 'Personal externo actualizado correctamente')
-#                 return redirect('/recursos_personal_externo_listall/')
-#         form = formRECURSOS_PERSONAL_EXTERNO(instance=personal)
-#         ctx = {
-#             'form': form
-#         }
-#         return render(request, 'home/RECURSOS/PERSONAL_EXTERNO/recursos_personal_externo_addone.html', ctx)
-#     except Exception as e:
-#         print(e)
-#         messages.error(request, f'Error, {str(e)}')
-#         return redirect('/')
-
-# # ---------- MATERIALES----------------
-
-# def RECURSOS_MATERIALES_LISTALL(request):
-#     try:
-#         materiales = RECURSOS_MATERIALES.objects.all()
-#         ctx = {
-#             'materiales': materiales
-#         }
-#         return render(request, 'home/RECURSOS/MATERIALES/recursos_materiales_listall.html', ctx)
-#     except Exception as e:
-#         print(e)
-#         messages.error(request, f'Error, {str(e)}')
-#         return redirect('/')
-
-# def RECURSOS_MATERIALES_ADDONE(request):
-#     try:
-#         if request.method == 'POST':
-#             form = formRECURSOS_MATERIALES(request.POST)
-#             if form.is_valid():
-#                 material = form.save(commit=False)
-#                 material.RM_CUSUARIO_CREADOR = request.user
-#                 material.save()
-#                 messages.success(request, 'Material guardado correctamente')
-#                 return redirect('/recursos_materiales_listall/')
-#         form = formRECURSOS_MATERIALES()
-#         ctx = {
-#             'form': form
-#         }
-#         return render(request, 'home/RECURSOS/MATERIALES/recursos_materiales_addone.html', ctx)
-#     except Exception as e:
-#         print(e)
-#         messages.error(request, f'Error, {str(e)}')
-#         return redirect('/')
-
-# def RECURSOS_MATERIALES_UPDATE(request, pk):
-#     try:
-#         material = RECURSOS_MATERIALES.objects.get(id=pk)
-#         if request.method == 'POST':
-#             form = formRECURSOS_MATERIALES(request.POST, instance=material)
-#             if form.is_valid():
-#                 material = form.save(commit=False)
-#                 material.RM_CUSUARIO_MODIFICADOR = request.user
-#                 material.save()
-#                 messages.success(request, 'Material actualizado correctamente')
-#                 return redirect('/recursos_materiales_listall/')
-#         form = formRECURSOS_MATERIALES(instance=material)
-#         ctx = {
-#             'form': form
-#         }
-#         return render(request, 'home/RECURSOS/MATERIALES/recursos_materiales_addone.html', ctx)
-#     except Exception as e:
-#         print(e)
-#         messages.error(request, f'Error, {str(e)}')
-#         return redirect('/')
-
-#--------------------------------------
-#----------------RECURSOS--------------
 #--------------------------------------
 
 def ACTA_REUNION_LISTALL(request):
