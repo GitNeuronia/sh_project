@@ -1395,9 +1395,8 @@ class formBOLETA_GARANTIA(forms.ModelForm):
 class formTAREA_GENERAL_DEPENDENCIA(forms.ModelForm):
     class Meta:
         model = TAREA_GENERAL_DEPENDENCIA
-        fields = ['TD_TAREA_PREDECESORA', 'TD_TAREA_SUCESORA', 'TD_TIPO_DEPENDENCIA']
-        widgets = {
-            'TD_TAREA_PREDECESORA': forms.Select(attrs={'class': 'form-control'}),
+        fields = ['TD_TAREA_SUCESORA', 'TD_TIPO_DEPENDENCIA']
+        widgets = {            
             'TD_TAREA_SUCESORA': forms.Select(attrs={'class': 'form-control'}),
             'TD_TIPO_DEPENDENCIA': forms.Select(attrs={'class': 'form-control'}),
         }
@@ -1406,9 +1405,8 @@ class formTAREA_GENERAL_DEPENDENCIA(forms.ModelForm):
 class formTAREA_FINANCIERA_DEPENDENCIA(forms.ModelForm):
     class Meta:
         model = TAREA_FINANCIERA_DEPENDENCIA
-        fields = ['TD_TAREA_PREDECESORA', 'TD_TAREA_SUCESORA', 'TD_TIPO_DEPENDENCIA']
-        widgets = {
-            'TD_TAREA_PREDECESORA': forms.Select(attrs={'class': 'form-control'}),
+        fields = ['TD_TAREA_SUCESORA', 'TD_TIPO_DEPENDENCIA']
+        widgets = {            
             'TD_TAREA_SUCESORA': forms.Select(attrs={'class': 'form-control'}),
             'TD_TIPO_DEPENDENCIA': forms.Select(attrs={'class': 'form-control'}),
         }
@@ -1417,9 +1415,8 @@ class formTAREA_FINANCIERA_DEPENDENCIA(forms.ModelForm):
 class formTAREA_INGENIERIA_DEPENDENCIA(forms.ModelForm):
     class Meta:
         model = TAREA_INGENIERIA_DEPENDENCIA
-        fields = ['TD_TAREA_PREDECESORA', 'TD_TAREA_SUCESORA', 'TD_TIPO_DEPENDENCIA']
-        widgets = {
-            'TD_TAREA_PREDECESORA': forms.Select(attrs={'class': 'form-control'}),
+        fields = ['TD_TAREA_SUCESORA', 'TD_TIPO_DEPENDENCIA']
+        widgets = {            
             'TD_TAREA_SUCESORA': forms.Select(attrs={'class': 'form-control'}),
             'TD_TIPO_DEPENDENCIA': forms.Select(attrs={'class': 'form-control'}),
         }

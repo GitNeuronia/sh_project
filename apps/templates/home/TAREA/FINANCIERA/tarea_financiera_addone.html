@@ -90,6 +90,19 @@
                                             <div id="recursos-asignados">
                                                 <!-- Aquí se mostrarán los recursos asignados -->
                                             </div>
+                                            <div class="form-group">
+                                                <h5>Dependencias</h5>
+                                                <hr>
+                                                <div id="dependencias-container">
+                                                    <div class="dependencia-row">
+                                                        {{ form_dependencia.TD_TAREA_SUCESORA.label_tag }}
+                                                        {{ form_dependencia.TD_TAREA_SUCESORA }}
+                                                        {{ form_dependencia.TD_TIPO_DEPENDENCIA.label_tag }}
+                                                        {{ form_dependencia.TD_TIPO_DEPENDENCIA }}
+                                                    </div>
+                                                </div>
+                                                <button type="button" class="btn btn-primary mt-2" id="add-dependencia">Agregar Dependencia</button>
+                                            </div>
                                             <div class="form-group nav justify-content-end">
                                                 <button class="btn btn-success mr-4" type="submit">Guardar</button>
                                                 <a class="btn btn-danger mr-1" onclick="window.history.go(-1); return false;">Volver</a>
