@@ -1,6 +1,6 @@
 {% extends "layouts/base.html" %}
 
-{% block title %} Actualizar Asignaciones de Tarea Financiera {% endblock %} 
+{% block title %} Actualizar Asignaciones de Tarea General {% endblock %} 
 
 {% block stylesheets %}
  <!-- Select2 CSS -->
@@ -17,11 +17,11 @@
                     <div class="row align-items-center">
                         <div class="col-md-12">
                             <div class="page-header-title">
-                                <h5 class="m-b-10">Actualizar Asignaciones de Tarea Financiera</h5>
+                                <h5 class="m-b-10">Actualizar Asignaciones de Tarea General</h5>
                             </div>
                             <ul class="breadcrumb">
                                 <li class="breadcrumb-item"><a href="/"><i class="feather icon-home"></i></a></li>
-                                <li class="breadcrumb-item"><a href="{% url 'tarea_financiera_listall' %}">Tareas Financieras</a></li>
+                                <li class="breadcrumb-item"><a href="{% url 'tarea_general_listall' %}">Tareas Generales</a></li>
                                 <li class="breadcrumb-item"><a href="#!">Actualizar Asignaciones</a></li>
                             </ul>
                         </div>
@@ -35,7 +35,7 @@
                 <div class="col-sm-12">
                     <div class="card">
                         <div class="card-header">
-                            <h5>Actualizar Asignaciones de Tarea Financiera</h5>
+                            <h5>Actualizar Asignaciones de Tarea General</h5>
                         </div>
                         <div class="card-body">
                             <form method="POST" id="asignaciones-form">
@@ -75,10 +75,9 @@
                                 <div id="recursos-asignados">
                                     <!-- Aquí se mostrarán los recursos asignados -->
                                 </div>
-                                <input type="hidden" name="recursos_json" id="recursos_json">
                                 <div class="form-group nav justify-content-end">
                                     <button class="btn btn-primary mr-4" type="submit">Actualizar Asignaciones</button>
-                                    <a href="javascript:history.back()" class="btn btn-secondary">Cancelar</a>
+                                    <a class="btn btn-secondary mr-1" href="{% url 'tarea_general_listall' %}">Cancelar</a>
                                 </div>
                             </form>
                         </div>
@@ -107,7 +106,6 @@
             const recursosSelect = document.getElementById('id_recursos');
             const recursosDetalles = document.getElementById('recursos-detalles');
             const recursosAsignados = document.getElementById('recursos-asignados');
-            const recursosJsonInput = document.getElementById('recursos_json');
             let recursosAsignadosArray = {{ recursos_asignados_data|safe }};
         
             recursosSelect.addEventListener('change', function() {
@@ -169,8 +167,6 @@
                         `;
                     });
                 }
-                // Actualizar el campo oculto con los recursos asignados
-                recursosJsonInput.value = JSON.stringify(recursosAsignadosArray);
             }
         
             window.eliminarRecurso = function(index) {
@@ -183,8 +179,12 @@
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
                 
-                // Actualizar el campo oculto con los recursos asignados antes de enviar
-                recursosJsonInput.value = JSON.stringify(recursosAsignadosArray);
+                // Crear un campo oculto para los recursos
+                const recursosInput = document.createElement('input');
+                recursosInput.type = 'hidden';
+                recursosInput.name = 'recursos_json';
+                recursosInput.value = JSON.stringify(recursosAsignadosArray);
+                form.appendChild(recursosInput);
         
                 // Enviar el formulario
                 form.submit();

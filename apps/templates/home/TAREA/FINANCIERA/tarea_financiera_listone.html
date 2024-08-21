@@ -1,0 +1,241 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Detalle Tarea Financiera {% endblock %} 
+
+{% block stylesheets %}
+<style>
+    .detail-card {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .detail-card .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+    }
+    .detail-section {
+        margin-bottom: 30px;
+    }
+    .detail-item {
+        margin-bottom: 10px;
+    }
+    .detail-label {
+        font-weight: bold;
+        color: #495057;
+    }
+    .detail-value {
+        color: #212529;
+    }
+    .breadcrumb {
+        background-color: transparent;
+        padding: 0;
+    }
+    .btn-group-lg > .btn, .btn-lg {
+        padding: 0.5rem 1rem;
+        font-size: 1.25rem;
+        line-height: 1.5;
+        border-radius: 0.3rem;
+    }
+    .progress {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+        overflow: hidden;
+    }
+    .progress-bar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+        transition: width 0.6s ease;
+        min-width: 2em;
+    }
+    .progress-bar[style^="width: 100%"] {
+        border-top-right-radius: 0.25rem;
+        border-bottom-right-radius: 0.25rem;
+    }
+    .progress-bar[style^="width: 0%"] {
+        color: black;
+        text-shadow: none;
+    }
+</style>
+{% endblock stylesheets %}
+
+{% block content %}		
+<section class="pcoded-main-container">
+    <div class="pcoded-content">
+        <!-- Breadcrumb -->
+        <div class="page-header">
+            <div class="page-block">
+                <div class="row align-items-center">
+                    <div class="col-md-12">
+                        <div class="page-header-title">
+                            <h3 class="m-b-10">Detalle Tarea Financiera</h3>
+                        </div>
+                        <ul class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="/"><i class="feather icon-home"></i></a></li>
+                            <li class="breadcrumb-item"><a href="{% url 'tarea_financiera_listall' %}">Tareas Financieras</a></li>
+                            <li class="breadcrumb-item active">Detalle Tarea Financiera</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="card detail-card">
+                    <div class="card-header">
+                        <h4>Tarea Financiera: {{ tarea.TF_CNOMBRE }}</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row detail-section">
+                            <div class="col-md-6">
+                                <h5 class="mb-3">Información General</h5>
+                                <div class="detail-item">
+                                    <span class="detail-label">Código:</span>
+                                    <span class="detail-value">{{ tarea.TF_CCODIGO }}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Descripción:</span>
+                                    <span class="detail-value">{{ tarea.TF_CDESCRIPCION }}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Etapa:</span>
+                                    <span class="detail-value">{{ tarea.TF_ETAPA.ET_CNOMBRE }}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Estado:</span>
+                                    <span class="detail-value badge badge-{{ tarea.TF_CESTADO|lower }}">{{ tarea.TF_CESTADO }}</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h5 class="mb-3">Fechas y Duración</h5>
+                                <div class="detail-item">
+                                    <span class="detail-label">Fecha Inicio:</span>
+                                    <span class="detail-value">{{ tarea.TF_FFECHA_INICIO }}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Fecha Fin Estimada:</span>
+                                    <span class="detail-value">{{ tarea.TF_FFECHA_FIN_ESTIMADA }}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Fecha Fin Real:</span>
+                                    <span class="detail-value">{{ tarea.TF_FFECHA_FIN_REAL|default_if_none:"No finalizada" }}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Duración Planificada:</span>
+                                    <span class="detail-value">{{ tarea.TF_NDURACION_PLANIFICADA }} horas</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Duración Real:</span>
+                                    <span class="detail-value">{{ tarea.TF_NDURACION_REAL|default_if_none:"No finalizada" }} horas</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row detail-section">
+                            <div class="col-md-6">
+                                <h5 class="mb-3">Detalles Financieros</h5>
+                                <div class="detail-item">
+                                    <span class="detail-label">Monto:</span>
+                                    <span class="detail-value">{{ tarea.TF_NMONTO|floatformat:0 }}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Tipo de Transacción:</span>
+                                    <span class="detail-value">{{ tarea.TF_CTIPO_TRANSACCION }}</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h5 class="mb-3">Información Adicional</h5>
+                                <div class="detail-item">
+                                    <span class="detail-label">Es un hito:</span>
+                                    <span class="detail-value">{% if tarea.TF_BMILESTONE %}Sí{% else %}No{% endif %}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">En la ruta crítica:</span>
+                                    <span class="detail-value">{% if tarea.TF_BCRITICA %}Sí{% else %}No{% endif %}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Proyecto de Cliente:</span>
+                                    <span class="detail-value">{{ tarea.TF_PROYECTO_CLIENTE }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row detail-section">
+                            <div class="col-md-12">
+                                <h5 class="mb-3">Progreso</h5>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar {% if tarea.TF_NPROGRESO >= 100 %}bg-success{% elif tarea.TF_NPROGRESO >= 50 %}bg-info{% else %}bg-warning{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {% if tarea.TF_NPROGRESO > 100 %}100%{% else %}{{ tarea.TF_NPROGRESO }}%{% endif %};" 
+                                         aria-valuenow="{{ tarea.TF_NPROGRESO }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100">
+                                        {{ tarea.TF_NPROGRESO }}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row detail-section">
+                            <div class="col-md-12">
+                                <h5 class="mb-3">Observaciones</h5>
+                                <p>{{ tarea.TF_COBSERVACIONES|default_if_none:"Sin observaciones" }}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="row detail-section">
+                            <div class="col-md-4">
+                                <h5 class="mb-3">Empleados Asignados</h5>
+                                <ul class="list-group">
+                                {% for asignacion in empleados_asignados %}
+                                    <li class="list-group-item">{{ asignacion.AE_EMPLEADO }}</li>
+                                {% empty %}
+                                    <li class="list-group-item">No hay empleados asignados</li>
+                                {% endfor %}
+                                </ul>
+                            </div>
+                            <div class="col-md-4">
+                                <h5 class="mb-3">Contratistas Asignados</h5>
+                                <ul class="list-group">
+                                {% for asignacion in contratistas_asignados %}
+                                    <li class="list-group-item">{{ asignacion.AEC_EMPLEADO }}</li>
+                                {% empty %}
+                                    <li class="list-group-item">No hay contratistas asignados</li>
+                                {% endfor %}
+                                </ul>
+                            </div>
+                            <div class="col-md-4">
+                                <h5 class="mb-3">Recursos Asignados</h5>
+                                <ul class="list-group">
+                                {% for asignacion in recursos_asignados %}
+                                    <li class="list-group-item">
+                                        {{ asignacion.ART_PRODUCTO }}
+                                        <br>
+                                        <small>Cantidad: {{ asignacion.ART_CANTIDAD }}, Costo: {{ asignacion.ART_COSTO_UNITARIO|floatformat:0 }}</small>
+                                    </li>
+                                {% empty %}
+                                    <li class="list-group-item">No hay recursos asignados</li>
+                                {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group nav justify-content-end mt-4">
+                            <a class="btn btn-primary btn-lg mr-2" href="{% url 'tarea_financiera_update' tarea.id 1 %}">Editar</a>
+                            <a class="btn btn-secondary btn-lg" onclick="window.history.go(-1); return false;">Volver</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock content %}
+
+{% block javascripts %}
+{% endblock javascripts %}

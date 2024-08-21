@@ -956,17 +956,18 @@ class formTAREA_GENERAL(forms.ModelForm):
 
 # Form for TAREA_INGENIERIA model
 class formTAREA_INGENIERIA(forms.ModelForm):
+    TI_CCODIGO = forms.CharField(widget=forms.HiddenInput(), required=False, label='')
+
     class Meta:
         model = TAREA_INGENIERIA
         fields = [
-            'TI_PROYECTO_CLIENTE', 'TI_CCODIGO', 'TI_CNOMBRE', 'TI_CDESCRIPCION', 'TI_ETAPA', 'TI_FFECHA_INICIO',
+            'TI_CCODIGO', 'TI_PROYECTO_CLIENTE', 'TI_CNOMBRE', 'TI_CDESCRIPCION', 'TI_ETAPA', 'TI_FFECHA_INICIO',
             'TI_FFECHA_FIN_ESTIMADA', 'TI_FFECHA_FIN_REAL', 'TI_CESTADO', 'TI_NPRESUPUESTO',
             'TI_COBSERVACIONES', 'TI_BMILESTONE', 'TI_NPROGRESO', 'TI_NDURACION_PLANIFICADA',
             'TI_NDURACION_REAL', 'TG_BCRITICA'
         ]
         widgets = {
             'TI_PROYECTO_CLIENTE': forms.Select(attrs={'class': 'form-control'}),
-            'TI_CCODIGO': forms.TextInput(attrs={'class': 'form-control'}),
             'TI_CNOMBRE': forms.TextInput(attrs={'class': 'form-control'}),
             'TI_CDESCRIPCION': forms.Textarea(attrs={'class': 'form-control'}),
             'TI_ETAPA': forms.Select(attrs={'class': 'form-control'}),
@@ -989,20 +990,43 @@ class formTAREA_INGENIERIA(forms.ModelForm):
                       'TI_CUSUARIO_CREADOR', 'TI_CUSUARIO_MODIFICADOR']:
             if field in self.fields:
                 self.fields[field].widget = forms.HiddenInput()
+        
+        # Generamos el código automáticamente si es una nueva instancia
+        if not self.instance.pk:
+            self.generate_code()
+
+    def generate_code(self):
+        if self.data.get('TI_PROYECTO_CLIENTE') and self.data.get('TI_ETAPA'):
+            proyecto = PROYECTO_CLIENTE.objects.get(id=self.data['TI_PROYECTO_CLIENTE'])
+            etapa = ETAPA.objects.get(id=self.data['TI_ETAPA'])
+            tarea_count = TAREA_INGENIERIA.objects.filter(TI_PROYECTO_CLIENTE=proyecto, TI_ETAPA=etapa).count() + 1
+            self.initial['TI_CCODIGO'] = f"{proyecto.PC_CCODIGO}-{etapa.ET_CCODIGO}-TI{tarea_count:03d}"
+
+    def save(self, commit=True):
+        instance = super(formTAREA_INGENIERIA, self).save(commit=False)
+        
+        if not instance.TI_CCODIGO:
+            self.generate_code()
+            instance.TI_CCODIGO = self.initial['TI_CCODIGO']
+        
+        if commit:
+            instance.save()
+        return instance
 
 # Formulario para TAREA_FINANCIERA
 class formTAREA_FINANCIERA(forms.ModelForm):
+    TF_CCODIGO = forms.CharField(widget=forms.HiddenInput(), required=False, label='')
+
     class Meta:
         model = TAREA_FINANCIERA
         fields = [
-            'TF_PROYECTO_CLIENTE', 'TF_CCODIGO', 'TF_CNOMBRE', 'TF_CDESCRIPCION', 'TF_ETAPA', 'TF_FFECHA_INICIO',
+            'TF_CCODIGO', 'TF_PROYECTO_CLIENTE', 'TF_CNOMBRE', 'TF_CDESCRIPCION', 'TF_ETAPA', 'TF_FFECHA_INICIO',
             'TF_FFECHA_FIN_ESTIMADA', 'TF_FFECHA_FIN_REAL', 'TF_CESTADO', 'TF_NMONTO',
             'TF_CTIPO_TRANSACCION', 'TF_COBSERVACIONES', 'TF_BMILESTONE', 'TF_NPROGRESO', 
             'TF_NDURACION_PLANIFICADA', 'TF_NDURACION_REAL', 'TG_BCRITICA'
         ]
         widgets = {
             'TF_PROYECTO_CLIENTE': forms.Select(attrs={'class': 'form-control'}),
-            'TF_CCODIGO': forms.TextInput(attrs={'class': 'form-control'}),
             'TF_CNOMBRE': forms.TextInput(attrs={'class': 'form-control'}),
             'TF_CDESCRIPCION': forms.Textarea(attrs={'class': 'form-control'}),
             'TF_ETAPA': forms.Select(attrs={'class': 'form-control'}),
@@ -1026,6 +1050,28 @@ class formTAREA_FINANCIERA(forms.ModelForm):
                       'TF_CUSUARIO_CREADOR', 'TF_CUSUARIO_MODIFICADOR']:
             if field in self.fields:
                 self.fields[field].widget = forms.HiddenInput()
+        
+        # Generamos el código automáticamente si es una nueva instancia
+        if not self.instance.pk:
+            self.generate_code()
+
+    def generate_code(self):
+        if self.data.get('TF_PROYECTO_CLIENTE') and self.data.get('TF_ETAPA'):
+            proyecto = PROYECTO_CLIENTE.objects.get(id=self.data['TF_PROYECTO_CLIENTE'])
+            etapa = ETAPA.objects.get(id=self.data['TF_ETAPA'])
+            tarea_count = TAREA_FINANCIERA.objects.filter(TF_PROYECTO_CLIENTE=proyecto, TF_ETAPA=etapa).count() + 1
+            self.initial['TF_CCODIGO'] = f"{proyecto.PC_CCODIGO}-{etapa.ET_CCODIGO}-TF{tarea_count:03d}"
+
+    def save(self, commit=True):
+        instance = super(formTAREA_FINANCIERA, self).save(commit=False)
+        
+        if not instance.TF_CCODIGO:
+            self.generate_code()
+            instance.TF_CCODIGO = self.initial['TF_CCODIGO']
+        
+        if commit:
+            instance.save()
+        return instance
 
     def clean(self):
         cleaned_data = super().clean()
@@ -1038,7 +1084,6 @@ class formTAREA_FINANCIERA(forms.ModelForm):
             cleaned_data['TF_FFECHA_INICIO'] = fecha_fin_estimada
 
         return cleaned_data
-
 
 # Form for ADJUNTO_TAREA_GENERAL model
 class formADJUNTO_TAREA_GENERAL(forms.ModelForm):

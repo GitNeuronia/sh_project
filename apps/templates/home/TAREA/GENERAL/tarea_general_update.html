@@ -1,6 +1,6 @@
 {% extends "layouts/base.html" %}
 
-{% block title %} Editar Tarea Financiera {% endblock %} 
+{% block title %} Editar Tarea General {% endblock %} 
 
 {% block stylesheets %}
 <!-- Agrega aquí cualquier estilo específico si es necesario -->
@@ -16,12 +16,12 @@
                     <div class="row align-items-center">
                         <div class="col-md-12">
                             <div class="page-header-title">
-                                <h5 class="m-b-10">Editar Tarea Financiera</h5>
+                                <h5 class="m-b-10">Editar Tarea General</h5>
                             </div>
                             <ul class="breadcrumb">
                                 <li class="breadcrumb-item"><a href="/"><i class="feather icon-home"></i></a></li>
-                                <li class="breadcrumb-item"><a href="{% url 'tarea_financiera_listall' %}">Tareas Financieras</a></li>
-                                <li class="breadcrumb-item"><a href="#!">Editar Tarea Financiera</a></li>
+                                <li class="breadcrumb-item"><a href="{% url 'tarea_general_listall' %}">Tareas Generales</a></li>
+                                <li class="breadcrumb-item"><a href="#!">Editar Tarea General</a></li>
                             </ul>
                         </div>
                     </div>
@@ -34,10 +34,10 @@
                 <div class="col-sm-12">
                     <div class="card">
                         <div class="card-header">
-                            <h5>Editar Tarea Financiera</h5>
+                            <h5>Editar Tarea General</h5>
                         </div>
                         <div class="card-body">
-                            <form method="POST" id="tarea-financiera-form">
+                            <form method="POST" id="tarea-general-form">
                                 {% csrf_token %}
                                 {{ form.non_field_errors }}
                                 {% for field in form %}
@@ -49,7 +49,7 @@
                                 {% endfor %}
                                 <div class="form-group">
                                     <button type="submit" class="btn btn-primary">Actualizar</button>
-                                    <a href="javascript:history.back()" class="btn btn-secondary">Cancelar</a>
+                                    <a href="{% url 'tarea_general_listall' %}" class="btn btn-secondary">Cancelar</a>
                                 </div>
                             </form>
                         </div>
@@ -65,24 +65,6 @@
 
 {% block javascripts %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var fechaInicio = document.getElementById('id_TF_FFECHA_INICIO');
-        var fechaFinEstimada = document.getElementById('id_TF_FFECHA_FIN_ESTIMADA');
-    
-        function actualizarFechas(campoModificado) {
-            if (campoModificado === 'inicio') {
-                fechaFinEstimada.value = fechaInicio.value;
-            } else if (campoModificado === 'fin') {
-                fechaInicio.value = fechaFinEstimada.value;
-            }
-        }
-    
-        fechaInicio.addEventListener('change', function() {
-            actualizarFechas('inicio');
-        });
-        fechaFinEstimada.addEventListener('change', function() {
-            actualizarFechas('fin');
-        });
-    });
+// Aquí puedes agregar cualquier JavaScript específico si es necesario
 </script>
 {% endblock javascripts %}

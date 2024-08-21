@@ -1,15 +1,11 @@
 {% extends "layouts/base.html" %}
 
-{% block title %} Agregar Tarea General {% endblock %} 
+{% block title %} Tarea General {% endblock %} 
 
+<!-- Specific CSS goes HERE -->
 {% block stylesheets %}
-    {{ block.super }}
-    <style>
-        .error-message {
-            color: red;
-            font-size: 0.9em;
-        }
-    </style>
+ <!-- Select2 CSS -->
+ <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 {% endblock stylesheets %}
 
 {% block content %}		
@@ -40,40 +36,65 @@
                 <div class="col-sm-12">
                     <div class="card">
                         <div class="card-header">
-                            <h5>Agregar Tarea General</h5>
+                            <h5>Tarea General</h5>
                         </div>
                         <div class="card-body">
                             <h5>Ingrese datos de la Tarea General</h5>
                             <hr>
                             <div class="row">
                                 <div class="col-md-12">
-                                    <form method="POST" id="tarea-general-form" enctype="multipart/form-data">
+                                    <form method="POST" id="validation-form123" enctype="multipart/form-data">
                                         {% csrf_token %}
-                                        {% if form.non_field_errors %}
-                                            <div class="alert alert-danger">
-                                                {{ form.non_field_errors }}
-                                            </div>
-                                        {% endif %}
-                                        {% for field in form %}
-                                            {% if field.widget_type != 'hidden' %}
-                                                <div class="form-group">
-                                                    <label for="{{ field.id_for_label }}">{{ field.label }}:</label>
+                                            {{ form.non_field_errors }}
+                                            {% for field in form %}
+                                                <div class="fieldWrapper">
+                                                    {{ field.errors }}
+                                                    <label class="my-1 me-2" for="{{ field.id_for_label }}">{{ field.label }}:</label>
                                                     {{ field }}
-                                                    {% if field.errors %}
-                                                        <div class="error-message">
-                                                            {{ field.errors }}
-                                                        </div>
-                                                    {% endif %}
                                                 </div>
-                                            {% else %}
-                                                {{ field }}
-                                            {% endif %}
-                                        {% endfor %}
-                                        <div class="form-group nav justify-content-end">
-                                            <button class="btn btn-primary mr-2" type="submit">Guardar</button>
-                                            <a class="btn btn-secondary" href="{% url 'tarea_general_listall' %}">Cancelar</a>
-                                        </div>
-                                    </form>
+                                            {% endfor %}
+                                            {{ form.errors }}
+                                            <br>
+                                            <h5>Asignaciones Opcionales</h5>
+                                            <hr>
+                                            <div class="form-group">
+                                                <label for="id_empleados">Asignar Empleados:</label>
+                                                <select class="form-control select2-multiple" id="id_empleados" name="empleados" multiple="multiple">
+                                                    {% for empleado in form_asignacion_empleado.fields.AE_EMPLEADO.queryset %}
+                                                        <option value="{{ empleado.id }}">{{ empleado }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            
+                                            <div class="form-group">
+                                                <label for="id_contratistas">Asignar Contratistas:</label>
+                                                <select class="form-control select2-multiple" id="id_contratistas" name="contratistas" multiple="multiple">
+                                                    {% for contratista in form_asignacion_contratista.fields.AEC_EMPLEADO.queryset %}
+                                                        <option value="{{ contratista.id }}">{{ contratista }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            
+                                            <div class="form-group">
+                                                <label for="id_recursos">Asignar Recursos:</label>
+                                                <select class="form-control" id="id_recursos" name="recursos">
+                                                    <option value="">Seleccione un recurso</option>
+                                                    {% for recurso in form_asignacion_recurso.fields.ART_PRODUCTO.queryset %}
+                                                        <option value="{{ recurso.id }}">{{ recurso }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div id="recursos-detalles">
+                                                <!-- Los campos de cantidad y costo unitario se generarán dinámicamente aquí -->
+                                            </div>
+                                            <div id="recursos-asignados">
+                                                <!-- Aquí se mostrarán los recursos asignados -->
+                                            </div>
+                                            <div class="form-group nav justify-content-end">
+                                                <button class="btn btn-success mr-4" type="submit">Guardar</button>
+                                                <a class="btn btn-danger mr-1" onclick="window.history.go(-1); return false;">Volver</a>
+                                            </div>
+                                        </form>
                                 </div>
                             </div>
                         </div>
@@ -87,12 +108,102 @@
     <!-- [ Main Content ] end -->
 {% endblock content %}
 
+<!-- Specific Page JS goes HERE  -->
 {% block javascripts %}
-    {{ block.super }}
+    <!-- bootstrap-tagsinput-latest Js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/typeahead.js/0.11.1/typeahead.bundle.min.js"></script>
     <script src="/static/assets/js/plugins/bootstrap-tagsinput.min.js"></script>
+    <!-- bootstrap-maxlength Js -->
     <script src="/static/assets/js/plugins/bootstrap-maxlength.js"></script>
+    <!-- form-advance custom js -->
     <script src="/static/assets/js/pages/form-advance-custom.js"></script>
+    <!-- Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     
-    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {            
+        
+            // Inicializar Select2 para selecciones múltiples
+            $('.select2-multiple').select2({
+                placeholder: "Seleccione una o más opciones",
+                allowClear: true
+            });
+        
+            const recursosSelect = document.getElementById('id_recursos');
+            const recursosDetalles = document.getElementById('recursos-detalles');
+            const recursosAsignados = document.getElementById('recursos-asignados');
+            let recursosAsignadosArray = [];
+        
+            recursosSelect.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                if (selectedOption.value) {
+                    const recursoId = selectedOption.value;
+                    const recursoNombre = selectedOption.text;
+                    
+                    recursosDetalles.innerHTML = `
+                        <h6>${recursoNombre}</h6>
+                        <div class="form-group">
+                            <label for="cantidad_${recursoId}">Cantidad:</label>
+                            <input type="number" class="form-control" id="cantidad_${recursoId}" name="cantidad_${recursoId}" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="costo_${recursoId}">Costo Unitario:</label>
+                            <input type="number" step="0.01" class="form-control" id="costo_${recursoId}" name="costo_${recursoId}" required>
+                        </div>
+                        <button type="button" class="btn btn-primary" onclick="agregarRecurso('${recursoId}', '${recursoNombre}')">Agregar Recurso</button>
+                    `;
+                } else {
+                    recursosDetalles.innerHTML = '';
+                }
+            });
+        
+            window.agregarRecurso = function(recursoId, recursoNombre) {
+                const cantidad = document.getElementById(`cantidad_${recursoId}`).value;
+                const costo = document.getElementById(`costo_${recursoId}`).value;
+                
+                if (cantidad && costo) {
+                    recursosAsignadosArray.push({id: recursoId, nombre: recursoNombre, cantidad: cantidad, costo: costo});
+                    actualizarRecursosAsignados();
+                    recursosDetalles.innerHTML = '';
+                    recursosSelect.value = '';
+                } else {
+                    alert('Por favor, ingrese la cantidad y el costo unitario.');
+                }
+            };
+        
+            function actualizarRecursosAsignados() {
+                recursosAsignados.innerHTML = '<h6>Recursos Asignados:</h6>';
+                recursosAsignadosArray.forEach((recurso, index) => {
+                    recursosAsignados.innerHTML += `
+                        <div>
+                            ${recurso.nombre} - Cantidad: ${recurso.cantidad}, Costo: ${recurso.costo}
+                            <button type="button" class="btn btn-sm btn-danger" onclick="eliminarRecurso(${index})">Eliminar</button>
+                        </div>
+                    `;
+                });
+            }
+        
+            window.eliminarRecurso = function(index) {
+                recursosAsignadosArray.splice(index, 1);
+                actualizarRecursosAsignados();
+            };
+        
+            // Nuevo código para manejar el envío del formulario
+            const form = document.querySelector('form');
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Crear un campo oculto para los recursos
+                const recursosInput = document.createElement('input');
+                recursosInput.type = 'hidden';
+                recursosInput.name = 'recursos_json';
+                recursosInput.value = JSON.stringify(recursosAsignadosArray);
+                form.appendChild(recursosInput);
+        
+                // Enviar el formulario
+                form.submit();
+            });
+        });
+    </script>
+        
 {% endblock javascripts %}
