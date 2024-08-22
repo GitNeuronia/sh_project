@@ -9,6 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.template import loader
 from django.urls import reverse
+from django.db.models import Sum
 from apps.home.models import * 
 from django.shortcuts import redirect, render
 from django.contrib import messages
@@ -1207,7 +1208,6 @@ def ACTA_REUNION_UPDATE(request, pk):
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
-
 def COTIZACION_LISTALL(request):
     try:
         object_list = COTIZACION.objects.all()
@@ -1286,6 +1286,11 @@ def COTIZACION_ADD_LINE(request):
             )
             detalle.save()
 
+            # Recalculate COTIZACION.CO_NTOTAL
+            total_cotizacion = COTIZACION_DETALLE.objects.filter(CD_COTIZACION=cotizacion).aggregate(Sum('CD_NTOTAL'))['CD_NTOTAL__sum'] or 0
+            cotizacion.CO_NTOTAL = total_cotizacion
+            cotizacion.save()
+
             messages.success(request, 'Línea de cotización agregada correctamente')
             return redirect(f'/cotizacion_listone/{cotizacion_id}')
         
@@ -1294,7 +1299,6 @@ def COTIZACION_ADD_LINE(request):
         errMsg=print(f"Error al agregar línea de cotización: {str(e)}")
         messages.error(request, errMsg)
         return JsonResponse({'error': str(errMsg)}, status=400)
-
 
 def COTIZACION_UPDATE(request, pk):
     try:
@@ -1331,6 +1335,35 @@ def COTIZACION_LISTONE(request, pk):
         print("ERROR:", e)
         messages.error(request, f'Error, {str(e)}')
         return redirect('/cotizacion_listall/')
+    
+def COTIZACION_GET_DATA(request, pk):
+    try:
+        cotizacion = COTIZACION.objects.get(id=pk)
+        data = {
+            'cotizacion': {
+                'id': cotizacion.id,
+                'CO_CCLIENTE': {
+                    'id': cotizacion.CO_CLIENTE.id,
+                    'nombre': str(cotizacion.CO_CLIENTE)
+                },
+                'CO_CNUMERO': cotizacion.CO_CNUMERO,
+                'CO_FFECHA': cotizacion.CO_FFECHA.strftime('%Y-%m-%d'),
+                'CO_CVALIDO_HASTA': cotizacion.CO_CVALIDO_HASTA.strftime('%Y-%m-%d'),
+                'CO_CESTADO': cotizacion.CO_CESTADO,
+                'CO_NTOTAL': str(cotizacion.CO_NTOTAL),
+                'CO_COBSERVACIONES': cotizacion.CO_COBSERVACIONES,
+                'CO_CCOMENTARIO': cotizacion.CO_CCOMENTARIO
+            }
+        }
+        return JsonResponse(data)
+    except COTIZACION.DoesNotExist:
+        return JsonResponse({'error': 'Cotización no encontrada'}, status=404)
+    except Exception as e:
+        print("ERROR:", e)
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+
 def COTIZACION_LISTONE_FORMAT(request, pk):
     try:
         cotizacion = COTIZACION.objects.get(id=pk)
@@ -1370,12 +1403,446 @@ def COTIZACION_DELETE_LINE(request, pk):
         detalle = COTIZACION_DETALLE.objects.get(id=pk)
         cotizacion_id = detalle.CD_COTIZACION.id
         detalle.delete()
+        # Recalculate COTIZACION.CO_NTOTAL
+        cotizacion = detalle.CD_COTIZACION
+        total_cotizacion = COTIZACION_DETALLE.objects.filter(CD_COTIZACION=cotizacion).aggregate(Sum('CD_NTOTAL'))['CD_NTOTAL__sum'] or 0
+        cotizacion.CO_NTOTAL = total_cotizacion
+        cotizacion.save()
         return JsonResponse({'success': 'Línea de cotización eliminada correctamente', 'cotizacion_id': cotizacion_id})
     except COTIZACION_DETALLE.DoesNotExist:
         return JsonResponse({'error': 'Línea de cotización no encontrada'}, status=404)
     except Exception as e:
         print("ERROR:", e)
         return JsonResponse({'error': str(e)}, status=500)
+
+def CHECK_CO_NUMERO(request):
+    if request.method == 'POST':
+        co_numero = request.POST.get('co_numero')
+        exists = COTIZACION.objects.filter(CO_CNUMERO=co_numero).exists()
+        return JsonResponse({'exists': exists})
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+def ORDEN_VENTA_LISTALL(request):
+    try:
+        object_list = ORDEN_VENTA.objects.all()
+        ctx = {
+            'object_list': object_list
+        }
+        return render(request, 'home/ORDEN_VENTA/orden_venta_listall.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def ORDEN_VENTA_ADDONE(request):
+    try:
+        if request.method == 'POST':
+            form = formORDEN_VENTA(request.POST)
+            if form.is_valid():
+                print("form is valid")
+                orden_venta = form.save(commit=False)
+                orden_venta.OV_CUSUARIO_CREADOR = request.user
+                orden_venta.save()
+                print("orden_venta saved")
+                # If there's a related cotización, copy its details
+                if orden_venta.OV_COTIZACION:
+                    print("orden_venta.OV_COTIZACION:", orden_venta.OV_COTIZACION)
+                    try:
+                        cotizacion_detalles = COTIZACION_DETALLE.objects.filter(CD_COTIZACION=orden_venta.OV_COTIZACION)
+                        for cotizacion_detalle in cotizacion_detalles:
+                            ORDEN_VENTA_DETALLE.objects.create(
+                                OVD_ORDEN_VENTA=orden_venta,
+                                OVD_PRODUCTO=cotizacion_detalle.CD_PRODUCTO,
+                                OVD_NCANTIDAD=cotizacion_detalle.CD_NCANTIDAD,
+                                OVD_NPRECIO_UNITARIO=cotizacion_detalle.CD_NPRECIO_UNITARIO,
+                                OVD_NSUBTOTAL=cotizacion_detalle.CD_NSUBTOTAL,
+                                OVD_NDESCUENTO=cotizacion_detalle.CD_NDESCUENTO,
+                                OVD_NTOTAL=cotizacion_detalle.CD_NTOTAL,
+                                OVD_CUSUARIO_CREADOR=request.user
+                            )
+                    except Exception as e:
+                        print(f"Error al copiar detalles de cotización: {str(e)}")
+
+                messages.success(request, 'Orden de venta guardada correctamente')
+                return redirect('/orden_venta_listall/')
+            else:
+                print("Form is not valid. Errors:", form.errors)
+                return HttpResponse(form.errors.as_text())
+        form = formORDEN_VENTA()
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/ORDEN_VENTA/orden_venta_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+    
+def ORDEN_VENTA_ADD_LINE(request):
+    try:
+        if request.method == 'POST':
+
+            orden_venta_id = request.POST.get('orden_venta_id')
+            producto_id = request.POST.get('producto')
+            cantidad = request.POST.get('cantidad')
+            precio_unitario = request.POST.get('precioUnitario')
+            descuento = request.POST.get('descuento')
+
+            # Ensure cantidad and precio_unitario are at least 1
+            cantidad = max(1, int(cantidad or 0))
+            precio_unitario = max(Decimal('1'), Decimal(precio_unitario or '0'))
+
+            # Recalculate subtotal
+            subtotal = Decimal(cantidad) * precio_unitario
+
+            # Ensure descuento is non-negative and not greater than subtotal
+            descuento = max(Decimal('0'), min(Decimal(descuento or '0'), subtotal))
+
+            orden_venta = ORDEN_VENTA.objects.get(id=orden_venta_id)
+            producto = PRODUCTO.objects.get(id=producto_id)
+
+            subtotal = Decimal(cantidad) * Decimal(precio_unitario)
+            total = subtotal - Decimal(descuento)
+
+            # Verificar si la combinación de orden de venta y producto ya existe
+            existing_detail = ORDEN_VENTA_DETALLE.objects.filter(OVD_ORDEN_VENTA=orden_venta, OVD_PRODUCTO=producto).first()
+            if existing_detail:
+                existing_detail.delete()
+
+            # Recalculate total
+            total = subtotal - descuento
+
+            detalle = ORDEN_VENTA_DETALLE(
+                OVD_ORDEN_VENTA=orden_venta,
+                OVD_PRODUCTO=producto,
+                OVD_NCANTIDAD=cantidad,
+                OVD_NPRECIO_UNITARIO=precio_unitario,
+                OVD_NSUBTOTAL=subtotal,
+                OVD_NDESCUENTO=descuento,
+                OVD_NTOTAL=total,
+                OVD_CUSUARIO_CREADOR=request.user
+            )
+            detalle.save()
+
+            # Recalculate ORDEN_VENTA.OV_NTOTAL
+            total_orden_venta = ORDEN_VENTA_DETALLE.objects.filter(OVD_ORDEN_VENTA=orden_venta).aggregate(Sum('OVD_NTOTAL'))['OVD_NTOTAL__sum'] or 0
+            orden_venta.OV_NTOTAL = total_orden_venta
+            orden_venta.save()
+
+            messages.success(request, 'Línea de orden de venta agregada correctamente')
+            return redirect(f'/orden_venta_listone/{orden_venta_id}')
+        
+        return redirect('/orden_venta_listall/')
+    except Exception as e:
+        errMsg=print(f"Error al agregar línea de orden de venta: {str(e)}")
+        messages.error(request, errMsg)
+        return JsonResponse({'error': str(errMsg)}, status=400)
+
+def ORDEN_VENTA_UPDATE(request, pk):
+    try:
+        orden_venta = ORDEN_VENTA.objects.get(id=pk)
+        if request.method == 'POST':
+            form = formORDEN_VENTA(request.POST, instance=orden_venta)
+            if form.is_valid():
+                orden_venta = form.save(commit=False)
+                orden_venta.OV_CUSUARIO_MODIFICADOR = request.user
+                orden_venta.save()
+                messages.success(request, 'Orden de venta actualizada correctamente')
+                return redirect('/orden_venta_listall/')
+        form = formORDEN_VENTA(instance=orden_venta)
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/ORDEN_VENTA/orden_venta_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def ORDEN_VENTA_LISTONE(request, pk):
+    try:
+        orden_venta = ORDEN_VENTA.objects.get(id=pk)
+        product_list = list(PRODUCTO.objects.filter(PR_BACTIVO=True).values_list('id', 'PR_CNOMBRE'))
+        
+        ctx = {
+            'orden_venta': orden_venta,
+            'product_list': product_list,
+        }
+        return render(request, 'home/ORDEN_VENTA/orden_venta_listone.html', ctx)
+    except Exception as e:
+        print("ERROR:", e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/orden_venta_listall/')
+
+def ORDEN_VENTA_LISTONE_FORMAT(request, pk):
+    try:
+        orden_venta = ORDEN_VENTA.objects.get(id=pk)
+        product_list = list(PRODUCTO.objects.filter(PR_BACTIVO=True).values_list('id', 'PR_CNOMBRE'))
+        
+        ctx = {
+            'orden_venta': orden_venta,
+            'product_list': product_list,
+        }
+        return render(request, 'home/ORDEN_VENTA/orden_venta_listone_format.html', ctx)
+    except Exception as e:
+        print("ERROR:", e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/orden_venta_listall/')
+
+def ORDEN_VENTA_GET_LINE(request, pk):
+    try:
+        print("id linea:", pk)
+        detalle = ORDEN_VENTA_DETALLE.objects.get(id=pk)
+        
+        data = {
+            'id': detalle.id,
+            'producto': detalle.OVD_PRODUCTO.id,
+            'cantidad': detalle.OVD_NCANTIDAD,
+            'precioUnitario': detalle.OVD_NPRECIO_UNITARIO,
+            'descuento': detalle.OVD_NDESCUENTO
+        }
+        return JsonResponse(data)
+    except ORDEN_VENTA_DETALLE.DoesNotExist:
+        return JsonResponse({'error': 'Línea de orden de venta no encontrada'}, status=404)
+    except Exception as e:
+        print("ERROR:", e)
+        return JsonResponse({'error': str(e)}, status=500)
+
+def ORDEN_VENTA_DELETE_LINE(request, pk):
+    try:
+        detalle = ORDEN_VENTA_DETALLE.objects.get(id=pk)
+        orden_venta_id = detalle.OVD_ORDEN_VENTA.id
+        detalle.delete()
+        # Recalculate ORDEN_VENTA.OV_NTOTAL
+        orden_venta = detalle.OVD_ORDEN_VENTA
+        total_orden_venta = ORDEN_VENTA_DETALLE.objects.filter(OVD_ORDEN_VENTA=orden_venta).aggregate(Sum('OVD_NTOTAL'))['OVD_NTOTAL__sum'] or 0
+        orden_venta.OV_NTOTAL = total_orden_venta
+        orden_venta.save()
+        return JsonResponse({'success': 'Línea de orden de venta eliminada correctamente', 'orden_venta_id': orden_venta_id})
+    except ORDEN_VENTA_DETALLE.DoesNotExist:
+        return JsonResponse({'error': 'Línea de orden de venta no encontrada'}, status=404)
+    except Exception as e:
+        print("ERROR:", e)
+        return JsonResponse({'error': str(e)}, status=500)
+
+def CHECK_OV_NUMERO(request):
+    if request.method == 'POST':
+        ov_numero = request.POST.get('ov_numero')
+        exists = ORDEN_VENTA.objects.filter(OV_CNUMERO=ov_numero).exists()
+        return JsonResponse({'exists': exists})
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+def ORDEN_VENTA_LISTALL(request):
+    try:
+        object_list = ORDEN_VENTA.objects.all()
+        ctx = {
+            'object_list': object_list
+        }
+        return render(request, 'home/ORDEN_VENTA/orden_venta_listall.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def ORDEN_VENTA_ADDONE(request):
+    try:
+        if request.method == 'POST':
+            form = formORDEN_VENTA(request.POST)
+            if form.is_valid():
+                print("form is valid")
+                orden_venta = form.save(commit=False)
+                orden_venta.OV_CUSUARIO_CREADOR = request.user
+                orden_venta.save()
+                print("orden_venta saved")
+                # If there's a related cotización, copy its details
+                if orden_venta.OV_COTIZACION:
+                    print("orden_venta.OV_COTIZACION:", orden_venta.OV_COTIZACION)
+                    try:
+                        cotizacion_detalles = COTIZACION_DETALLE.objects.filter(CD_COTIZACION=orden_venta.OV_COTIZACION)
+                        for cotizacion_detalle in cotizacion_detalles:
+                            ORDEN_VENTA_DETALLE.objects.create(
+                                OVD_ORDEN_VENTA=orden_venta,
+                                OVD_PRODUCTO=cotizacion_detalle.CD_PRODUCTO,
+                                OVD_NCANTIDAD=cotizacion_detalle.CD_NCANTIDAD,
+                                OVD_NPRECIO_UNITARIO=cotizacion_detalle.CD_NPRECIO_UNITARIO,
+                                OVD_NSUBTOTAL=cotizacion_detalle.CD_NSUBTOTAL,
+                                OVD_NDESCUENTO=cotizacion_detalle.CD_NDESCUENTO,
+                                OVD_NTOTAL=cotizacion_detalle.CD_NTOTAL,
+                                OVD_CUSUARIO_CREADOR=request.user
+                            )
+                    except Exception as e:
+                        print(f"Error al copiar detalles de cotización: {str(e)}")
+
+                messages.success(request, 'Orden de venta guardada correctamente')
+                return redirect('/orden_venta_listall/')
+            else:
+                print("Form is not valid. Errors:", form.errors)
+                return HttpResponse(form.errors.as_text())
+        form = formORDEN_VENTA()
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/ORDEN_VENTA/orden_venta_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+    
+def ORDEN_VENTA_ADD_LINE(request):
+    try:
+        if request.method == 'POST':
+
+            orden_venta_id = request.POST.get('orden_venta_id')
+            producto_id = request.POST.get('producto')
+            cantidad = request.POST.get('cantidad')
+            precio_unitario = request.POST.get('precioUnitario')
+            descuento = request.POST.get('descuento')
+
+            # Ensure cantidad and precio_unitario are at least 1
+            cantidad = max(1, int(cantidad or 0))
+            precio_unitario = max(Decimal('1'), Decimal(precio_unitario or '0'))
+
+            # Recalculate subtotal
+            subtotal = Decimal(cantidad) * precio_unitario
+
+            # Ensure descuento is non-negative and not greater than subtotal
+            descuento = max(Decimal('0'), min(Decimal(descuento or '0'), subtotal))
+
+            orden_venta = ORDEN_VENTA.objects.get(id=orden_venta_id)
+            producto = PRODUCTO.objects.get(id=producto_id)
+
+            subtotal = Decimal(cantidad) * Decimal(precio_unitario)
+            total = subtotal - Decimal(descuento)
+
+            # Verificar si la combinación de orden de venta y producto ya existe
+            existing_detail = ORDEN_VENTA_DETALLE.objects.filter(OVD_ORDEN_VENTA=orden_venta, OVD_PRODUCTO=producto).first()
+            if existing_detail:
+                existing_detail.delete()
+
+            # Recalculate total
+            total = subtotal - descuento
+
+            detalle = ORDEN_VENTA_DETALLE(
+                OVD_ORDEN_VENTA=orden_venta,
+                OVD_PRODUCTO=producto,
+                OVD_NCANTIDAD=cantidad,
+                OVD_NPRECIO_UNITARIO=precio_unitario,
+                OVD_NSUBTOTAL=subtotal,
+                OVD_NDESCUENTO=descuento,
+                OVD_NTOTAL=total,
+                OVD_CUSUARIO_CREADOR=request.user
+            )
+            detalle.save()
+
+            # Recalculate ORDEN_VENTA.OV_NTOTAL
+            total_orden_venta = ORDEN_VENTA_DETALLE.objects.filter(OVD_ORDEN_VENTA=orden_venta).aggregate(Sum('OVD_NTOTAL'))['OVD_NTOTAL__sum'] or 0
+            orden_venta.OV_NTOTAL = total_orden_venta
+            orden_venta.save()
+
+            messages.success(request, 'Línea de orden de venta agregada correctamente')
+            return redirect(f'/orden_venta_listone/{orden_venta_id}')
+        
+        return redirect('/orden_venta_listall/')
+    except Exception as e:
+        errMsg=print(f"Error al agregar línea de orden de venta: {str(e)}")
+        messages.error(request, errMsg)
+        return JsonResponse({'error': str(errMsg)}, status=400)
+
+def ORDEN_VENTA_UPDATE(request, pk):
+    try:
+        orden_venta = ORDEN_VENTA.objects.get(id=pk)
+        if request.method == 'POST':
+            form = formORDEN_VENTA(request.POST, instance=orden_venta)
+            if form.is_valid():
+                orden_venta = form.save(commit=False)
+                orden_venta.OV_CUSUARIO_MODIFICADOR = request.user
+                orden_venta.save()
+                messages.success(request, 'Orden de venta actualizada correctamente')
+                return redirect('/orden_venta_listall/')
+        form = formORDEN_VENTA(instance=orden_venta)
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/ORDEN_VENTA/orden_venta_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def ORDEN_VENTA_LISTONE(request, pk):
+    try:
+        orden_venta = ORDEN_VENTA.objects.get(id=pk)
+        product_list = list(PRODUCTO.objects.filter(PR_BACTIVO=True).values_list('id', 'PR_CNOMBRE'))
+        
+        ctx = {
+            'orden_venta': orden_venta,
+            'product_list': product_list,
+        }
+        return render(request, 'home/ORDEN_VENTA/orden_venta_listone.html', ctx)
+    except Exception as e:
+        print("ERROR:", e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/orden_venta_listall/')
+
+def ORDEN_VENTA_LISTONE_FORMAT(request, pk):
+    try:
+        orden_venta = ORDEN_VENTA.objects.get(id=pk)
+        product_list = list(PRODUCTO.objects.filter(PR_BACTIVO=True).values_list('id', 'PR_CNOMBRE'))
+        
+        ctx = {
+            'orden_venta': orden_venta,
+            'product_list': product_list,
+        }
+        return render(request, 'home/ORDEN_VENTA/orden_venta_listone_format.html', ctx)
+    except Exception as e:
+        print("ERROR:", e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/orden_venta_listall/')
+
+def ORDEN_VENTA_GET_LINE(request, pk):
+    try:
+        print("id linea:", pk)
+        detalle = ORDEN_VENTA_DETALLE.objects.get(id=pk)
+        
+        data = {
+            'id': detalle.id,
+            'producto': detalle.OVD_PRODUCTO.id,
+            'cantidad': detalle.OVD_NCANTIDAD,
+            'precioUnitario': detalle.OVD_NPRECIO_UNITARIO,
+            'descuento': detalle.OVD_NDESCUENTO
+        }
+        return JsonResponse(data)
+    except ORDEN_VENTA_DETALLE.DoesNotExist:
+        return JsonResponse({'error': 'Línea de orden de venta no encontrada'}, status=404)
+    except Exception as e:
+        print("ERROR:", e)
+        return JsonResponse({'error': str(e)}, status=500)
+
+def ORDEN_VENTA_DELETE_LINE(request, pk):
+    try:
+        detalle = ORDEN_VENTA_DETALLE.objects.get(id=pk)
+        orden_venta_id = detalle.OVD_ORDEN_VENTA.id
+        detalle.delete()
+        # Recalculate ORDEN_VENTA.OV_NTOTAL
+        orden_venta = detalle.OVD_ORDEN_VENTA
+        total_orden_venta = ORDEN_VENTA_DETALLE.objects.filter(OVD_ORDEN_VENTA=orden_venta).aggregate(Sum('OVD_NTOTAL'))['OVD_NTOTAL__sum'] or 0
+        orden_venta.OV_NTOTAL = total_orden_venta
+        orden_venta.save()
+        return JsonResponse({'success': 'Línea de orden de venta eliminada correctamente', 'orden_venta_id': orden_venta_id})
+    except ORDEN_VENTA_DETALLE.DoesNotExist:
+        return JsonResponse({'error': 'Línea de orden de venta no encontrada'}, status=404)
+    except Exception as e:
+        print("ERROR:", e)
+        return JsonResponse({'error': str(e)}, status=500)
+
+def CHECK_OV_NUMERO(request):
+    if request.method == 'POST':
+        ov_numero = request.POST.get('ov_numero')
+        exists = ORDEN_VENTA.objects.filter(OV_CNUMERO=ov_numero).exists()
+        return JsonResponse({'exists': exists})
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
 
 
 # def BOLETA_GARANTIA_LISTALL(request):
