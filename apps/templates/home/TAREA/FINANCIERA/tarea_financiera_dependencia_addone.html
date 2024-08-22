@@ -1,0 +1,68 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Agregar Dependencia de Tarea Financiera {% endblock %}
+
+{% block content %}
+    <!-- [ Main Content ] start -->
+    <section class="pcoded-main-container">
+        <div class="pcoded-content">
+            <!-- [ breadcrumb ] start -->
+            <div class="page-header">
+                <div class="page-block">
+                    <div class="row align-items-center">
+                        <div class="col-md-12">
+                            <div class="page-header-title">
+                                <h5 class="m-b-10">Agregar Dependencia</h5>
+                            </div>
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="/"><i class="feather icon-home"></i></a></li>
+                                <li class="breadcrumb-item"><a href="{% url 'tarea_financiera_listall' %}">Tareas Financieras</a></li>
+                                <li class="breadcrumb-item"><a href="{% url 'tarea_financiera_listone' pk=tarea.id page=1 %}">{{ tarea.TF_CNOMBRE }}</a></li>
+                                <li class="breadcrumb-item"><a href="#!">Agregar Dependencia</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- [ breadcrumb ] end -->
+            <!-- [ Main Content ] start -->
+            <div class="row">
+                <!-- [ form-element ] start -->
+                <div class="col-sm-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Agregar Dependencia para {{ tarea.TF_CNOMBRE }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST">
+                                {% csrf_token %}
+                                <div class="form-group">
+                                    {{ form.TD_TAREA_SUCESORA.label_tag }}
+                                    {{ form.TD_TAREA_SUCESORA }}
+                                </div>
+                                <div class="form-group">
+                                    {{ form.TD_TIPO_DEPENDENCIA.label_tag }}
+                                    {{ form.TD_TIPO_DEPENDENCIA }}
+                                </div>
+                                {% if form.errors %}
+                                    <div class="alert alert-danger">
+                                        {% for field in form %}
+                                            {% for error in field.errors %}
+                                                <p>{{ error }}</p>
+                                            {% endfor %}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <button type="submit" class="btn btn-primary">Guardar Dependencia</button>
+                                <a href="{% url 'tarea_financiera_listone' pk=tarea.id page=1 %}" class="btn btn-secondary">Cancelar</a>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <!-- [ form-element ] end -->
+            </div>
+            <!-- [ Main Content ] end -->
+        </div>
+    </section>
+    <!-- [ Main Content ] end -->
+{% endblock content %}

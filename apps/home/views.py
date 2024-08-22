@@ -1059,6 +1059,11 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
         tareas_general = TAREA_GENERAL.objects.filter(TG_PROYECTO_CLIENTE=proyecto)
         tareas_ingenieria = TAREA_INGENIERIA.objects.filter(TI_PROYECTO_CLIENTE=proyecto)
         tareas_financiera = TAREA_FINANCIERA.objects.filter(TF_PROYECTO_CLIENTE=proyecto)
+        
+        dependencias_general = TAREA_GENERAL_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_general)
+        dependencias_ingenieria = TAREA_INGENIERIA_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_ingenieria)
+        dependencias_financiera = TAREA_FINANCIERA_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_financiera)
+        
         for tarea in tareas_general:
             tarea.TG_NPROGRESO = int(round(float(tarea.TG_NPROGRESO)))
         for tarea in tareas_ingenieria:
@@ -1069,7 +1074,10 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
             'proyecto': proyecto,
             'tareas_general': tareas_general,
             'tareas_ingenieria': tareas_ingenieria,
-            'tareas_financiera': tareas_financiera
+            'tareas_financiera': tareas_financiera,
+            'dependencias_general': dependencias_general,
+            'dependencias_ingenieria': dependencias_ingenieria,
+            'dependencias_financiera': dependencias_financiera
         }
         return render(request, 'home/PROYECTO_CLIENTE/proycli_listone.html', ctx)
     except Exception as e:
@@ -1094,7 +1102,7 @@ def TAREA_GENERAL_LISTALL(request):
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
-def TAREA_GENERAL_ADDONE(request):
+def TAREA_GENERAL_ADDONE(request, page):
     try:
         form = formTAREA_GENERAL()
         form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_GENERAL()
@@ -1149,14 +1157,17 @@ def TAREA_GENERAL_ADDONE(request):
                             ART_PRODUCTO=id_rec,
                             ART_FFECHA_ASIGNACION=tarea.TG_FFECHA_INICIO,
                             ART_CUSUARIO_CREADOR=request.user,
-                            ART_CANTIDAD=int(recurso['cantidad']),
-                            ART_COSTO_UNITARIO=int(recurso['costo']),
-                            ART_COSTO_TOTAL = int(recurso['costo']) * int(recurso['cantidad'])
+                            ART_CANTIDAD=int(float(recurso['cantidad'])),
+                            ART_COSTO_UNITARIO=int(float(recurso['costo'])),
+                            ART_COSTO_TOTAL = int(float(recurso['costo'])) * int(float(recurso['cantidad']))
                         )
                         asignacion.save()
 
                 messages.success(request, 'Tarea general guardada correctamente con las asignaciones seleccionadas')
-                return redirect('/tarea_general_listall/')
+                if page == 1:
+                    return redirect('/proycli_listone/'+str(tarea.TG_PROYECTO_CLIENTE.id)+'/')
+                else:
+                    return redirect('/tarea_general_listall/')
             else:
                 messages.error(request, 'Por favor, corrija los errores en el formulario.')
         
@@ -1323,6 +1334,37 @@ def TAREA_GENERAL_LISTONE(request, pk, page):
         print(e)
         messages.error(request, f'Error: {str(e)}')
         return redirect('/')
+
+def TAREA_GENERAL_DEPENDENCIA_ADDONE(request, pk):
+    try:
+        tarea = TAREA_GENERAL.objects.get(id=pk)
+        proyecto_actual = tarea.TG_PROYECTO_CLIENTE
+        
+        if request.method == 'POST':
+            form = formTAREA_GENERAL_DEPENDENCIA(request.POST)
+            if form.is_valid():
+                dependencia = form.save(commit=False)
+                dependencia.TD_TAREA_PREDECESORA = tarea
+                dependencia.save()
+                messages.success(request, 'Dependencia agregada correctamente')
+                return redirect('proycli_listone', pk=proyecto_actual.id)
+        else:
+            form = formTAREA_GENERAL_DEPENDENCIA()
+        
+        # Filtrar las tareas generales del proyecto actual
+        tareas_sucesoras = TAREA_GENERAL.objects.filter(TG_PROYECTO_CLIENTE=proyecto_actual).exclude(id=tarea.id)
+        form.fields['TD_TAREA_SUCESORA'].queryset = tareas_sucesoras
+        
+        ctx = {
+            'form': form,
+            'tarea': tarea
+        }
+        return render(request, 'home/TAREA/GENERAL/tarea_general_dependencia_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error: {str(e)}')
+        return redirect('/')
+    
 # ----------TAREA INGENIERIA--------------
 
 def TAREA_INGENIERIA_LISTALL(request):
@@ -1337,7 +1379,7 @@ def TAREA_INGENIERIA_LISTALL(request):
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
-def TAREA_INGENIERIA_ADDONE(request):
+def TAREA_INGENIERIA_ADDONE(request, page):
     try:
         form = formTAREA_INGENIERIA()
         form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_INGENIERIA()
@@ -1399,7 +1441,10 @@ def TAREA_INGENIERIA_ADDONE(request):
                         asignacion.save()
 
                 messages.success(request, 'Tarea de ingeniería guardada correctamente con las asignaciones seleccionadas')
-                return redirect('/tarea_ingenieria_listall/')
+                if page == 1:
+                    return redirect('/proycli_listone/'+str(tarea.TI_PROYECTO_CLIENTE.id)+'/')
+                else:
+                    return redirect('/tarea_ingenieria_listall/')
             else:
                 messages.error(request, 'Por favor, corrija los errores en el formulario.')
         
@@ -1407,7 +1452,8 @@ def TAREA_INGENIERIA_ADDONE(request):
             'form': form,
             'form_asignacion_empleado': form_asignacion_empleado,
             'form_asignacion_contratista': form_asignacion_contratista,
-            'form_asignacion_recurso': form_asignacion_recurso
+            'form_asignacion_recurso': form_asignacion_recurso,
+            'page': page
         }
         return render(request, 'home/TAREA/INGENIERIA/tarea_ingenieria_addone.html', ctx)
     except Exception as e:
@@ -1565,6 +1611,36 @@ def TAREA_INGENIERIA_LISTONE(request, pk, page):
         messages.error(request, f'Error: {str(e)}')
         return redirect('/')
 
+def TAREA_INGENIERIA_DEPENDENCIA_ADDONE(request, pk):
+    try:
+        tarea = TAREA_INGENIERIA.objects.get(id=pk)
+        proyecto_actual = tarea.TI_PROYECTO_CLIENTE
+        
+        if request.method == 'POST':
+            form = formTAREA_INGENIERIA_DEPENDENCIA(request.POST)
+            if form.is_valid():
+                dependencia = form.save(commit=False)
+                dependencia.TD_TAREA_PREDECESORA = tarea
+                dependencia.save()
+                messages.success(request, 'Dependencia agregada correctamente')
+                return redirect('proycli_listone', pk=proyecto_actual.id)
+        else:
+            form = formTAREA_INGENIERIA_DEPENDENCIA()
+        
+        # Filtrar las tareas de ingeniería del proyecto actual
+        tareas_sucesoras = TAREA_INGENIERIA.objects.filter(TI_PROYECTO_CLIENTE=proyecto_actual).exclude(id=tarea.id)
+        form.fields['TD_TAREA_SUCESORA'].queryset = tareas_sucesoras
+        
+        ctx = {
+            'form': form,
+            'tarea': tarea
+        }
+        return render(request, 'home/TAREA/INGENIERIA/tarea_ingenieria_dependencia_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error: {str(e)}')
+        return redirect('/')
+
 # ----------TAREA FINANCIERA--------------
 
 def TAREA_FINANCIERA_LISTALL(request):
@@ -1579,13 +1655,12 @@ def TAREA_FINANCIERA_LISTALL(request):
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
-def TAREA_FINANCIERA_ADDONE(request):
+def TAREA_FINANCIERA_ADDONE(request, page):
     try:
         form = formTAREA_FINANCIERA()
         form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_FINANCIERA()
         form_asignacion_contratista = formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_FINANCIERA()
-        form_asignacion_recurso = formASIGNACION_RECURSO_TAREA_FINANCIERA()
-
+        form_asignacion_recurso = formASIGNACION_RECURSO_TAREA_FINANCIERA()        
         if request.method == 'POST':
             form = formTAREA_FINANCIERA(request.POST)
             if form.is_valid():
@@ -1649,9 +1724,12 @@ def TAREA_FINANCIERA_ADDONE(request):
                             ART_COSTO_TOTAL = int(recurso['costo']) * int(recurso['cantidad'])
                         )
                         asignacion.save()
-
+                
                 messages.success(request, 'Tarea financiera guardada correctamente con las asignaciones seleccionadas')
-                return redirect('/tarea_financiera_listall/')
+                if page == 1:
+                    return redirect('/proycli_listone/'+str(tarea.TF_PROYECTO_CLIENTE.id)+'/')
+                else:
+                    return redirect('/tarea_financiera_listall/')
             else:
                 messages.error(request, 'Por favor, corrija los errores en el formulario.')
         
@@ -1659,7 +1737,8 @@ def TAREA_FINANCIERA_ADDONE(request):
             'form': form,
             'form_asignacion_empleado': form_asignacion_empleado,
             'form_asignacion_contratista': form_asignacion_contratista,
-            'form_asignacion_recurso': form_asignacion_recurso
+            'form_asignacion_recurso': form_asignacion_recurso,            
+            'page': page
         }
         return render(request, 'home/TAREA/FINANCIERA/tarea_financiera_addone.html', ctx)
     except Exception as e:
@@ -1828,6 +1907,36 @@ def TAREA_FINANCIERA_LISTONE(request, pk, page):
             'page': page
         }
         return render(request, 'home/TAREA/FINANCIERA/tarea_financiera_listone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error: {str(e)}')
+        return redirect('/')
+
+def TAREA_FINANCIERA_DEPENDENCIA_ADDONE(request, pk):
+    try:
+        tarea = TAREA_FINANCIERA.objects.get(id=pk)
+        proyecto_actual = tarea.TF_PROYECTO_CLIENTE
+        
+        if request.method == 'POST':
+            form = formTAREA_FINANCIERA_DEPENDENCIA(request.POST)
+            if form.is_valid():
+                dependencia = form.save(commit=False)
+                dependencia.TD_TAREA_PREDECESORA = tarea
+                dependencia.save()
+                messages.success(request, 'Dependencia agregada correctamente')
+                return redirect('proycli_listone', pk=proyecto_actual.id)
+        else:
+            form = formTAREA_FINANCIERA_DEPENDENCIA()
+        
+        # Filtrar las tareas financieras del proyecto actual
+        tareas_sucesoras = TAREA_FINANCIERA.objects.filter(TF_PROYECTO_CLIENTE=proyecto_actual).exclude(id=tarea.id)
+        form.fields['TD_TAREA_SUCESORA'].queryset = tareas_sucesoras
+        
+        ctx = {
+            'form': form,
+            'tarea': tarea
+        }
+        return render(request, 'home/TAREA/FINANCIERA/tarea_financiera_dependencia_addone.html', ctx)
     except Exception as e:
         print(e)
         messages.error(request, f'Error: {str(e)}')
