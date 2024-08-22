@@ -1063,13 +1063,39 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
         dependencias_general = TAREA_GENERAL_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_general)
         dependencias_ingenieria = TAREA_INGENIERIA_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_ingenieria)
         dependencias_financiera = TAREA_FINANCIERA_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_financiera)
-        
+        costo_real_proyecto = 0
+        horas_reales_proyecto = 0
         for tarea in tareas_general:
             tarea.TG_NPROGRESO = int(round(float(tarea.TG_NPROGRESO)))
+            if tarea.TG_NPROGRESO == 100 and tarea.TG_NDURACION_REAL is not None and tarea.TG_NDURACION_REAL > 0:
+                    # proyecto.PC_NHORAS_REALES += tarea.TG_NDURACION_REAL
+                    horas_reales_proyecto += tarea.TG_NDURACION_REAL
+                    # proyecto.PC_NCOSTO_REAL +=  tarea.TG_NDURACION_REAL * proyecto.PC_NVALOR_HORA
+                    costo_real_proyecto +=  tarea.TG_NDURACION_REAL * proyecto.PC_NVALOR_HORA
         for tarea in tareas_ingenieria:
             tarea.TI_NPROGRESO = int(round(float(tarea.TI_NPROGRESO)))
+            if tarea.TI_NPROGRESO == 100 and tarea.TI_NDURACION_REAL is not None and tarea.TI_NDURACION_REAL > 0:
+                    # proyecto.PC_NHORAS_REALES += tarea.TG_NDURACION_REAL                    
+                    horas_reales_proyecto += tarea.TI_NDURACION_REAL
+                    # proyecto.PC_NCOSTO_REAL +=  tarea.TI_NDURACION_REAL * proyecto.PC_NVALOR_HORA
+                    costo_real_proyecto +=  tarea.TI_NDURACION_REAL * proyecto.PC_NVALOR_HORA
         for tarea in tareas_financiera:
             tarea.TF_NPROGRESO = int(round(float(tarea.TF_NPROGRESO)))
+            if tarea.TF_NPROGRESO == 100 and tarea.TF_NDURACION_REAL is not None and tarea.TF_NDURACION_REAL > 0:
+                    # proyecto.PC_NHORAS_REALES += tarea.TF_NDURACION_REAL
+                    horas_reales_proyecto += tarea.TF_NDURACION_REAL
+                    # proyecto.PC_NCOSTO_REAL +=  tarea.TF_NDURACION_REAL * proyecto.PC_NVALOR_HORA
+                    costo_real_proyecto +=  tarea.TF_NMONTO
+        if horas_reales_proyecto != proyecto.PC_NHORAS_REALES:
+            print('horas_reales_proyecto', horas_reales_proyecto)
+            print('proyecto.PC_NHORAS_REALES', proyecto.PC_NHORAS_REALES)
+            proyecto.PC_NHORAS_REALES = horas_reales_proyecto
+            proyecto.save()
+        if costo_real_proyecto != proyecto.PC_NCOSTO_REAL:
+            print('costo_real_proyecto', costo_real_proyecto)
+            print('proyecto.PC_NCOSTO_REAL', proyecto.PC_NCOSTO_REAL)
+            proyecto.PC_NCOSTO_REAL = costo_real_proyecto
+            proyecto.save()
         ctx = {
             'proyecto': proyecto,
             'tareas_general': tareas_general,
@@ -1077,7 +1103,9 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
             'tareas_financiera': tareas_financiera,
             'dependencias_general': dependencias_general,
             'dependencias_ingenieria': dependencias_ingenieria,
-            'dependencias_financiera': dependencias_financiera
+            'dependencias_financiera': dependencias_financiera,
+            'costo_real_proyecto': costo_real_proyecto,
+            'horas_reales_proyecto': horas_reales_proyecto
         }
         return render(request, 'home/PROYECTO_CLIENTE/proycli_listone.html', ctx)
     except Exception as e:

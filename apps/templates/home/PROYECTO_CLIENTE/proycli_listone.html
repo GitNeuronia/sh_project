@@ -1,5 +1,4 @@
 {% extends "layouts/base.html" %}
-
 {% block title %} Proyectos de Cliente {% endblock %} 
 
 <!-- Specific CSS goes HERE -->
@@ -13,6 +12,8 @@
     {% load humanize %}
     {% load i18n %}
     {% load l10n %}
+    {% load custom_filters %}
+    
     <style>
         .progress {
             background-color: #f8f9fa;
@@ -145,9 +146,20 @@
                                     <div class="progress-group">
                                         <div class="mb-2">
                                             <strong>Costo Real:</strong> ${{ proyecto.PC_NCOSTO_REAL|floatformat:0|intcomma }}
+                                            {% if proyecto.PC_NCOSTO_REAL > proyecto.PC_NCOSTO_ESTIMADO %}
+                                                <span class="text-danger ml-2">
+                                                    <i class="fas fa-exclamation-triangle"></i>
+                                                    Exceso: ${{ proyecto.PC_NCOSTO_REAL|subtract:proyecto.PC_NCOSTO_ESTIMADO|floatformat:0|intcomma }}
+                                                </span>
+                                            {% endif %}
                                         </div>
                                         <div class="progress mb-3" style="height: 20px;">
-                                            <div class="progress-bar bg-success" role="progressbar" style="width: {% widthratio proyecto.PC_NCOSTO_REAL proyecto.PC_NCOSTO_ESTIMADO 100 %}%" aria-valuenow="{{ proyecto.PC_NCOSTO_REAL }}" aria-valuemin="0" aria-valuemax="{{ proyecto.PC_NCOSTO_ESTIMADO }}"></div>
+                                            <div class="progress-bar {% if proyecto.PC_NCOSTO_REAL > proyecto.PC_NCOSTO_ESTIMADO %}bg-danger{% else %}bg-success{% endif %}" 
+                                                role="progressbar" 
+                                                style="width: {% widthratio proyecto.PC_NCOSTO_REAL proyecto.PC_NCOSTO_ESTIMADO 100 %}%" 
+                                                aria-valuenow="{{ proyecto.PC_NCOSTO_REAL }}" 
+                                                aria-valuemin="0" 
+                                                aria-valuemax="{{ proyecto.PC_NCOSTO_ESTIMADO }}"></div>
                                         </div>
                                         <div class="mb-2">
                                             <strong>Costo Estimado:</strong> ${{ proyecto.PC_NCOSTO_ESTIMADO|floatformat:0|intcomma }}
