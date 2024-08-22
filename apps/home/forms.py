@@ -436,14 +436,14 @@ class formCOTIZACION(forms.ModelForm):
             'CO_CCOMENTARIO': 'Comentarios generales'
         }
         widgets = {
-            'CO_CLIENTE': forms.Select(attrs={'class': 'form-control'}),
-            'CO_CNUMERO': forms.TextInput(attrs={'class': 'form-control'}),
-            'CO_FFECHA': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'CO_CVALIDO_HASTA': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'CO_CESTADO': forms.Select(attrs={'class': 'form-control'}),
-            'CO_NTOTAL': forms.NumberInput(attrs={'class': 'form-control'}),
-            'CO_COBSERVACIONES': forms.Textarea(attrs={'class': 'form-control'}),
-            'CO_CCOMENTARIO': forms.Textarea(attrs={'class': 'form-control'})
+            'CO_CLIENTE': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'CO_CNUMERO': forms.TextInput(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'CO_FFECHA': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'style': 'width: 480px;'}),
+            'CO_CVALIDO_HASTA': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'style': 'width: 480px;'}),
+            'CO_CESTADO': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'CO_NTOTAL': forms.NumberInput(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'CO_COBSERVACIONES': forms.Textarea(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'CO_CCOMENTARIO': forms.Textarea(attrs={'class': 'form-control', 'style': 'width: 480px;'})
         }
 
     def __init__(self, *args, **kwargs):
@@ -490,11 +490,13 @@ class formORDEN_VENTA(forms.ModelForm):
     class Meta:
         model = ORDEN_VENTA
         fields = [
+            'OV_COTIZACION',
             'OV_CCLIENTE', 'OV_CNUMERO', 'OV_FFECHA', 'OV_FFECHA_ENTREGA',
-            'OV_CESTADO', 'OV_NTOTAL', 'OV_COBSERVACIONES', 'OV_CCOMENTARIO',
-            'OV_COTIZACION'
+            'OV_CESTADO', 'OV_NTOTAL', 'OV_COBSERVACIONES', 'OV_CCOMENTARIO'
+            
         ]
         labels = {
+            'OV_COTIZACION': 'Cotización',
             'OV_CCLIENTE': 'Cliente',
             'OV_CNUMERO': 'Número de orden de venta',
             'OV_FFECHA': 'Fecha de orden',
@@ -503,18 +505,19 @@ class formORDEN_VENTA(forms.ModelForm):
             'OV_NTOTAL': 'Total',
             'OV_COBSERVACIONES': 'Observaciones',
             'OV_CCOMENTARIO': 'Comentarios generales',
-            'OV_COTIZACION': 'Cotización'
+            
         }
         widgets = {
-            'OV_CCLIENTE': forms.Select(attrs={'class': 'form-control'}),
-            'OV_CNUMERO': forms.TextInput(attrs={'class': 'form-control'}),
-            'OV_FFECHA': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'OV_FFECHA_ENTREGA': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'OV_CESTADO': forms.Select(attrs={'class': 'form-control'}),
-            'OV_NTOTAL': forms.NumberInput(attrs={'class': 'form-control'}),
-            'OV_COBSERVACIONES': forms.Textarea(attrs={'class': 'form-control'}),
-            'OV_CCOMENTARIO': forms.Textarea(attrs={'class': 'form-control'}),
-            'OV_COTIZACION': forms.Select(attrs={'class': 'form-control'})
+            'OV_COTIZACION': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'OV_CCLIENTE': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'OV_CNUMERO': forms.TextInput(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'OV_FFECHA': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'style': 'width: 480px;'}),
+            'OV_FFECHA_ENTREGA': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'style': 'width: 480px;'}),
+            'OV_CESTADO': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'OV_NTOTAL': forms.NumberInput(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'OV_COBSERVACIONES': forms.Textarea(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'OV_CCOMENTARIO': forms.Textarea(attrs={'class': 'form-control', 'style': 'width: 480px;'})
+            
         }
 
     def __init__(self, *args, **kwargs):

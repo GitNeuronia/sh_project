@@ -155,10 +155,23 @@ urlpatterns = [
     path('cotizacion_addone/', login_required(views.COTIZACION_ADDONE), name='cotizacion_addone'),
     path('cotizacion_update/<int:pk>/', login_required(views.COTIZACION_UPDATE), name='cotizacion_update'),
     path('cotizacion_listone/<int:pk>', login_required(views.COTIZACION_LISTONE), name='cotizacion_listone'),
+    path('cotizacion_getdata/<int:pk>', login_required(views.COTIZACION_GET_DATA), name='cotizacion_getdata'),
     path('cotizacion_listone_format/<int:pk>', login_required(views.COTIZACION_LISTONE_FORMAT), name='cotizacion_listone_format'),
     path('cotizacion_getline/<int:pk>', login_required(views.COTIZACION_GET_LINE), name='cotizacion_getline'),
     path('cotizacion_deleteline/<int:pk>', login_required(views.COTIZACION_DELETE_LINE), name='cotizacion_deleteline'),
     path('cotizacion_addline/', login_required(views.COTIZACION_ADD_LINE), name='cotizacion_addline'),
+    path('check_co_numero/', login_required(views.CHECK_CO_NUMERO), name='check_co_numero'),
+
+
+    path('orden_venta_listall/', login_required(views.ORDEN_VENTA_LISTALL), name='orden_venta_listall'),
+    path('orden_venta_addone/', login_required(views.ORDEN_VENTA_ADDONE), name='orden_venta_addone'),
+    path('orden_venta_update/<int:pk>/', login_required(views.ORDEN_VENTA_UPDATE), name='orden_venta_update'),
+    path('orden_venta_listone/<int:pk>', login_required(views.ORDEN_VENTA_LISTONE), name='orden_venta_listone'),
+    path('orden_venta_listone_format/<int:pk>', login_required(views.ORDEN_VENTA_LISTONE_FORMAT), name='orden_venta_listone_format'),
+    path('orden_venta_getline/<int:pk>', login_required(views.ORDEN_VENTA_GET_LINE), name='orden_venta_getline'),
+    path('orden_venta_deleteline/<int:pk>', login_required(views.ORDEN_VENTA_DELETE_LINE), name='orden_venta_deleteline'),
+    path('orden_venta_addline/', login_required(views.ORDEN_VENTA_ADD_LINE), name='orden_venta_addline'),
+    path('check_ov_numero/', login_required(views.CHECK_OV_NUMERO), name='check_ov_numero'),
 
 
     # Coincide con cualquier archivo html

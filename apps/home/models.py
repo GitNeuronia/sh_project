@@ -302,7 +302,7 @@ class COTIZACION(models.Model):
     CO_CUSUARIO_MODIFICADOR = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='cotizaciones_modificadas', verbose_name='Usuario modificador')
     CO_CCOMENTARIO = models.TextField(blank=True, null=True, verbose_name='Comentarios generales')
     def __str__(self):
-        return f"Cotización {self.CO_CNUMERO} - {self.CO_CCLIENTE}"
+        return f"Cotización {self.CO_CNUMERO} - {self.CO_CLIENTE}"
 
     class Meta:
         db_table = 'COTIZACION'
@@ -1226,3 +1226,5 @@ class TAREA_INGENIERIA_DEPENDENCIA(models.Model):
         db_table = 'TAREA_INGENIERIA_DEPENDENCIA'
         verbose_name = 'Dependencia de Tarea de Ingeniería'
         verbose_name_plural = 'Dependencias de Tareas de Ingeniería'
+
+
