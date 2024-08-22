@@ -1,0 +1,782 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Proyectos de Cliente {% endblock %} 
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}
+    <!-- data tables css -->
+    <link rel="stylesheet" href="/static/assets/css/plugins/dataTables.bootstrap4.min.css">
+    <!-- Frappe Gantt CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.css">
+    <!-- SweetAlert2 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    {% load humanize %}
+    {% load i18n %}
+    {% load l10n %}
+    <style>
+        .progress {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            overflow: hidden;
+        }
+        .progress-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+            transition: width 0.6s ease;
+            min-width: 2em;
+        }
+        .progress-bar[style^="width: 100%"] {
+            border-top-right-radius: 0.25rem;
+            border-bottom-right-radius: 0.25rem;
+        }
+        .progress-bar[style^="width: 0%"] {
+            color: black;
+            text-shadow: none;
+        }
+        .handle-group, .handle {
+            display: none !important;
+        }
+        .bar-wrapper {
+            cursor: default !important;
+        }
+        .bar-wrapper:hover {
+            cursor: default !important;
+        }
+    </style>
+{% endblock stylesheets %}
+
+{% block content %}	
+
+    <!-- [ Main Content ] start -->
+    <section class="pcoded-main-container">
+        <div class="pcoded-content">
+            <!-- [ breadcrumb ] start -->
+            <div class="page-header">
+                <div class="page-block">
+                    <div class="row align-items-center">
+                        <div class="col-md-12">
+                            <div class="page-header-title">
+                                <h5 class="m-b-10">Proyectos de Cliente</h5>
+                            </div>
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="/"><i class="feather icon-home"></i></a></li>
+                                <li class="breadcrumb-item"><a href="/">Gestión de Proyectos</a></li>
+                                <li class="breadcrumb-item"><a href="{% url 'proycli_listall' %}">Proyectos de Cliente</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- [ breadcrumb ] end -->
+            <!-- [ Main Content ] start -->
+            <div class="row">
+                <!-- Detalles del proyecto -->
+                <div class="col-md-12">
+                    <div class="card shadow-lg rounded-lg overflow-hidden">
+                        <div class="card-header bg-primary d-flex justify-content-between align-items-center">
+                            <h4 class="mb-0 text-white"><i class="fas fa-project-diagram mr-2"></i>{{ proyecto.PC_CNOMBRE }}</h4>
+                            <a href="{% url 'proycli_update' proyecto.id 1 %}" class="btn btn-light btn-sm rounded-pill shadow-sm hover-lift">
+                                <i class="fas fa-edit mr-2"></i>Editar Proyecto
+                            </a>
+                        </div>
+                        <hr>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <h5 class="mb-3 text-primary"><i class="fas fa-info-circle mr-2"></i>Información General</h5>
+                                    <ul class="list-unstyled">
+                                        <li class="mb-2"><i class="fas fa-hashtag mr-2 text-muted"></i><strong>Código:</strong> {{ proyecto.PC_CCODIGO }}</li>
+                                        <li class="mb-2"><i class="fas fa-user mr-2 text-muted"></i><strong>Cliente:</strong> {{ proyecto.PC_CLIENTE.CL_CNOMBRE }}</li>
+                                        <li class="mb-2">
+                                            <i class="fas fa-folder mr-2 text-muted"></i><strong>Categoría:</strong> 
+                                            <span class="badge badge-pill badge-info">{{ proyecto.PC_CCATEGORIA.CA_CNOMBRE|default:"No especificada" }}</span>
+                                        </li>
+                                        <li class="mb-2">
+                                            <i class="fas fa-tag mr-2 text-muted"></i><strong>Tipo:</strong> 
+                                            <span class="badge badge-pill badge-success">{{ proyecto.PC_CTIPO.TP_CNOMBRE|default:"No especificado" }}</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-4">
+                                    <h5 class="mb-3 text-primary"><i class="fas fa-calendar-alt mr-2"></i>Fechas</h5>
+                                    <ul class="list-unstyled">
+                                        <li class="mb-2"><i class="fas fa-play mr-2 text-muted"></i><strong>Inicio:</strong> {{ proyecto.PC_FFECHA_INICIO|date:"d/m/Y" }}</li>
+                                        <li class="mb-2"><i class="fas fa-flag-checkered mr-2 text-muted"></i><strong>Fin estimado:</strong> {{ proyecto.PC_FFECHA_FIN_ESTIMADA|date:"d/m/Y" }}</li>
+                                        <li class="mb-2">
+                                            <i class="fas fa-stop mr-2 text-muted"></i><strong>Fin real:</strong>
+                                            {% if proyecto.PC_FFECHA_FIN_REAL %}
+                                                {% if proyecto.PC_FFECHA_FIN_REAL <= proyecto.PC_FFECHA_FIN_ESTIMADA %}
+                                                    <span class="badge badge-success">{{ proyecto.PC_FFECHA_FIN_REAL|date:"d/m/Y" }}</span>
+                                                {% else %}
+                                                    <span class="badge badge-danger">{{ proyecto.PC_FFECHA_FIN_REAL|date:"d/m/Y" }}</span>
+                                                {% endif %}
+                                            {% else %}
+                                                {% now "Y-m-d" as current_date %}
+                                                {% if proyecto.PC_FFECHA_FIN_ESTIMADA|date:"Y-m-d" >= current_date %}
+                                                    <span class="badge badge-success">No finalizado</span>
+                                                {% else %}
+                                                    <span class="badge badge-danger">No finalizado</span>
+                                                {% endif %}
+                                            {% endif %}
+                                        </li>
+                                        <li class="mb-2">
+                                            <i class="fas fa-tasks mr-2 text-muted"></i><strong>Estado:</strong> 
+                                            <span class="badge badge-pill badge-warning">{{ proyecto.PC_CESTADO }}</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-4">
+                                    <h5 class="mb-3 text-primary"><i class="fas fa-chart-line mr-2"></i>Finanzas y Progreso</h5>
+                                    <ul class="list-unstyled">
+                                        <li class="mb-2"><i class="fas fa-money-bill-wave mr-2 text-muted"></i><strong>Presupuesto:</strong> ${{ proyecto.PC_NPRESUPUESTO|floatformat:0|intcomma }}</li>
+                                        <li class="mb-2"><i class="fas fa-clock mr-2 text-muted"></i><strong>Valor/hora:</strong> ${{ proyecto.PC_NVALOR_HORA|floatformat:0|intcomma }}</li>
+                                        <li class="mb-2"><i class="fas fa-percentage mr-2 text-muted"></i><strong>Margen:</strong> {{ proyecto.PC_NMARGEN|floatformat:2 }}%</li>
+                                        <li class="mb-2"><i class="fas fa-hourglass-half mr-2 text-muted"></i><strong>Horas est/real:</strong> {{ proyecto.PC_NHORAS_ESTIMADAS }} / {{ proyecto.PC_NHORAS_REALES }}</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="row mt-4">
+                                <div class="col-md-12">
+                                    <h5 class="mb-3 text-primary"><i class="fas fa-calculator mr-2"></i>Resumen de Costos</h5>
+                                    <div class="progress-group">
+                                        <div class="mb-2">
+                                            <strong>Costo Real:</strong> ${{ proyecto.PC_NCOSTO_REAL|floatformat:0|intcomma }}
+                                        </div>
+                                        <div class="progress mb-3" style="height: 20px;">
+                                            <div class="progress-bar bg-success" role="progressbar" style="width: {% widthratio proyecto.PC_NCOSTO_REAL proyecto.PC_NCOSTO_ESTIMADO 100 %}%" aria-valuenow="{{ proyecto.PC_NCOSTO_REAL }}" aria-valuemin="0" aria-valuemax="{{ proyecto.PC_NCOSTO_ESTIMADO }}"></div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <strong>Costo Estimado:</strong> ${{ proyecto.PC_NCOSTO_ESTIMADO|floatformat:0|intcomma }}
+                                        </div>
+                                        <div class="progress mb-3" style="height: 20px;">
+                                            <div class="progress-bar bg-info" role="progressbar" style="width: 100%" aria-valuenow="{{ proyecto.PC_NCOSTO_ESTIMADO }}" aria-valuemin="0" aria-valuemax="{{ proyecto.PC_NCOSTO_ESTIMADO }}"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% comment %} <!-- Gráfico de avance -->
+                <div class="col-md-3"></div>
+                <div class="col-md-6 mt-3">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h6>Avance del Proyecto</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="avanceChart" height="150"></canvas>
+                        </div>
+                    </div>
+                </div>                
+                <div class="col-md-3"></div> {% endcomment %}
+
+                <!-- Carta Gantt -->
+                <div class="col-md-12 mt-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h5>Carta Gantt del Proyecto</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="gantt"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tabs de tareas -->
+                <div class="col-md-12 mt-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <ul class="nav nav-tabs card-header-tabs" id="tareasTabs" role="tablist">
+                                <li class="nav-item">
+                                    <a class="nav-link active" id="financieras-tab" data-toggle="tab" href="#financieras" role="tab">Tareas Financieras</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" id="generales-tab" data-toggle="tab" href="#generales" role="tab">Tareas Generales</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" id="ingenieria-tab" data-toggle="tab" href="#ingenieria" role="tab">Tareas de Ingeniería</a>
+                                </li>
+                            </ul>
+                            <div class="dropdown">
+                                <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    Agregar Tarea
+                                </button>
+                                <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                    <a class="dropdown-item" href="{% url 'tarea_financiera_addone' 1 %}">Tarea Financiera</a>
+                                    <a class="dropdown-item" href="{% url 'tarea_general_addone' 1 %}">Tarea General</a>
+                                    <a class="dropdown-item" href="{% url 'tarea_ingenieria_addone' 1%}">Tarea de Ingeniería</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="tab-content" id="tareasTabsContent">
+                                <div class="tab-pane fade show active" id="financieras" role="tabpanel">
+                                    <h5>Tareas Financieras</h5>
+                                    <table class="table table-striped table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Acción</th>
+                                                <th>Nombre</th>
+                                                <th>Descripción</th>
+                                                <th>Progreso</th>
+                                                <th>Estado</th>
+                                                <th>Fecha Inicio</th>
+                                                <th>Fecha Fin</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for tarea in tareas_financiera %}
+                                            <tr>
+                                                <td>
+                                                    <a href="{% url 'tarea_financiera_listone' tarea.id 1 %}" class="btn btn-sm btn-info mr-1" title="Ver detalles"><i class="fas fa-eye"></i></a>
+                                                    <a href="{% url 'tarea_financiera_update' tarea.id 1 %}" class="btn btn-sm btn-primary mr-1" title="Editar"><i class="fas fa-edit"></i></a>
+                                                    <a href="{% url 'tarea_financiera_update_asignaciones' tarea.id 1 %}" class="btn btn-sm btn-info mr-1" title="Asignar recursos">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-people" viewBox="0 0 16 16">
+                                                            <path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8Zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002a.274.274 0 0 1-.014.002H7.022ZM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816ZM4.92 10A5.493 5.493 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275ZM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0Zm3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/>
+                                                        </svg>
+                                                    </a>
+                                                    <a href="{% url 'tarea_financiera_dependencia_addone' tarea.id %}" class="btn btn-sm btn-warning" title="Agregar dependencia">
+                                                        <i class="fas fa-link"></i>
+                                                    </a>
+                                                </td>
+                                                <td>{{ tarea.TF_CNOMBRE }}</td>
+                                                <td>{{ tarea.TF_CDESCRIPCION }}</td>                                                
+                                                <td style="width: 150px;">
+                                                    <div class="progress" style="height: 20px; width: 100%;">
+                                                        <div class="progress-bar {% if tarea.TF_NPROGRESO >= 100 %}bg-success{% elif tarea.TF_NPROGRESO >= 50 %}bg-info{% else %}bg-warning{% endif %}" 
+                                                            role="progressbar" 
+                                                            style="width: {% if tarea.TF_NPROGRESO > 100 %}100%{% else %}{{ tarea.TF_NPROGRESO }}%{% endif %};" 
+                                                            aria-valuenow="{{ tarea.TF_NPROGRESO }}" 
+                                                            aria-valuemin="0" 
+                                                            aria-valuemax="100">
+                                                            {{ tarea.TF_NPROGRESO }}%
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>{{ tarea.TF_CESTADO }}</td>                                                
+                                                <td>{{ tarea.TF_FFECHA_INICIO|date:"d/m/Y" }}</td>
+                                                <td>{{ tarea.TF_FFECHA_FIN_ESTIMADA|date:"d/m/Y" }}</td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr>
+                                                <td colspan="7">No hay tareas financieras registradas.</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="tab-pane fade" id="generales" role="tabpanel">
+                                    <h5>Tareas Generales</h5>
+                                    <table class="table table-striped table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Acción</th>
+                                                <th>Nombre</th>
+                                                <th>Descripción</th>
+                                                <th>Progreso</th>
+                                                <th>Estado</th>
+                                                <th>Fecha Inicio</th>
+                                                <th>Fecha Fin</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for tarea in tareas_general %}
+                                            <tr>
+                                                <td>
+                                                    <a href="{% url 'tarea_general_listone' tarea.id 1 %}" class="btn btn-sm btn-info mr-1" title="Ver detalles"><i class="fas fa-eye"></i></a>
+                                                    <a href="{% url 'tarea_general_update' tarea.id 1 %}" class="btn btn-sm btn-primary mr-1" title="Editar"><i class="fas fa-edit"></i></a>
+                                                    <a href="{% url 'tarea_general_update_asignaciones' tarea.id 1 %}" class="btn btn-sm btn-info mr-1" title="Asignar recursos">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-people" viewBox="0 0 16 16">
+                                                            <path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8Zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002a.274.274 0 0 1-.014.002H7.022ZM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816ZM4.92 10A5.493 5.493 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275ZM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0Zm3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/>
+                                                        </svg>
+                                                    </a>
+                                                    <a href="{% url 'tarea_general_dependencia_addone' tarea.id %}" class="btn btn-sm btn-warning" title="Agregar dependencia">
+                                                        <i class="fas fa-link"></i>
+                                                    </a>
+                                                </td>
+                                                <td>{{ tarea.TG_CNOMBRE }}</td>
+                                                <td>{{ tarea.TG_CDESCRIPCION }}</td>
+                                                <td style="width: 150px;">
+                                                    <div class="progress" style="height: 20px; width: 100%;">
+                                                        <div class="progress-bar {% if tarea.TG_NPROGRESO >= 100 %}bg-success{% elif tarea.TG_NPROGRESO >= 50 %}bg-info{% else %}bg-warning{% endif %}" 
+                                                            role="progressbar" 
+                                                            style="width: {% if tarea.TG_NPROGRESO > 100 %}100%{% else %}{{ tarea.TG_NPROGRESO }}%{% endif %};" 
+                                                            aria-valuenow="{{ tarea.TG_NPROGRESO }}" 
+                                                            aria-valuemin="0" 
+                                                            aria-valuemax="100">
+                                                            {{ tarea.TG_NPROGRESO }}%
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>{{ tarea.TG_CESTADO }}</td>
+                                                <td>{{ tarea.TG_FFECHA_INICIO|date:"d/m/Y" }}</td>
+                                                <td>{{ tarea.TG_FFECHA_FIN_ESTIMADA|date:"d/m/Y" }}</td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr>
+                                                <td colspan="7">No hay tareas generales registradas.</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="tab-pane fade" id="ingenieria" role="tabpanel">
+                                    <h5>Tareas de Ingeniería</h5>
+                                    <table class="table table-striped table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Acción</th>
+                                                <th>Nombre</th>
+                                                <th>Descripción</th>
+                                                <th>Progreso</th>
+                                                <th>Estado</th>
+                                                <th>Fecha Inicio</th>
+                                                <th>Fecha Fin</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for tarea in tareas_ingenieria %}
+                                            <tr>
+                                                <td>
+                                                    <a href="{% url 'tarea_ingenieria_listone' tarea.id 1 %}" class="btn btn-sm btn-info mr-1" title="Ver detalles"><i class="fas fa-eye"></i></a>
+                                                    <a href="{% url 'tarea_ingenieria_update' tarea.id 1 %}" class="btn btn-sm btn-primary mr-1" title="Editar"><i class="fas fa-edit"></i></a>
+                                                    <a href="{% url 'tarea_ingenieria_update_asignaciones' tarea.id 1 %}" class="btn btn-sm btn-info mr-1" title="Asignar recursos">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-people" viewBox="0 0 16 16">
+                                                            <path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8Zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002a.274.274 0 0 1-.014.002H7.022ZM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816ZM4.92 10A5.493 5.493 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275ZM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0Zm3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/>
+                                                        </svg>
+                                                    </a>
+                                                    <a href="{% url 'tarea_ingenieria_dependencia_addone' tarea.id %}" class="btn btn-sm btn-warning" title="Agregar dependencia">
+                                                        <i class="fas fa-link"></i>
+                                                    </a>
+                                                </td>
+                                                <td>{{ tarea.TI_CNOMBRE }}</td>
+                                                <td>{{ tarea.TI_CDESCRIPCION }}</td>
+                                                <td style="width: 150px;">
+                                                    <div class="progress" style="height: 20px; width: 100%;">
+                                                        <div class="progress-bar {% if tarea.TI_NPROGRESO >= 100 %}bg-success{% elif tarea.TI_NPROGRESO >= 50 %}bg-info{% else %}bg-warning{% endif %}" 
+                                                            role="progressbar" 
+                                                            style="width: {% if tarea.TI_NPROGRESO > 100 %}100%{% else %}{{ tarea.TI_NPROGRESO }}%{% endif %};" 
+                                                            aria-valuenow="{{ tarea.TI_NPROGRESO }}" 
+                                                            aria-valuemin="0" 
+                                                            aria-valuemax="100">
+                                                            {{ tarea.TI_NPROGRESO }}%
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>{{ tarea.TI_CESTADO }}</td>
+                                                <td>{{ tarea.TI_FFECHA_INICIO|date:"d/m/Y" }}</td>
+                                                <td>{{ tarea.TI_FFECHA_FIN_ESTIMADA|date:"d/m/Y" }}</td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr>
+                                                <td colspan="7">No hay tareas de ingeniería registradas.</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- [ Main Content ] end -->
+        </div>
+    </section>
+    <!-- [ Main Content ] end -->
+
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}
+    <!-- datatable Js -->
+    <script src="/static/assets/js/plugins/jquery.dataTables.min.js"></script>
+    <script src="/static/assets/js/plugins/dataTables.bootstrap4.min.js"></script>
+    <script src="/static/assets/js/plugins/buttons.colVis.min.js"></script>
+    <script src="/static/assets/js/plugins/buttons.print.min.js"></script>
+    <script src="/static/assets/js/plugins/pdfmake.min.js"></script>
+    <script src="/static/assets/js/plugins/jszip.min.js"></script>
+    <script src="/static/assets/js/plugins/dataTables.buttons.min.js"></script>
+    <script src="/static/assets/js/plugins/buttons.html5.min.js"></script>
+    <script src="/static/assets/js/plugins/buttons.bootstrap4.min.js"></script>
+    <script src="/static/assets/js/pages/data-export-custom.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Frappe Gantt JS -->
+    <script src="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Gráfico de avance
+            {% comment %} var ctx = document.getElementById('avanceChart');
+            if (ctx) {
+                var labels = [];
+                var avanceReal = [];
+                var avancePlanificado = [];
+                var duracionPlanificada = [];
+                var duracionReal = [];
+
+                {% for tarea in tareas_general %}
+                    labels.push('{{ tarea.TG_CNOMBRE|escapejs }}');
+                    avanceReal.push({{ tarea.TG_NPROGRESO }});
+                    avancePlanificado.push(100);
+                    duracionPlanificada.push({{ tarea.TG_NDURACION_PLANIFICADA }});
+                    duracionReal.push({{ tarea.TG_NDURACION_REAL|default_if_none:0 }});
+                {% endfor %}
+
+                {% for tarea in tareas_ingenieria %}
+                    labels.push('{{ tarea.TI_CNOMBRE|escapejs }}');
+                    avanceReal.push({{ tarea.TI_NPROGRESO }});
+                    avancePlanificado.push(100);
+                    duracionPlanificada.push({{ tarea.TI_NDURACION_PLANIFICADA }});
+                    duracionReal.push({{ tarea.TI_NDURACION_REAL|default_if_none:0 }});
+                {% endfor %}
+
+                {% for tarea in tareas_financiera %}
+                    labels.push('{{ tarea.TF_CNOMBRE|escapejs }}');
+                    avanceReal.push({{ tarea.TF_NPROGRESO }});
+                    avancePlanificado.push(100);
+                    duracionPlanificada.push({{ tarea.TF_NDURACION_PLANIFICADA }});
+                    duracionReal.push({{ tarea.TF_NDURACION_REAL|default_if_none:0 }});
+                {% endfor %}
+
+                var chart = new Chart(ctx.getContext('2d'), {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: avanceReal,
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.8)',
+                                'rgba(54, 162, 235, 0.8)',
+                                'rgba(255, 206, 86, 0.8)',
+                                'rgba(75, 192, 192, 0.8)',
+                                'rgba(153, 102, 255, 0.8)',
+                                'rgba(255, 159, 64, 0.8)'
+                            ],
+                            borderColor: [
+                                'rgba(255, 99, 132, 1)',
+                                'rgba(54, 162, 235, 1)',
+                                'rgba(255, 206, 86, 1)',
+                                'rgba(75, 192, 192, 1)',
+                                'rgba(153, 102, 255, 1)',
+                                'rgba(255, 159, 64, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            title: {
+                                display: true,
+                                text: 'Distribución del Avance Real de Tareas'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        var label = context.label || '';
+                                        var value = context.parsed || 0;
+                                        return label + ': ' + value + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            window.filtrarTareas = function(tipo) {
+                var todasLasTareas = document.querySelectorAll('.tarea-general, .tarea-ingenieria, .tarea-financiera');
+                todasLasTareas.forEach(function(tarea) {
+                    if (tipo === 'todas') {
+                        tarea.style.display = '';
+                    } else {
+                        tarea.style.display = 'none';
+                    }
+                });
+
+                if (tipo === 'generales') {
+                    document.querySelectorAll('.tarea-general').forEach(function(tarea) {
+                        tarea.style.display = '';
+                    });
+                } else if (tipo === 'ingenieria') {
+                    document.querySelectorAll('.tarea-ingenieria').forEach(function(tarea) {
+                        tarea.style.display = '';
+                    });
+                } else if (tipo === 'financieras') {
+                    document.querySelectorAll('.tarea-financiera').forEach(function(tarea) {
+                        tarea.style.display = '';
+                    });
+                }
+                
+                actualizarGrafico(tipo);
+            }
+
+            function actualizarGrafico(tipo) {
+                var labelsFiltered = [];
+                var avanceRealFiltered = [];
+                
+                labels.forEach(function(label, index) {
+                    var incluir = false;
+                    if (tipo === 'todas') {
+                        incluir = true;
+                    } else if (tipo === 'generales' && index < {{ tareas_general|length }}) {
+                        incluir = true;
+                    } else if (tipo === 'ingenieria' && index >= {{ tareas_general|length }} && index < {{ tareas_general|length }} + {{ tareas_ingenieria|length }}) {
+                        incluir = true;
+                    } else if (tipo === 'financieras' && index >= {{ tareas_general|length }} + {{ tareas_ingenieria|length }}) {
+                        incluir = true;
+                    }
+                    
+                    if (incluir) {
+                        labelsFiltered.push(label);
+                        avanceRealFiltered.push(avanceReal[index]);
+                    }
+                });
+                
+                chart.data.labels = labelsFiltered;
+                chart.data.datasets[0].data = avanceRealFiltered;
+                chart.update();
+            }
+            // Panel de botones para filtrar tareas
+            var botonesPanel = document.createElement('div');
+            botonesPanel.className = 'btn-group mb-3';
+            botonesPanel.innerHTML = `
+                <button type="button" class="btn btn-primary" onclick="filtrarTareas('todas')">Todas las Tareas</button>
+                <button type="button" class="btn btn-info" onclick="filtrarTareas('financieras')">Tareas Financieras</button>
+                <button type="button" class="btn btn-success" onclick="filtrarTareas('ingenieria')">Tareas de Ingeniería</button>
+                <button type="button" class="btn btn-warning" onclick="filtrarTareas('generales')">Tareas Generales</button>
+            `;
+            document.getElementById('avanceChart').parentNode.insertBefore(botonesPanel, document.getElementById('avanceChart'));
+
+            // Inicialmente mostrar todas las tareas
+            filtrarTareas('todas');       {% endcomment %}
+
+            // Carta Gantt
+            var tasks = [];
+                                       
+            // Función para obtener las dependencias de una tarea
+            function getDependencies(tareaId) {
+                var dependencies = [];
+                {% for dep in dependencias_general %}
+                    if ('TG{{ dep.TD_TAREA_SUCESORA.id }}' === tareaId) {
+                        dependencies.push('TG{{ dep.TD_TAREA_PREDECESORA.id }}');
+                    }
+                {% endfor %}
+                {% for dep in dependencias_ingenieria %}
+                    if ('TI{{ dep.TD_TAREA_SUCESORA.id }}' === tareaId) {
+                        dependencies.push('TI{{ dep.TD_TAREA_PREDECESORA.id }}');
+                    }
+                {% endfor %}
+                {% for dep in dependencias_financiera %}
+                    if ('TF{{ dep.TD_TAREA_SUCESORA.id }}' === tareaId) {
+                        dependencies.push('TF{{ dep.TD_TAREA_PREDECESORA.id }}');
+                    }
+                {% endfor %}
+                return dependencies.join(',');
+            }
+
+            // Modificar la función createTask para incluir las dependencias
+            function createTask(id, name, start, end, progress, isMilestone) {
+                var dependencies = getDependencies(id);
+                return {
+                    id: id,
+                    name: name,
+                    start: start,
+                    end: end,
+                    dependencies: dependencies,
+                    progress: Math.min(100, Math.max(0, parseFloat(progress) || 0)),
+                    custom_class: isMilestone ? 'milestone' : 'task-with-progress'
+                };
+            }
+
+            // Agregar tareas generales            
+            {% for tarea in tareas_general %}
+                try {
+                    tasks.push(createTask(
+                        'TG{{ tarea.id }}',
+                        '{{ tarea.TG_CNOMBRE|escapejs }} ({{ tarea.TG_NPROGRESO }}%)',
+                        '{{ tarea.TG_FFECHA_INICIO|date:"Y-m-d" }}',
+                        '{{ tarea.TG_FFECHA_FIN_ESTIMADA|date:"Y-m-d" }}',
+                        '{{ tarea.TG_NPROGRESO }}',
+                        {{ tarea.TG_BMILESTONE|yesno:"true,false" }}
+                    ));
+                } catch (error) {
+                    console.error('Error al crear tarea general:', error);
+                }
+            {% endfor %}
+            
+            // Agregar tareas de ingeniería
+            {% for tarea in tareas_ingenieria %}
+                try {
+                    tasks.push(createTask(
+                        'TI{{ tarea.id }}',
+                        '{{ tarea.TI_CNOMBRE|escapejs }} ({{ tarea.TI_NPROGRESO }}%)',
+                        '{{ tarea.TI_FFECHA_INICIO|date:"Y-m-d" }}',
+                        '{{ tarea.TI_FFECHA_FIN_ESTIMADA|date:"Y-m-d" }}',
+                        '{{ tarea.TI_NPROGRESO }}',
+                        {{ tarea.TI_BMILESTONE|yesno:"true,false" }}
+                    ));
+                } catch (error) {
+                    console.error('Error al crear tarea de ingeniería:', error);
+                }
+            {% endfor %}
+            
+            // Agregar tareas financieras
+            {% for tarea in tareas_financiera %}
+                try {
+                    tasks.push(createTask(
+                        'TF{{ tarea.id }}',
+                        '{{ tarea.TF_CNOMBRE|escapejs }} ({{ tarea.TF_NPROGRESO }}%)',
+                        '{{ tarea.TF_FFECHA_INICIO|date:"Y-m-d" }}',
+                        '{{ tarea.TF_FFECHA_FIN_ESTIMADA|date:"Y-m-d" }}',
+                        '{{ tarea.TF_NPROGRESO }}',
+                        {{ tarea.TF_BMILESTONE|yesno:"true,false" }}
+                    ));
+                } catch (error) {
+                    console.error('Error al crear tarea financiera:', error);
+                }
+            {% endfor %}
+            // Ordenar las tareas por fecha de inicio
+            tasks.sort(function(a, b) {
+                return new Date(a.start) - new Date(b.start);
+            });
+            console.log('Tareas:', tasks);
+
+            var ganttElement = document.getElementById('gantt');
+            if (ganttElement && tasks.length > 0) {
+                // Encontrar la fecha más temprana y la más tardía
+                var minDate = new Date(Math.min.apply(null, tasks.map(function(task) {
+                    return new Date(task.start);
+                })));
+                var maxDate = new Date(Math.max.apply(null, tasks.map(function(task) {
+                    return new Date(task.end);
+                })));
+
+                var gantt = new Gantt("#gantt", tasks, {
+                    view_modes: ['Quarter Day', 'Half Day', 'Day', 'Week', 'Month'],
+                    view_mode: 'Week',
+                    date_format: 'YYYY-MM-DD',
+                    language: 'es',
+                    start_date: minDate,
+                    end_date: maxDate,
+                    bar_height: 40,
+                    bar_corner_radius: 3,
+                    arrow_curve: 5,
+                    padding: 18,
+                    on_click: function (task) {
+                        console.log('Tarea clickeada:', task);
+                    },
+                    on_view_change: function(mode) {
+                        console.log('Modo de vista cambiado:', mode);
+                    },
+                    readonly: true,
+                    drag_progress: false,
+                    allow_resize: false,
+                    allow_drag: false,
+                    custom_popup_html: function(task) {
+                        // Personalizar el popup para mostrar información adicional
+                        return `
+                            <div class="details-container" style="width: 350px; background-color: rgba(0, 0, 0, 0.8); border-radius: 10px; padding: 15px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                                <h3 style="font-weight: bold; color: #ffffff; margin-bottom: 15px; font-size: 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.2); padding-bottom: 10px;">${task.name}</h3>
+                                <p style="color: #f0f0f0; margin: 8px 0; font-size: 15px;"><i class="fas fa-calendar-alt" style="margin-right: 8px; color: #3498db;"></i><strong>Inicio:</strong> ${task.start}</p>
+                                <p style="color: #f0f0f0; margin: 8px 0; font-size: 15px;"><i class="fas fa-calendar-check" style="margin-right: 8px; color: #2ecc71;"></i><strong>Fin:</strong> ${task.end}</p>
+                                <p style="color: #f0f0f0; margin: 8px 0; font-size: 15px;"><i class="fas fa-tasks" style="margin-right: 8px; color: #f39c12;"></i><strong>Progreso:</strong> <span style="background-color: rgba(255,255,255,0.2); padding: 3px 8px; border-radius: 12px; font-weight: bold;">${task.progress}%</span></p>
+                                <p style="color: #f0f0f0; margin: 8px 0; font-size: 15px;"><i class="fas fa-flag" style="margin-right: 8px; color: #e74c3c;"></i><strong>Tipo:</strong> <span style="text-transform: uppercase; font-weight: bold; color: ${task.custom_class === 'milestone' ? '#e74c3c' : '#3498db'};">${task.custom_class === 'milestone' ? 'Hito' : 'Tarea'}</span></p>
+                            </div>
+                        `;
+                    }
+                });
+
+                // Crear botones para cambiar entre vistas
+                var viewModes = [
+                    {mode: 'Quarter Day', text: 'Cuarto de día'},
+                    {mode: 'Half Day', text: 'Medio día'},
+                    {mode: 'Day', text: 'Día'},
+                    {mode: 'Week', text: 'Semana'},
+                    {mode: 'Month', text: 'Mes'}
+                ];
+                var buttonContainer = document.createElement('div');
+                buttonContainer.style.marginBottom = '20px';
+                buttonContainer.style.textAlign = 'center';
+                
+                viewModes.forEach(function(viewMode) {
+                    var button = document.createElement('button');
+                    button.innerText = viewMode.text;
+                    button.style.margin = '0 5px';
+                    button.style.padding = '8px 12px';
+                    button.style.backgroundColor = '#007bff';
+                    button.style.color = 'white';
+                    button.style.border = 'none';
+                    button.style.borderRadius = '4px';
+                    button.style.cursor = 'pointer';
+                    button.style.transition = 'background-color 0.3s';
+                    button.onmouseover = function() {
+                        this.style.backgroundColor = '#0056b3';
+                    };
+                    button.onmouseout = function() {
+                        this.style.backgroundColor = '#007bff';
+                    };
+                    button.onclick = function() {
+                        gantt.change_view_mode(viewMode.mode);
+                        // Resaltar el botón activo
+                        buttonContainer.querySelectorAll('button').forEach(btn => btn.style.backgroundColor = '#007bff');
+                        this.style.backgroundColor = '#0056b3';
+                    };
+                    buttonContainer.appendChild(button);
+                });
+
+                ganttElement.parentNode.insertBefore(buttonContainer, ganttElement);
+
+                // Ajustar la vista inicial
+                gantt.change_view_mode('Week');
+            } else if (ganttElement) {
+                ganttElement.innerHTML = 'No hay tareas para mostrar';
+            }
+
+            // Agregar estilos para mostrar el progreso en las tareas
+            var style = document.createElement('style');
+            style.textContent = `
+                .task-with-progress .bar-progress {
+                    position: relative;
+                }
+                .task-with-progress .bar-progress::after {
+                    content: attr(data-progress) '%';
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    color: white;
+                    font-weight: bold;
+                    text-shadow: 1px 1px 2px black;
+                }
+            `;
+            document.head.appendChild(style);
+
+            $('.bar-wrapper').on('mousedown', (e, element) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+            $('.handle').on('mousedown', (e, element) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+            // Prevenir arrastre en elementos de Gantt
+            document.querySelectorAll('.bar-wrapper, .handle').forEach(function(element) {
+                element.addEventListener('mousedown', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+            });
+        });
+    </script>
+{% endblock javascripts %}

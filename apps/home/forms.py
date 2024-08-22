@@ -900,16 +900,18 @@ class formETAPA(forms.ModelForm):
 
 # Form for TAREA_GENERAL model
 class formTAREA_GENERAL(forms.ModelForm):
+    TG_CCODIGO = forms.CharField(widget=forms.HiddenInput(), required=False, label='')
+
     class Meta:
         model = TAREA_GENERAL
         fields = [
-            'TG_CCODIGO', 'TG_CNOMBRE', 'TG_CDESCRIPCION', 'TG_ETAPA', 'TG_FFECHA_INICIO',
+            'TG_CCODIGO', 'TG_PROYECTO_CLIENTE', 'TG_ETAPA', 'TG_CNOMBRE', 'TG_CDESCRIPCION', 'TG_FFECHA_INICIO',
             'TG_FFECHA_FIN_ESTIMADA', 'TG_FFECHA_FIN_REAL', 'TG_CESTADO', 'TG_NPRESUPUESTO',
             'TG_COBSERVACIONES', 'TG_BMILESTONE', 'TG_NPROGRESO', 'TG_NDURACION_PLANIFICADA',
             'TG_NDURACION_REAL', 'TG_BCRITICA'
         ]
         widgets = {
-            'TG_CCODIGO': forms.TextInput(attrs={'class': 'form-control'}),
+            'TG_PROYECTO_CLIENTE': forms.Select(attrs={'class': 'form-control'}),
             'TG_CNOMBRE': forms.TextInput(attrs={'class': 'form-control'}),
             'TG_CDESCRIPCION': forms.Textarea(attrs={'class': 'form-control'}),
             'TG_ETAPA': forms.Select(attrs={'class': 'form-control'}),
@@ -932,19 +934,43 @@ class formTAREA_GENERAL(forms.ModelForm):
                       'TG_CUSUARIO_CREADOR', 'TG_CUSUARIO_MODIFICADOR']:
             if field in self.fields:
                 self.fields[field].widget = forms.HiddenInput()
+        
+        # Generamos el código automáticamente si es una nueva instancia
+        if not self.instance.pk:
+            self.generate_code()
+
+    def generate_code(self):
+        if self.data.get('TG_PROYECTO_CLIENTE') and self.data.get('TG_ETAPA'):
+            proyecto = PROYECTO_CLIENTE.objects.get(id=self.data['TG_PROYECTO_CLIENTE'])
+            etapa = ETAPA.objects.get(id=self.data['TG_ETAPA'])
+            tarea_count = TAREA_GENERAL.objects.filter(TG_PROYECTO_CLIENTE=proyecto, TG_ETAPA=etapa).count() + 1
+            self.initial['TG_CCODIGO'] = f"{proyecto.PC_CCODIGO}-{etapa.ET_CCODIGO}-TG{tarea_count:03d}"
+
+    def save(self, commit=True):
+        instance = super(formTAREA_GENERAL, self).save(commit=False)
+        
+        if not instance.TG_CCODIGO:
+            self.generate_code()
+            instance.TG_CCODIGO = self.initial['TG_CCODIGO']
+        
+        if commit:
+            instance.save()
+        return instance
 
 # Form for TAREA_INGENIERIA model
 class formTAREA_INGENIERIA(forms.ModelForm):
+    TI_CCODIGO = forms.CharField(widget=forms.HiddenInput(), required=False, label='')
+
     class Meta:
         model = TAREA_INGENIERIA
         fields = [
-            'TI_CCODIGO', 'TI_CNOMBRE', 'TI_CDESCRIPCION', 'TI_ETAPA', 'TI_FFECHA_INICIO',
+            'TI_CCODIGO', 'TI_PROYECTO_CLIENTE', 'TI_CNOMBRE', 'TI_CDESCRIPCION', 'TI_ETAPA', 'TI_FFECHA_INICIO',
             'TI_FFECHA_FIN_ESTIMADA', 'TI_FFECHA_FIN_REAL', 'TI_CESTADO', 'TI_NPRESUPUESTO',
             'TI_COBSERVACIONES', 'TI_BMILESTONE', 'TI_NPROGRESO', 'TI_NDURACION_PLANIFICADA',
             'TI_NDURACION_REAL', 'TG_BCRITICA'
         ]
         widgets = {
-            'TI_CCODIGO': forms.TextInput(attrs={'class': 'form-control'}),
+            'TI_PROYECTO_CLIENTE': forms.Select(attrs={'class': 'form-control'}),
             'TI_CNOMBRE': forms.TextInput(attrs={'class': 'form-control'}),
             'TI_CDESCRIPCION': forms.Textarea(attrs={'class': 'form-control'}),
             'TI_ETAPA': forms.Select(attrs={'class': 'form-control'}),
@@ -967,19 +993,43 @@ class formTAREA_INGENIERIA(forms.ModelForm):
                       'TI_CUSUARIO_CREADOR', 'TI_CUSUARIO_MODIFICADOR']:
             if field in self.fields:
                 self.fields[field].widget = forms.HiddenInput()
+        
+        # Generamos el código automáticamente si es una nueva instancia
+        if not self.instance.pk:
+            self.generate_code()
+
+    def generate_code(self):
+        if self.data.get('TI_PROYECTO_CLIENTE') and self.data.get('TI_ETAPA'):
+            proyecto = PROYECTO_CLIENTE.objects.get(id=self.data['TI_PROYECTO_CLIENTE'])
+            etapa = ETAPA.objects.get(id=self.data['TI_ETAPA'])
+            tarea_count = TAREA_INGENIERIA.objects.filter(TI_PROYECTO_CLIENTE=proyecto, TI_ETAPA=etapa).count() + 1
+            self.initial['TI_CCODIGO'] = f"{proyecto.PC_CCODIGO}-{etapa.ET_CCODIGO}-TI{tarea_count:03d}"
+
+    def save(self, commit=True):
+        instance = super(formTAREA_INGENIERIA, self).save(commit=False)
+        
+        if not instance.TI_CCODIGO:
+            self.generate_code()
+            instance.TI_CCODIGO = self.initial['TI_CCODIGO']
+        
+        if commit:
+            instance.save()
+        return instance
 
 # Formulario para TAREA_FINANCIERA
 class formTAREA_FINANCIERA(forms.ModelForm):
+    TF_CCODIGO = forms.CharField(widget=forms.HiddenInput(), required=False, label='')
+
     class Meta:
         model = TAREA_FINANCIERA
         fields = [
-            'TF_CCODIGO', 'TF_CNOMBRE', 'TF_CDESCRIPCION', 'TF_ETAPA', 'TF_FFECHA_INICIO',
+            'TF_CCODIGO', 'TF_PROYECTO_CLIENTE', 'TF_CNOMBRE', 'TF_CDESCRIPCION', 'TF_ETAPA', 'TF_FFECHA_INICIO',
             'TF_FFECHA_FIN_ESTIMADA', 'TF_FFECHA_FIN_REAL', 'TF_CESTADO', 'TF_NMONTO',
             'TF_CTIPO_TRANSACCION', 'TF_COBSERVACIONES', 'TF_BMILESTONE', 'TF_NPROGRESO', 
             'TF_NDURACION_PLANIFICADA', 'TF_NDURACION_REAL', 'TG_BCRITICA'
         ]
         widgets = {
-            'TF_CCODIGO': forms.TextInput(attrs={'class': 'form-control'}),
+            'TF_PROYECTO_CLIENTE': forms.Select(attrs={'class': 'form-control'}),
             'TF_CNOMBRE': forms.TextInput(attrs={'class': 'form-control'}),
             'TF_CDESCRIPCION': forms.Textarea(attrs={'class': 'form-control'}),
             'TF_ETAPA': forms.Select(attrs={'class': 'form-control'}),
@@ -1003,7 +1053,40 @@ class formTAREA_FINANCIERA(forms.ModelForm):
                       'TF_CUSUARIO_CREADOR', 'TF_CUSUARIO_MODIFICADOR']:
             if field in self.fields:
                 self.fields[field].widget = forms.HiddenInput()
+        
+        # Generamos el código automáticamente si es una nueva instancia
+        if not self.instance.pk:
+            self.generate_code()
 
+    def generate_code(self):
+        if self.data.get('TF_PROYECTO_CLIENTE') and self.data.get('TF_ETAPA'):
+            proyecto = PROYECTO_CLIENTE.objects.get(id=self.data['TF_PROYECTO_CLIENTE'])
+            etapa = ETAPA.objects.get(id=self.data['TF_ETAPA'])
+            tarea_count = TAREA_FINANCIERA.objects.filter(TF_PROYECTO_CLIENTE=proyecto, TF_ETAPA=etapa).count() + 1
+            self.initial['TF_CCODIGO'] = f"{proyecto.PC_CCODIGO}-{etapa.ET_CCODIGO}-TF{tarea_count:03d}"
+
+    def save(self, commit=True):
+        instance = super(formTAREA_FINANCIERA, self).save(commit=False)
+        
+        if not instance.TF_CCODIGO:
+            self.generate_code()
+            instance.TF_CCODIGO = self.initial['TF_CCODIGO']
+        
+        if commit:
+            instance.save()
+        return instance
+
+    def clean(self):
+        cleaned_data = super().clean()
+        fecha_inicio = cleaned_data.get('TF_FFECHA_INICIO')
+        fecha_fin_estimada = cleaned_data.get('TF_FFECHA_FIN_ESTIMADA')
+
+        if fecha_inicio and not fecha_fin_estimada:
+            cleaned_data['TF_FFECHA_FIN_ESTIMADA'] = fecha_inicio
+        elif fecha_fin_estimada and not fecha_inicio:
+            cleaned_data['TF_FFECHA_INICIO'] = fecha_fin_estimada
+
+        return cleaned_data
 
 # Form for ADJUNTO_TAREA_GENERAL model
 class formADJUNTO_TAREA_GENERAL(forms.ModelForm):
@@ -1103,10 +1186,9 @@ class formASIGNACION_EMPLEADO_TAREA_INGENIERIA(forms.ModelForm):
 class formASIGNACION_EMPLEADO_TAREA_FINANCIERA(forms.ModelForm):
     class Meta:
         model = ASIGNACION_EMPLEADO_TAREA_FINANCIERA
-        fields = ['AE_EMPLEADO', 'AE_TAREA', 'AE_CESTADO']
+        fields = ['AE_EMPLEADO', 'AE_CESTADO']
         widgets = {
-            'AE_EMPLEADO': forms.Select(attrs={'class': 'form-control'}),
-            'AE_TAREA': forms.Select(attrs={'class': 'form-control'}),
+            'AE_EMPLEADO': forms.Select(attrs={'class': 'js-example-basic-multiple form-control'}),            
             'AE_CESTADO': forms.Select(attrs={'class': 'form-control'}),
         }
 
@@ -1121,10 +1203,9 @@ class formASIGNACION_EMPLEADO_TAREA_FINANCIERA(forms.ModelForm):
 class formASIGNACION_EMPLEADO_TAREA_GENERAL(forms.ModelForm):
     class Meta:
         model = ASIGNACION_EMPLEADO_TAREA_GENERAL
-        fields = ['AE_EMPLEADO', 'AE_TAREA', 'AE_CESTADO']
+        fields = ['AE_EMPLEADO', 'AE_CESTADO']
         widgets = {
-            'AE_EMPLEADO': forms.Select(attrs={'class': 'form-control'}),
-            'AE_TAREA': forms.Select(attrs={'class': 'form-control'}),
+            'AE_EMPLEADO': forms.Select(attrs={'class': 'js-example-basic-multiple form-control'}),            
             'AE_CESTADO': forms.Select(attrs={'class': 'form-control'}),
         }
 
@@ -1157,10 +1238,9 @@ class formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA(forms.ModelForm):
 class formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_FINANCIERA(forms.ModelForm):
     class Meta:
         model = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_FINANCIERA
-        fields = ['AEC_EMPLEADO', 'AEC_TAREA', 'AEC_CESTADO']
+        fields = ['AEC_EMPLEADO', 'AEC_CESTADO']
         widgets = {
-            'AEC_EMPLEADO': forms.Select(attrs={'class': 'form-control'}),
-            'AEC_TAREA': forms.Select(attrs={'class': 'form-control'}),
+            'AEC_EMPLEADO': forms.Select(attrs={'class': 'js-example-basic-multiple form-control'}),
             'AEC_CESTADO': forms.Select(attrs={'class': 'form-control'}),
         }
 
@@ -1231,9 +1311,8 @@ class formASIGNACION_RECURSO_TAREA_INGENIERIA(forms.ModelForm):
 class formASIGNACION_RECURSO_TAREA_FINANCIERA(forms.ModelForm):
     class Meta:
         model = ASIGNACION_RECURSO_TAREA_FINANCIERA
-        fields = ['ART_TAREA', 'ART_PRODUCTO', 'ART_CANTIDAD', 'ART_COSTO_UNITARIO']
-        widgets = {
-            'ART_TAREA': forms.Select(attrs={'class': 'form-control'}),
+        fields = ['ART_PRODUCTO', 'ART_CANTIDAD', 'ART_COSTO_UNITARIO']
+        widgets = {            
             'ART_PRODUCTO': forms.Select(attrs={'class': 'form-control'}),
             'ART_CANTIDAD': forms.NumberInput(attrs={'class': 'form-control'}),
             'ART_COSTO_UNITARIO': forms.NumberInput(attrs={'class': 'form-control'}),
@@ -1319,9 +1398,8 @@ class formBOLETA_GARANTIA(forms.ModelForm):
 class formTAREA_GENERAL_DEPENDENCIA(forms.ModelForm):
     class Meta:
         model = TAREA_GENERAL_DEPENDENCIA
-        fields = ['TD_TAREA_PREDECESORA', 'TD_TAREA_SUCESORA', 'TD_TIPO_DEPENDENCIA']
-        widgets = {
-            'TD_TAREA_PREDECESORA': forms.Select(attrs={'class': 'form-control'}),
+        fields = ['TD_TAREA_SUCESORA', 'TD_TIPO_DEPENDENCIA']
+        widgets = {            
             'TD_TAREA_SUCESORA': forms.Select(attrs={'class': 'form-control'}),
             'TD_TIPO_DEPENDENCIA': forms.Select(attrs={'class': 'form-control'}),
         }
@@ -1330,9 +1408,8 @@ class formTAREA_GENERAL_DEPENDENCIA(forms.ModelForm):
 class formTAREA_FINANCIERA_DEPENDENCIA(forms.ModelForm):
     class Meta:
         model = TAREA_FINANCIERA_DEPENDENCIA
-        fields = ['TD_TAREA_PREDECESORA', 'TD_TAREA_SUCESORA', 'TD_TIPO_DEPENDENCIA']
-        widgets = {
-            'TD_TAREA_PREDECESORA': forms.Select(attrs={'class': 'form-control'}),
+        fields = ['TD_TAREA_SUCESORA', 'TD_TIPO_DEPENDENCIA']
+        widgets = {            
             'TD_TAREA_SUCESORA': forms.Select(attrs={'class': 'form-control'}),
             'TD_TIPO_DEPENDENCIA': forms.Select(attrs={'class': 'form-control'}),
         }
@@ -1341,9 +1418,8 @@ class formTAREA_FINANCIERA_DEPENDENCIA(forms.ModelForm):
 class formTAREA_INGENIERIA_DEPENDENCIA(forms.ModelForm):
     class Meta:
         model = TAREA_INGENIERIA_DEPENDENCIA
-        fields = ['TD_TAREA_PREDECESORA', 'TD_TAREA_SUCESORA', 'TD_TIPO_DEPENDENCIA']
-        widgets = {
-            'TD_TAREA_PREDECESORA': forms.Select(attrs={'class': 'form-control'}),
+        fields = ['TD_TAREA_SUCESORA', 'TD_TIPO_DEPENDENCIA']
+        widgets = {            
             'TD_TAREA_SUCESORA': forms.Select(attrs={'class': 'form-control'}),
             'TD_TIPO_DEPENDENCIA': forms.Select(attrs={'class': 'form-control'}),
         }

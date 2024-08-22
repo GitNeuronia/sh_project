@@ -1,0 +1,70 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Editar Tarea de Ingeniería {% endblock %} 
+
+{% block stylesheets %}
+<!-- Agrega aquí cualquier estilo específico si es necesario -->
+{% endblock stylesheets %}
+
+{% block content %}		
+    <!-- [ Main Content ] start -->
+    <section class="pcoded-main-container">
+        <div class="pcoded-content">
+            <!-- [ breadcrumb ] start -->
+            <div class="page-header">
+                <div class="page-block">
+                    <div class="row align-items-center">
+                        <div class="col-md-12">
+                            <div class="page-header-title">
+                                <h5 class="m-b-10">Editar Tarea de Ingeniería</h5>
+                            </div>
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="/"><i class="feather icon-home"></i></a></li>
+                                <li class="breadcrumb-item"><a href="{% url 'tarea_ingenieria_listall' %}">Tareas de Ingeniería</a></li>
+                                <li class="breadcrumb-item"><a href="#!">Editar Tarea de Ingeniería</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- [ breadcrumb ] end -->
+            <!-- [ Main Content ] start -->
+            <div class="row">
+                <!-- [ form-element ] start -->
+                <div class="col-sm-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Editar Tarea de Ingeniería</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" id="tarea-ingenieria-form">
+                                {% csrf_token %}
+                                {{ form.non_field_errors }}
+                                {% for field in form %}
+                                    <div class="form-group">
+                                        {{ field.errors }}
+                                        <label for="{{ field.id_for_label }}">{{ field.label }}:</label>
+                                        {{ field }}
+                                    </div>
+                                {% endfor %}
+                                <div class="form-group">
+                                    <button type="submit" class="btn btn-primary">Actualizar</button>
+                                    <a href="{% url 'tarea_ingenieria_listall' %}" class="btn btn-secondary">Cancelar</a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <!-- [ form-element ] end -->
+            </div>
+            <!-- [ Main Content ] end -->
+        </div>
+    </section>
+    <!-- [ Main Content ] end -->
+{% endblock content %}
+
+{% block javascripts %}
+<script>
+
+</script>
+{% endblock javascripts %}

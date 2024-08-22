@@ -1,0 +1,197 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Actualizar Asignaciones de Tarea de Ingeniería {% endblock %} 
+
+{% block stylesheets %}
+ <!-- Select2 CSS -->
+ <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+{% endblock stylesheets %}
+
+{% block content %}		
+    <!-- [ Main Content ] start -->
+    <section class="pcoded-main-container">
+        <div class="pcoded-content">
+            <!-- [ breadcrumb ] start -->
+            <div class="page-header">
+                <div class="page-block">
+                    <div class="row align-items-center">
+                        <div class="col-md-12">
+                            <div class="page-header-title">
+                                <h5 class="m-b-10">Actualizar Asignaciones de Tarea de Ingeniería</h5>
+                            </div>
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="/"><i class="feather icon-home"></i></a></li>
+                                <li class="breadcrumb-item"><a href="{% url 'tarea_ingenieria_listall' %}">Tareas de Ingeniería</a></li>
+                                <li class="breadcrumb-item"><a href="#!">Actualizar Asignaciones</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- [ breadcrumb ] end -->
+            <!-- [ Main Content ] start -->
+            <div class="row">
+                <!-- [ form-element ] start -->
+                <div class="col-sm-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Actualizar Asignaciones de Tarea de Ingeniería</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" id="asignaciones-form">
+                                {% csrf_token %}
+                                <h5>Asignaciones</h5>
+                                <hr>
+                                <div class="form-group">
+                                    <label for="id_empleados">Asignar Empleados:</label>
+                                    <select class="form-control select2-multiple" id="id_empleados" name="empleados" multiple="multiple">
+                                        {% for empleado in form_asignacion_empleado.fields.AE_EMPLEADO.queryset %}
+                                            <option value="{{ empleado.id }}" {% if empleado.id in empleados_asignados_ids %}selected{% endif %}>{{ empleado }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="id_contratistas">Asignar Contratistas:</label>
+                                    <select class="form-control select2-multiple" id="id_contratistas" name="contratistas" multiple="multiple">
+                                        {% for contratista in form_asignacion_contratista.fields.AEC_EMPLEADO.queryset %}
+                                            <option value="{{ contratista.id }}" {% if contratista.id in contratistas_asignados_ids %}selected{% endif %}>{{ contratista }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="id_recursos">Asignar Recursos:</label>
+                                    <select class="form-control" id="id_recursos" name="recursos">
+                                        <option value="">Seleccione un recurso</option>
+                                        {% for recurso in form_asignacion_recurso.fields.ART_PRODUCTO.queryset %}
+                                            <option value="{{ recurso.id }}">{{ recurso }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div id="recursos-detalles">
+                                    <!-- Los campos de cantidad y costo unitario se generarán dinámicamente aquí -->
+                                </div>
+                                <div id="recursos-asignados">
+                                    <!-- Aquí se mostrarán los recursos asignados -->
+                                </div>
+                                <div class="form-group nav justify-content-end">
+                                    <button class="btn btn-primary mr-4" type="submit">Actualizar Asignaciones</button>
+                                    <a href="javascript:history.back()" class="btn btn-secondary">Cancelar</a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <!-- [ form-element ] end -->
+            </div>
+            <!-- [ Main Content ] end -->
+        </div>
+    </section>
+    <!-- [ Main Content ] end -->
+{% endblock content %}
+
+{% block javascripts %}
+    <!-- Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inicializar Select2 para selecciones múltiples
+            $('.select2-multiple').select2({
+                placeholder: "Seleccione una o más opciones",
+                allowClear: true
+            });
+        
+            const recursosSelect = document.getElementById('id_recursos');
+            const recursosDetalles = document.getElementById('recursos-detalles');
+            const recursosAsignados = document.getElementById('recursos-asignados');
+            let recursosAsignadosArray = {{ recursos_asignados_data|safe }};
+        
+            recursosSelect.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                if (selectedOption.value) {
+                    const recursoId = selectedOption.value;
+                    const recursoNombre = selectedOption.text;
+                    
+                    recursosDetalles.innerHTML = `
+                        <h6>${recursoNombre}</h6>
+                        <div class="form-group">
+                            <label for="cantidad_${recursoId}">Cantidad:</label>
+                            <input type="number" class="form-control" id="cantidad_${recursoId}" name="cantidad_${recursoId}" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="costo_${recursoId}">Costo Unitario:</label>
+                            <input type="number" step="0.01" class="form-control" id="costo_${recursoId}" name="costo_${recursoId}" required>
+                        </div>
+                        <button type="button" class="btn btn-primary" onclick="agregarRecurso('${recursoId}', '${recursoNombre}')">Agregar Recurso</button>
+                    `;
+                } else {
+                    recursosDetalles.innerHTML = '';
+                }
+            });
+        
+            window.agregarRecurso = function(recursoId, recursoNombre) {
+                const cantidad = document.getElementById(`cantidad_${recursoId}`).value;
+                const costo = document.getElementById(`costo_${recursoId}`).value;
+                
+                if (cantidad && costo) {
+                    recursosAsignadosArray.push({id: recursoId, nombre: recursoNombre, cantidad: cantidad, costo: costo});
+                    actualizarRecursosAsignados();
+                    recursosDetalles.innerHTML = '';
+                    recursosSelect.value = '';
+                } else {
+                    alert('Por favor, ingrese la cantidad y el costo unitario.');
+                }
+            };
+        
+            function actualizarRecursosAsignados() {
+                recursosAsignados.innerHTML = '<h4 class="mb-3">Recursos Asignados:</h4>';
+                if (recursosAsignadosArray.length === 0) {
+                    recursosAsignados.innerHTML += '<p class="text-muted">No hay recursos asignados.</p>';
+                } else {
+                    recursosAsignadosArray.forEach((recurso, index) => {
+                        recursosAsignados.innerHTML += `
+                            <div class="card mb-2">
+                                <div class="card-body d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="card-title mb-0">${recurso.nombre}</h5>
+                                        <p class="card-text mb-0">Cantidad: ${recurso.cantidad}</p>
+                                        <p class="card-text">Costo: $${parseFloat(recurso.costo).toFixed(2)}</p>
+                                    </div>
+                                    <button type="button" class="btn btn-danger btn-sm" onclick="eliminarRecurso(${index})">
+                                        <i class="fas fa-trash-alt"></i> Eliminar
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+            }
+        
+            window.eliminarRecurso = function(index) {
+                recursosAsignadosArray.splice(index, 1);
+                actualizarRecursosAsignados();
+            };
+        
+            // Manejar el envío del formulario
+            const form = document.querySelector('#asignaciones-form');
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Crear un campo oculto para los recursos
+                const recursosInput = document.createElement('input');
+                recursosInput.type = 'hidden';
+                recursosInput.name = 'recursos_json';
+                recursosInput.value = JSON.stringify(recursosAsignadosArray);
+                form.appendChild(recursosInput);
+        
+                // Enviar el formulario
+                form.submit();
+            });
+
+            // Mostrar recursos asignados al cargar la página
+            actualizarRecursosAsignados();
+        });
+    </script>
+{% endblock javascripts %}

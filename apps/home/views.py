@@ -4,6 +4,7 @@ Copyright (c) 2019 - present AppSeed.us
 """
 
 from decimal import Decimal
+import json
 from django import template
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
@@ -884,6 +885,65 @@ def CONTRATISTA_UPDATE(request, pk):
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
+def EMPLEADO_EXTERNO_LISTALL(request):
+    try:
+        object_list = EMPLEADO_CONTRATISTA.objects.all()
+        ctx = {
+            'object_list': object_list
+        }
+        return render(request, 'home/EMPLEADO_CONTRATISTA/empleado_externo_listall.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def EMPLEADO_EXTERNO_ADDONE(request):
+    try:
+        if request.method == 'POST':
+            form = formEMPLEADO_CONTRATISTA(request.POST)
+            if form.is_valid():
+                form.save()
+                messages.success(request, 'Empleado externo guardado correctamente')
+                return redirect('/empleado_externo_listall/')
+        form = formEMPLEADO_CONTRATISTA()
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/EMPLEADO_CONTRATISTA/empleado_externo_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def EMPLEADO_EXTERNO_UPDATE(request, pk):
+    try:
+        empleado_externo = EMPLEADO_CONTRATISTA.objects.get(id=pk)
+        if request.method == 'POST':
+            form = formEMPLEADO_CONTRATISTA(request.POST, instance=empleado_externo)
+            if form.is_valid():
+                empleado = form.save(commit=False)
+                empleado.EC_CUSUARIO_MODIFICADOR = request.user
+                empleado.save()
+                messages.success(request, 'Empleado externo actualizado correctamente')
+                return redirect('/empleado_externo_listall/')
+        else:
+            # Asegúrate de que las fechas se carguen correctamente en el formulario
+            initial_data = {
+                'EC_FFECHA_CONTRATACION': empleado_externo.EC_FFECHA_CONTRATACION.strftime('%Y-%m-%d') if empleado_externo.EC_FFECHA_CONTRATACION else None,
+                'EC_CFECHA_NACIMIENTO': empleado_externo.EC_CFECHA_NACIMIENTO.strftime('%Y-%m-%d') if empleado_externo.EC_CFECHA_NACIMIENTO else None,
+            }
+            form = formEMPLEADO_CONTRATISTA(instance=empleado_externo, initial=initial_data)
+        
+        ctx = {
+            'form': form,
+            'empleado_externo': empleado_externo
+        }
+        return render(request, 'home/EMPLEADO_CONTRATISTA/empleado_externo_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
 def ETAPA_LISTALL(request):
     try:
         object_list = ETAPA.objects.all()
@@ -965,7 +1025,7 @@ def PROYECTO_CLIENTE_ADDONE(request):
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
-def PROYECTO_CLIENTE_UPDATE(request, pk):
+def PROYECTO_CLIENTE_UPDATE(request, pk, page):
     try:
         proyecto = PROYECTO_CLIENTE.objects.get(id=pk)
         if request.method == 'POST':
@@ -975,8 +1035,16 @@ def PROYECTO_CLIENTE_UPDATE(request, pk):
                 proyecto.PC_CUSUARIO_MODIFICADOR = request.user
                 proyecto.save()
                 messages.success(request, 'Proyecto de cliente actualizado correctamente')
-                return redirect('/proycli_listall/')
-        form = formPROYECTO_CLIENTE(instance=proyecto)
+                if page == 1:
+                    return redirect('/proycli_listone/'+str(proyecto.id)+'/')
+                else:
+                    return redirect('/proycli_listall/')
+        else:
+            # Convertir las fechas a formato de cadena para el formulario
+            proyecto.PC_FFECHA_INICIO = proyecto.PC_FFECHA_INICIO.strftime('%Y-%m-%d') if proyecto.PC_FFECHA_INICIO else None
+            proyecto.PC_FFECHA_FIN_ESTIMADA = proyecto.PC_FFECHA_FIN_ESTIMADA.strftime('%Y-%m-%d') if proyecto.PC_FFECHA_FIN_ESTIMADA else None
+            proyecto.PC_FFECHA_FIN_REAL = proyecto.PC_FFECHA_FIN_REAL.strftime('%Y-%m-%d') if proyecto.PC_FFECHA_FIN_REAL else None
+            form = formPROYECTO_CLIENTE(instance=proyecto)
         ctx = {
             'form': form
         }
@@ -986,6 +1054,37 @@ def PROYECTO_CLIENTE_UPDATE(request, pk):
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
+def PROYECTO_CLIENTE_LISTONE(request, pk):
+    try:
+        proyecto = PROYECTO_CLIENTE.objects.get(id=pk)
+        tareas_general = TAREA_GENERAL.objects.filter(TG_PROYECTO_CLIENTE=proyecto)
+        tareas_ingenieria = TAREA_INGENIERIA.objects.filter(TI_PROYECTO_CLIENTE=proyecto)
+        tareas_financiera = TAREA_FINANCIERA.objects.filter(TF_PROYECTO_CLIENTE=proyecto)
+        
+        dependencias_general = TAREA_GENERAL_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_general)
+        dependencias_ingenieria = TAREA_INGENIERIA_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_ingenieria)
+        dependencias_financiera = TAREA_FINANCIERA_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_financiera)
+        
+        for tarea in tareas_general:
+            tarea.TG_NPROGRESO = int(round(float(tarea.TG_NPROGRESO)))
+        for tarea in tareas_ingenieria:
+            tarea.TI_NPROGRESO = int(round(float(tarea.TI_NPROGRESO)))
+        for tarea in tareas_financiera:
+            tarea.TF_NPROGRESO = int(round(float(tarea.TF_NPROGRESO)))
+        ctx = {
+            'proyecto': proyecto,
+            'tareas_general': tareas_general,
+            'tareas_ingenieria': tareas_ingenieria,
+            'tareas_financiera': tareas_financiera,
+            'dependencias_general': dependencias_general,
+            'dependencias_ingenieria': dependencias_ingenieria,
+            'dependencias_financiera': dependencias_financiera
+        }
+        return render(request, 'home/PROYECTO_CLIENTE/proycli_listone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
 #--------------------------------------
 #----------------TAREAS----------------
 #--------------------------------------
@@ -1004,27 +1103,88 @@ def TAREA_GENERAL_LISTALL(request):
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
-def TAREA_GENERAL_ADDONE(request):
+def TAREA_GENERAL_ADDONE(request, page):
     try:
+        form = formTAREA_GENERAL()
+        form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_GENERAL()
+        form_asignacion_contratista = formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL()
+        form_asignacion_recurso = formASIGNACION_RECURSO_TAREA_GENERAL()
+
         if request.method == 'POST':
             form = formTAREA_GENERAL(request.POST)
             if form.is_valid():
                 tarea = form.save(commit=False)
-                tarea.TG_CUSUARIO_CREADOR = request.user
+                tarea.TG_CUSUARIO_CREADOR = request.user                                                
                 tarea.save()
-                messages.success(request, 'Tarea general guardada correctamente')
-                return redirect('/tarea_general_listall/')
-        form = formTAREA_GENERAL()
+
+                # Manejar asignaciones múltiples
+                empleados_ids = request.POST.getlist('empleados')
+                contratistas_ids = request.POST.getlist('contratistas')                
+                recursos_json = request.POST.get('recursos_json')
+
+                # Asignar empleados
+                for empleado_id in empleados_ids:
+                    id_emp = EMPLEADO.objects.get(id=empleado_id)
+                    asignacion = ASIGNACION_EMPLEADO_TAREA_GENERAL(
+                        AE_TAREA=tarea,
+                        AE_EMPLEADO=id_emp,
+                        AE_CESTADO = 'ASIGNADO',
+                        AE_CUSUARIO_CREADOR = request.user,
+                        AE_FFECHA_ASIGNACION=tarea.TG_FFECHA_INICIO,  
+                        AE_FFECHA_FINALIZACION=tarea.TG_FFECHA_FIN_ESTIMADA                      
+                    )
+                    asignacion.save()
+
+                # Asignar contratistas
+                for contratista_id in contratistas_ids:
+                    id_emp = EMPLEADO_CONTRATISTA.objects.get(id=contratista_id)
+                    asignacion = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL(
+                        AEC_TAREA=tarea,
+                        AEC_EMPLEADO=id_emp,
+                        AEC_CESTADO = 'ASIGNADO',
+                        AEC_FFECHA_ASIGNACION=tarea.TG_FFECHA_INICIO,
+                        AEC_FFECHA_FINALIZACION=tarea.TG_FFECHA_FIN_ESTIMADA,
+                        AEC_CUSUARIO_CREADOR=request.user
+                    )
+                    asignacion.save()
+
+                # Procesar recursos                
+                if recursos_json:
+                    recursos = json.loads(recursos_json)
+                    for recurso in recursos:
+                        id_rec = PRODUCTO.objects.get(id=recurso['id'])
+                        asignacion = ASIGNACION_RECURSO_TAREA_GENERAL(
+                            ART_TAREA=tarea,
+                            ART_PRODUCTO=id_rec,
+                            ART_FFECHA_ASIGNACION=tarea.TG_FFECHA_INICIO,
+                            ART_CUSUARIO_CREADOR=request.user,
+                            ART_CANTIDAD=int(float(recurso['cantidad'])),
+                            ART_COSTO_UNITARIO=int(float(recurso['costo'])),
+                            ART_COSTO_TOTAL = int(float(recurso['costo'])) * int(float(recurso['cantidad']))
+                        )
+                        asignacion.save()
+
+                messages.success(request, 'Tarea general guardada correctamente con las asignaciones seleccionadas')
+                if page == 1:
+                    return redirect('/proycli_listone/'+str(tarea.TG_PROYECTO_CLIENTE.id)+'/')
+                else:
+                    return redirect('/tarea_general_listall/')
+            else:
+                messages.error(request, 'Por favor, corrija los errores en el formulario.')
+        
         ctx = {
-            'form': form
+            'form': form,
+            'form_asignacion_empleado': form_asignacion_empleado,
+            'form_asignacion_contratista': form_asignacion_contratista,
+            'form_asignacion_recurso': form_asignacion_recurso
         }
         return render(request, 'home/TAREA/GENERAL/tarea_general_addone.html', ctx)
     except Exception as e:
         print(e)
-        messages.error(request, f'Error, {str(e)}')
+        messages.error(request, f'Error: {str(e)}')
         return redirect('/')
 
-def TAREA_GENERAL_UPDATE(request, pk):
+def TAREA_GENERAL_UPDATE(request, pk, page):
     try:
         tarea = TAREA_GENERAL.objects.get(id=pk)
         if request.method == 'POST':
@@ -1034,17 +1194,179 @@ def TAREA_GENERAL_UPDATE(request, pk):
                 tarea.TG_CUSUARIO_MODIFICADOR = request.user
                 tarea.save()
                 messages.success(request, 'Tarea general actualizada correctamente')
-                return redirect('/tarea_general_listall/')
-        form = formTAREA_GENERAL(instance=tarea)
+                if page == 1:
+                    return redirect('/proycli_listone/'+str(tarea.TG_PROYECTO_CLIENTE.id)+'/')
+                else:
+                    return redirect('/tarea_general_listall/')
+        else:
+            # Asegúrate de que las fechas se carguen correctamente en el formulario
+            initial_data = {
+                'TG_FFECHA_INICIO': tarea.TG_FFECHA_INICIO.strftime('%Y-%m-%d') if tarea.TG_FFECHA_INICIO else None,
+                'TG_FFECHA_FIN_ESTIMADA': tarea.TG_FFECHA_FIN_ESTIMADA.strftime('%Y-%m-%d') if tarea.TG_FFECHA_FIN_ESTIMADA else None,
+                'TG_FFECHA_FIN_REAL': tarea.TG_FFECHA_FIN_REAL.strftime('%Y-%m-%d') if tarea.TG_FFECHA_FIN_REAL else None
+            }
+            form = formTAREA_GENERAL(instance=tarea, initial=initial_data)
+        
         ctx = {
-            'form': form
+            'form': form,
+            'tarea': tarea
         }
-        return render(request, 'home/TAREA/GENERAL/tarea_general_addone.html', ctx)
+        return render(request, 'home/TAREA/GENERAL/tarea_general_update.html', ctx)
     except Exception as e:
         print(e)
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
+def TAREA_GENERAL_UPDATE_ASIGNACIONES(request, pk, page):
+    try:
+        tarea = TAREA_GENERAL.objects.get(id=pk)
+        form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_GENERAL()
+        form_asignacion_contratista = formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL()
+        form_asignacion_recurso = formASIGNACION_RECURSO_TAREA_GENERAL()
+
+        # Cargar asignaciones existentes
+        empleados_asignados = ASIGNACION_EMPLEADO_TAREA_GENERAL.objects.filter(AE_TAREA=tarea)
+        contratistas_asignados = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL.objects.filter(AEC_TAREA=tarea)
+        recursos_asignados = ASIGNACION_RECURSO_TAREA_GENERAL.objects.filter(ART_TAREA=tarea)
+
+        if request.method == 'POST':
+            # Manejar asignaciones múltiples
+            empleados_ids = request.POST.getlist('empleados')
+            contratistas_ids = request.POST.getlist('contratistas')                
+            recursos_json = request.POST.get('recursos_json')
+
+            # Eliminar asignaciones existentes
+            ASIGNACION_EMPLEADO_TAREA_GENERAL.objects.filter(AE_TAREA=tarea).delete()
+            ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL.objects.filter(AEC_TAREA=tarea).delete()
+            ASIGNACION_RECURSO_TAREA_GENERAL.objects.filter(ART_TAREA=tarea).delete()
+
+            # Asignar empleados
+            for empleado_id in empleados_ids:
+                id_emp = EMPLEADO.objects.get(id=empleado_id)
+                asignacion = ASIGNACION_EMPLEADO_TAREA_GENERAL(
+                    AE_TAREA=tarea,
+                    AE_EMPLEADO=id_emp,
+                    AE_CESTADO = 'ASIGNADO',
+                    AE_CUSUARIO_CREADOR = request.user,
+                    AE_FFECHA_ASIGNACION=tarea.TG_FFECHA_INICIO,  
+                    AE_FFECHA_FINALIZACION=tarea.TG_FFECHA_FIN_ESTIMADA                      
+                )
+                asignacion.save()
+
+            # Asignar contratistas
+            for contratista_id in contratistas_ids:
+                id_emp = EMPLEADO_CONTRATISTA.objects.get(id=contratista_id)
+                asignacion = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL(
+                    AEC_TAREA=tarea,
+                    AEC_EMPLEADO=id_emp,
+                    AEC_CESTADO = 'ASIGNADO',
+                    AEC_FFECHA_ASIGNACION=tarea.TG_FFECHA_INICIO,
+                    AEC_FFECHA_FINALIZACION=tarea.TG_FFECHA_FIN_ESTIMADA,
+                    AEC_CUSUARIO_CREADOR=request.user
+                )
+                asignacion.save()
+
+            # Procesar recursos                
+            if recursos_json:
+                recursos = json.loads(recursos_json)
+                for recurso in recursos:
+                    id_rec = PRODUCTO.objects.get(id=recurso['id'])
+                    asignacion = ASIGNACION_RECURSO_TAREA_GENERAL(
+                        ART_TAREA=tarea,
+                        ART_PRODUCTO=id_rec,
+                        ART_FFECHA_ASIGNACION=tarea.TG_FFECHA_INICIO,
+                        ART_CUSUARIO_CREADOR=request.user,
+                        ART_CANTIDAD=int(float(recurso['cantidad'])),   
+                        ART_COSTO_UNITARIO=int(float(recurso['costo'])),
+                        ART_COSTO_TOTAL = int(float(recurso['costo'])) * int(float(recurso['cantidad']))
+                    )
+                    asignacion.save()
+
+            messages.success(request, 'Asignaciones de la tarea general actualizadas correctamente')
+            if page == 1:
+                return redirect('/proycli_listone/'+str(tarea.TG_PROYECTO_CLIENTE.id)+'/')
+            else:
+                return redirect('/tarea_general_listall/')
+        
+        # Preparar datos para mostrar en el template
+        empleados_asignados_ids = list(empleados_asignados.values_list('AE_EMPLEADO__id', flat=True))
+        contratistas_asignados_ids = list(contratistas_asignados.values_list('AEC_EMPLEADO__id', flat=True))
+        recursos_asignados_data = [
+            {
+                'id': str(recurso.ART_PRODUCTO.id),
+                'nombre': recurso.ART_PRODUCTO.PR_CNOMBRE,
+                'cantidad': str(recurso.ART_CANTIDAD),
+                'costo': str(recurso.ART_COSTO_UNITARIO)
+            } for recurso in recursos_asignados
+        ]
+        
+        ctx = {
+            'form_asignacion_empleado': form_asignacion_empleado,
+            'form_asignacion_contratista': form_asignacion_contratista,
+            'form_asignacion_recurso': form_asignacion_recurso,
+            'tarea': tarea,
+            'empleados_asignados_ids': empleados_asignados_ids,
+            'contratistas_asignados_ids': contratistas_asignados_ids,
+            'recursos_asignados_data': json.dumps(recursos_asignados_data),
+            'page': page
+        }
+        return render(request, 'home/TAREA/GENERAL/tarea_general_update_asignaciones.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error: {str(e)}')
+        return redirect('/')
+
+def TAREA_GENERAL_LISTONE(request, pk, page):
+    try:
+        tarea = TAREA_GENERAL.objects.get(id=pk)
+        empleados_asignados = ASIGNACION_EMPLEADO_TAREA_GENERAL.objects.filter(AE_TAREA=tarea)
+        contratistas_asignados = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL.objects.filter(AEC_TAREA=tarea)
+        recursos_asignados = ASIGNACION_RECURSO_TAREA_GENERAL.objects.filter(ART_TAREA=tarea)
+        tarea.TG_NPROGRESO = int(round(float(tarea.TG_NPROGRESO)))
+        ctx = {
+            'tarea': tarea,
+            'page': page,
+            'empleados_asignados': empleados_asignados,
+            'contratistas_asignados': contratistas_asignados,
+            'recursos_asignados': recursos_asignados
+        }
+        return render(request, 'home/TAREA/GENERAL/tarea_general_listone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error: {str(e)}')
+        return redirect('/')
+
+def TAREA_GENERAL_DEPENDENCIA_ADDONE(request, pk):
+    try:
+        tarea = TAREA_GENERAL.objects.get(id=pk)
+        proyecto_actual = tarea.TG_PROYECTO_CLIENTE
+        dependencia_existente = TAREA_GENERAL_DEPENDENCIA.objects.filter(TD_TAREA_PREDECESORA=tarea)
+        if request.method == 'POST':
+            form = formTAREA_GENERAL_DEPENDENCIA(request.POST)
+            if form.is_valid():
+                dependencia = form.save(commit=False)
+                dependencia.TD_TAREA_PREDECESORA = tarea
+                dependencia.save()
+                messages.success(request, 'Dependencia agregada correctamente')
+                return redirect('proycli_listone', pk=proyecto_actual.id)
+        else:
+            form = formTAREA_GENERAL_DEPENDENCIA()
+        
+        # Filtrar las tareas generales del proyecto actual
+        tareas_sucesoras = TAREA_GENERAL.objects.filter(TG_PROYECTO_CLIENTE=proyecto_actual).exclude(id=tarea.id)
+        form.fields['TD_TAREA_SUCESORA'].queryset = tareas_sucesoras
+        
+        ctx = {
+            'form': form,
+            'tarea': tarea,
+            'dependencia_existente': dependencia_existente  
+        }
+        return render(request, 'home/TAREA/GENERAL/tarea_general_dependencia_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error: {str(e)}')
+        return redirect('/')
+    
 # ----------TAREA INGENIERIA--------------
 
 def TAREA_INGENIERIA_LISTALL(request):
@@ -1059,27 +1381,89 @@ def TAREA_INGENIERIA_LISTALL(request):
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
-def TAREA_INGENIERIA_ADDONE(request):
+def TAREA_INGENIERIA_ADDONE(request, page):
     try:
+        form = formTAREA_INGENIERIA()
+        form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_INGENIERIA()
+        form_asignacion_contratista = formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA()
+        form_asignacion_recurso = formASIGNACION_RECURSO_TAREA_INGENIERIA()
+
         if request.method == 'POST':
             form = formTAREA_INGENIERIA(request.POST)
             if form.is_valid():
                 tarea = form.save(commit=False)
-                tarea.TI_CUSUARIO_CREADOR = request.user
+                tarea.TI_CUSUARIO_CREADOR = request.user                                                
                 tarea.save()
-                messages.success(request, 'Tarea de ingeniería guardada correctamente')
-                return redirect('/tarea_ingenieria_listall/')
-        form = formTAREA_INGENIERIA()
+
+                # Manejar asignaciones múltiples
+                empleados_ids = request.POST.getlist('empleados')
+                contratistas_ids = request.POST.getlist('contratistas')                
+                recursos_json = request.POST.get('recursos_json')
+
+                # Asignar empleados
+                for empleado_id in empleados_ids:
+                    id_emp = EMPLEADO.objects.get(id=empleado_id)
+                    asignacion = ASIGNACION_EMPLEADO_TAREA_INGENIERIA(
+                        AE_TAREA=tarea,
+                        AE_EMPLEADO=id_emp,
+                        AE_CESTADO = 'ASIGNADO',
+                        AE_CUSUARIO_CREADOR = request.user,
+                        AE_FFECHA_ASIGNACION=tarea.TI_FFECHA_INICIO,  
+                        AE_FFECHA_FINALIZACION=tarea.TI_FFECHA_FIN_ESTIMADA                      
+                    )
+                    asignacion.save()
+
+                # Asignar contratistas
+                for contratista_id in contratistas_ids:
+                    id_emp = EMPLEADO_CONTRATISTA.objects.get(id=contratista_id)
+                    asignacion = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA(
+                        AEC_TAREA=tarea,
+                        AEC_EMPLEADO=id_emp,
+                        AEC_CESTADO = 'ASIGNADO',
+                        AEC_FFECHA_ASIGNACION=tarea.TI_FFECHA_INICIO,
+                        AEC_FFECHA_FINALIZACION=tarea.TI_FFECHA_FIN_ESTIMADA,
+                        AEC_CUSUARIO_CREADOR=request.user
+                    )
+                    asignacion.save()
+
+                # Procesar recursos                
+                if recursos_json:
+                    recursos = json.loads(recursos_json)
+                    for recurso in recursos:
+                        id_rec = PRODUCTO.objects.get(id=recurso['id'])
+                        asignacion = ASIGNACION_RECURSO_TAREA_INGENIERIA(
+                            ART_TAREA=tarea,
+                            ART_PRODUCTO=id_rec,
+                            ART_FFECHA_ASIGNACION=tarea.TI_FFECHA_INICIO,
+                            ART_CUSUARIO_CREADOR=request.user,
+                            ART_CANTIDAD=int(recurso['cantidad']),
+                            ART_COSTO_UNITARIO=int(recurso['costo']),
+                            ART_COSTO_TOTAL = int(recurso['costo']) * int(recurso['cantidad'])
+                        )
+                        asignacion.save()
+
+                messages.success(request, 'Tarea de ingeniería guardada correctamente con las asignaciones seleccionadas')
+                if page == 1:
+                    return redirect('/proycli_listone/'+str(tarea.TI_PROYECTO_CLIENTE.id)+'/')
+                else:
+                    return redirect('/tarea_ingenieria_listall/')
+            else:
+                messages.error(request, 'Por favor, corrija los errores en el formulario.')
+        
         ctx = {
-            'form': form
+            'form': form,
+            'form_asignacion_empleado': form_asignacion_empleado,
+            'form_asignacion_contratista': form_asignacion_contratista,
+            'form_asignacion_recurso': form_asignacion_recurso,
+            'page': page
         }
         return render(request, 'home/TAREA/INGENIERIA/tarea_ingenieria_addone.html', ctx)
     except Exception as e:
         print(e)
-        messages.error(request, f'Error, {str(e)}')
+        messages.error(request, f'Error: {str(e)}')
         return redirect('/')
 
-def TAREA_INGENIERIA_UPDATE(request, pk):
+def TAREA_INGENIERIA_UPDATE(request, pk, page):
     try:
         tarea = TAREA_INGENIERIA.objects.get(id=pk)
         if request.method == 'POST':
@@ -1089,15 +1473,175 @@ def TAREA_INGENIERIA_UPDATE(request, pk):
                 tarea.TI_CUSUARIO_MODIFICADOR = request.user
                 tarea.save()
                 messages.success(request, 'Tarea de ingeniería actualizada correctamente')
-                return redirect('/tarea_ingenieria_listall/')
-        form = formTAREA_INGENIERIA(instance=tarea)
+                if page == 1:
+                    return redirect('/proycli_listone/'+str(tarea.TI_PROYECTO_CLIENTE.id)+'/')
+                else:
+                    return redirect('/tarea_ingenieria_listall/')
+        else:
+            initial_data = {
+                'TI_FFECHA_INICIO': tarea.TI_FFECHA_INICIO.strftime('%Y-%m-%d') if tarea.TI_FFECHA_INICIO else None,
+                'TI_FFECHA_FIN_ESTIMADA': tarea.TI_FFECHA_FIN_ESTIMADA.strftime('%Y-%m-%d') if tarea.TI_FFECHA_FIN_ESTIMADA else None,
+            }
+            form = formTAREA_INGENIERIA(instance=tarea, initial=initial_data)
+        
         ctx = {
-            'form': form
+            'form': form,
+            'tarea': tarea
         }
-        return render(request, 'home/TAREA/INGENIERIA/tarea_ingenieria_addone.html', ctx)
+        return render(request, 'home/TAREA/INGENIERIA/tarea_ingenieria_update.html', ctx)
     except Exception as e:
         print(e)
         messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def TAREA_INGENIERIA_UPDATE_ASIGNACIONES(request, pk, page):
+    try:
+        tarea = TAREA_INGENIERIA.objects.get(id=pk)
+        form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_INGENIERIA()
+        form_asignacion_contratista = formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA()
+        form_asignacion_recurso = formASIGNACION_RECURSO_TAREA_INGENIERIA()
+
+        # Cargar asignaciones existentes
+        empleados_asignados = ASIGNACION_EMPLEADO_TAREA_INGENIERIA.objects.filter(AE_TAREA=tarea)
+        contratistas_asignados = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA.objects.filter(AEC_TAREA=tarea)
+        recursos_asignados = ASIGNACION_RECURSO_TAREA_INGENIERIA.objects.filter(ART_TAREA=tarea)
+
+        if request.method == 'POST':
+            # Manejar asignaciones múltiples
+            empleados_ids = request.POST.getlist('empleados')
+            contratistas_ids = request.POST.getlist('contratistas')                
+            recursos_json = request.POST.get('recursos_json')
+
+            # Eliminar asignaciones existentes
+            ASIGNACION_EMPLEADO_TAREA_INGENIERIA.objects.filter(AE_TAREA=tarea).delete()
+            ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA.objects.filter(AEC_TAREA=tarea).delete()
+            ASIGNACION_RECURSO_TAREA_INGENIERIA.objects.filter(ART_TAREA=tarea).delete()
+
+            # Asignar empleados
+            for empleado_id in empleados_ids:
+                id_emp = EMPLEADO.objects.get(id=empleado_id)
+                asignacion = ASIGNACION_EMPLEADO_TAREA_INGENIERIA(
+                    AE_TAREA=tarea,
+                    AE_EMPLEADO=id_emp,
+                    AE_CESTADO = 'ASIGNADO',
+                    AE_CUSUARIO_CREADOR = request.user,
+                    AE_FFECHA_ASIGNACION=tarea.TI_FFECHA_INICIO,  
+                    AE_FFECHA_FINALIZACION=tarea.TI_FFECHA_FIN_ESTIMADA                      
+                )
+                asignacion.save()
+
+            # Asignar contratistas
+            for contratista_id in contratistas_ids:
+                id_emp = EMPLEADO_CONTRATISTA.objects.get(id=contratista_id)
+                asignacion = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA(
+                    AEC_TAREA=tarea,
+                    AEC_EMPLEADO=id_emp,
+                    AEC_CESTADO = 'ASIGNADO',
+                    AEC_FFECHA_ASIGNACION=tarea.TI_FFECHA_INICIO,
+                    AEC_FFECHA_FINALIZACION=tarea.TI_FFECHA_FIN_ESTIMADA,
+                    AEC_CUSUARIO_CREADOR=request.user
+                )
+                asignacion.save()
+
+            # Procesar recursos                
+            if recursos_json:
+                recursos = json.loads(recursos_json)
+                for recurso in recursos:
+                    id_rec = PRODUCTO.objects.get(id=recurso['id'])
+                    asignacion = ASIGNACION_RECURSO_TAREA_INGENIERIA(
+                        ART_TAREA=tarea,
+                        ART_PRODUCTO=id_rec,
+                        ART_FFECHA_ASIGNACION=tarea.TI_FFECHA_INICIO,
+                        ART_CUSUARIO_CREADOR=request.user,
+                        ART_CANTIDAD=int(float(recurso['cantidad'])),
+                        ART_COSTO_UNITARIO=int(float(recurso['costo'])),
+                        ART_COSTO_TOTAL = int(float(recurso['costo'])) * int(float(recurso['cantidad']))
+                    )
+                    asignacion.save()
+
+            messages.success(request, 'Asignaciones de la tarea de ingeniería actualizadas correctamente')
+            if page == 1:
+                return redirect('/proycli_listone/'+str(tarea.TI_PROYECTO_CLIENTE.id)+'/')
+            else:
+                return redirect('/tarea_ingenieria_listall/')
+        
+        # Preparar datos para mostrar en el template
+        empleados_asignados_ids = list(empleados_asignados.values_list('AE_EMPLEADO__id', flat=True))
+        contratistas_asignados_ids = list(contratistas_asignados.values_list('AEC_EMPLEADO__id', flat=True))
+        recursos_asignados_data = [
+            {
+                'id': str(recurso.ART_PRODUCTO.id),
+                'nombre': recurso.ART_PRODUCTO.PR_CNOMBRE,
+                'cantidad': str(recurso.ART_CANTIDAD),
+                'costo': str(recurso.ART_COSTO_UNITARIO)
+            } for recurso in recursos_asignados
+        ]
+        
+        ctx = {
+            'form_asignacion_empleado': form_asignacion_empleado,
+            'form_asignacion_contratista': form_asignacion_contratista,
+            'form_asignacion_recurso': form_asignacion_recurso,
+            'tarea': tarea,
+            'empleados_asignados_ids': empleados_asignados_ids,
+            'contratistas_asignados_ids': contratistas_asignados_ids,
+            'recursos_asignados_data': json.dumps(recursos_asignados_data),
+            'page': page
+        }
+        return render(request, 'home/TAREA/INGENIERIA/tarea_ingenieria_update_asignaciones.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error: {str(e)}')
+        return redirect('/')
+
+def TAREA_INGENIERIA_LISTONE(request, pk, page):
+    try:
+        tarea = TAREA_INGENIERIA.objects.get(id=pk)
+        empleados_asignados = ASIGNACION_EMPLEADO_TAREA_INGENIERIA.objects.filter(AE_TAREA=tarea)
+        contratistas_asignados = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA.objects.filter(AEC_TAREA=tarea)
+        recursos_asignados = ASIGNACION_RECURSO_TAREA_INGENIERIA.objects.filter(ART_TAREA=tarea)
+        tarea.TI_NPROGRESO = int(round(float(tarea.TI_NPROGRESO)))
+        ctx = {
+            'tarea': tarea,
+            'page': page,
+            'empleados_asignados': empleados_asignados,
+            'contratistas_asignados': contratistas_asignados,
+            'recursos_asignados': recursos_asignados
+        }
+        return render(request, 'home/TAREA/INGENIERIA/tarea_ingenieria_listone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error: {str(e)}')
+        return redirect('/')
+
+def TAREA_INGENIERIA_DEPENDENCIA_ADDONE(request, pk):
+    try:
+        tarea = TAREA_INGENIERIA.objects.get(id=pk)
+        proyecto_actual = tarea.TI_PROYECTO_CLIENTE
+        dependencia_existente = TAREA_INGENIERIA_DEPENDENCIA.objects.filter(TD_TAREA_PREDECESORA=tarea)
+        if request.method == 'POST':
+            form = formTAREA_INGENIERIA_DEPENDENCIA(request.POST)
+            if form.is_valid():
+                dependencia = form.save(commit=False)
+                dependencia.TD_TAREA_PREDECESORA = tarea
+                dependencia.save()
+                messages.success(request, 'Dependencia agregada correctamente')
+                return redirect('proycli_listone', pk=proyecto_actual.id)
+        else:
+            form = formTAREA_INGENIERIA_DEPENDENCIA()
+        
+        # Filtrar las tareas de ingeniería del proyecto actual
+        tareas_sucesoras = TAREA_INGENIERIA.objects.filter(TI_PROYECTO_CLIENTE=proyecto_actual).exclude(id=tarea.id)
+        form.fields['TD_TAREA_SUCESORA'].queryset = tareas_sucesoras
+        
+        ctx = {
+            'form': form,
+            'tarea': tarea,
+            'dependencia_existente': dependencia_existente
+        }
+        return render(request, 'home/TAREA/INGENIERIA/tarea_ingenieria_dependencia_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error: {str(e)}')
         return redirect('/')
 
 # ----------TAREA FINANCIERA--------------
@@ -1114,27 +1658,98 @@ def TAREA_FINANCIERA_LISTALL(request):
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
-def TAREA_FINANCIERA_ADDONE(request):
+def TAREA_FINANCIERA_ADDONE(request, page):
     try:
+        form = formTAREA_FINANCIERA()
+        form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_FINANCIERA()
+        form_asignacion_contratista = formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_FINANCIERA()
+        form_asignacion_recurso = formASIGNACION_RECURSO_TAREA_FINANCIERA()        
         if request.method == 'POST':
             form = formTAREA_FINANCIERA(request.POST)
             if form.is_valid():
                 tarea = form.save(commit=False)
                 tarea.TF_CUSUARIO_CREADOR = request.user
+                
+                # Aplicar lógica de fechas automáticamente
+                fecha_inicio = form.cleaned_data.get('TF_FFECHA_INICIO')
+                fecha_fin_estimada = form.cleaned_data.get('TF_FFECHA_FIN_ESTIMADA')
+                
+                if fecha_inicio and not fecha_fin_estimada:
+                    tarea.TF_FFECHA_FIN_ESTIMADA = fecha_inicio
+                elif fecha_fin_estimada and not fecha_inicio:
+                    tarea.TF_FFECHA_INICIO = fecha_fin_estimada
+                
                 tarea.save()
-                messages.success(request, 'Tarea financiera guardada correctamente')
-                return redirect('/tarea_financiera_listall/')
-        form = formTAREA_FINANCIERA()
+
+                # Manejar asignaciones múltiples
+                empleados_ids = request.POST.getlist('empleados')
+                contratistas_ids = request.POST.getlist('contratistas')                
+                recursos_json = request.POST.get('recursos_json')
+
+                # Asignar empleados
+                for empleado_id in empleados_ids:
+                    id_emp = EMPLEADO.objects.get(id=empleado_id)
+                    asignacion = ASIGNACION_EMPLEADO_TAREA_FINANCIERA(
+                        AE_TAREA=tarea,
+                        AE_EMPLEADO=id_emp,
+                        AE_CESTADO = 'ASIGNADO',
+                        AE_CUSUARIO_CREADOR = request.user,
+                        AE_FFECHA_ASIGNACION=fecha_inicio,  
+                        AE_FFECHA_FINALIZACION=fecha_fin_estimada                      
+                    )
+                    asignacion.save()
+
+                # Asignar contratistas
+                for contratista_id in contratistas_ids:
+                    id_emp = EMPLEADO_CONTRATISTA.objects.get(id=contratista_id)
+                    asignacion = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_FINANCIERA(
+                        AEC_TAREA=tarea,
+                        AEC_EMPLEADO=id_emp,
+                        AEC_CESTADO = 'ASIGNADO',
+                        AEC_FFECHA_ASIGNACION=fecha_inicio,
+                        AEC_FFECHA_FINALIZACION=fecha_fin_estimada,
+                        AEC_CUSUARIO_CREADOR=request.user
+                    )
+                    asignacion.save()
+
+                # Procesar recursos                
+                if recursos_json:
+                    recursos = json.loads(recursos_json)
+                    for recurso in recursos:
+                        id_rec = PRODUCTO.objects.get(id=recurso['id'])
+                        asignacion = ASIGNACION_RECURSO_TAREA_FINANCIERA(
+                            ART_TAREA=tarea,
+                            ART_PRODUCTO=id_rec,
+                            ART_FFECHA_ASIGNACION=fecha_inicio,
+                            ART_CUSUARIO_CREADOR=request.user,
+                            ART_CANTIDAD=int(recurso['cantidad']),
+                            ART_COSTO_UNITARIO=int(recurso['costo']),
+                            ART_COSTO_TOTAL = int(recurso['costo']) * int(recurso['cantidad'])
+                        )
+                        asignacion.save()
+                
+                messages.success(request, 'Tarea financiera guardada correctamente con las asignaciones seleccionadas')
+                if page == 1:
+                    return redirect('/proycli_listone/'+str(tarea.TF_PROYECTO_CLIENTE.id)+'/')
+                else:
+                    return redirect('/tarea_financiera_listall/')
+            else:
+                messages.error(request, 'Por favor, corrija los errores en el formulario.')
+        
         ctx = {
-            'form': form
+            'form': form,
+            'form_asignacion_empleado': form_asignacion_empleado,
+            'form_asignacion_contratista': form_asignacion_contratista,
+            'form_asignacion_recurso': form_asignacion_recurso,            
+            'page': page
         }
         return render(request, 'home/TAREA/FINANCIERA/tarea_financiera_addone.html', ctx)
     except Exception as e:
         print(e)
-        messages.error(request, f'Error, {str(e)}')
+        messages.error(request, f'Error: {str(e)}')
         return redirect('/')
 
-def TAREA_FINANCIERA_UPDATE(request, pk):
+def TAREA_FINANCIERA_UPDATE(request, pk, page):
     try:
         tarea = TAREA_FINANCIERA.objects.get(id=pk)
         if request.method == 'POST':
@@ -1142,17 +1757,193 @@ def TAREA_FINANCIERA_UPDATE(request, pk):
             if form.is_valid():
                 tarea = form.save(commit=False)
                 tarea.TF_CUSUARIO_MODIFICADOR = request.user
+                
+                # Aplicar lógica de fechas automáticamente
+                fecha_inicio = form.cleaned_data.get('TF_FFECHA_INICIO')
+                fecha_fin_estimada = form.cleaned_data.get('TF_FFECHA_FIN_ESTIMADA')
+                
+                if fecha_inicio and not fecha_fin_estimada:
+                    tarea.TF_FFECHA_FIN_ESTIMADA = fecha_inicio
+                elif fecha_fin_estimada and not fecha_inicio:
+                    tarea.TF_FFECHA_INICIO = fecha_fin_estimada
+                
                 tarea.save()
+
                 messages.success(request, 'Tarea financiera actualizada correctamente')
-                return redirect('/tarea_financiera_listall/')
-        form = formTAREA_FINANCIERA(instance=tarea)
+                if page == 1:
+                    return redirect('/proycli_listone/'+str(tarea.TF_PROYECTO_CLIENTE.id)+'/')
+                else:
+                    return redirect('/tarea_financiera_listall/')
+            else:
+                messages.error(request, 'Por favor, corrija los errores en el formulario.')
+        else:
+            # Asegúrate de que las fechas se carguen correctamente en el formulario
+            initial_data = {
+                'TF_FFECHA_INICIO': tarea.TF_FFECHA_INICIO.strftime('%Y-%m-%d') if tarea.TF_FFECHA_INICIO else None,
+                'TF_FFECHA_FIN_ESTIMADA': tarea.TF_FFECHA_FIN_ESTIMADA.strftime('%Y-%m-%d') if tarea.TF_FFECHA_FIN_ESTIMADA else None,
+                'TF_FFECHA_FIN_REAL': tarea.TF_FFECHA_FIN_REAL.strftime('%Y-%m-%d') if tarea.TF_FFECHA_FIN_REAL else None
+            }
+            form = formTAREA_FINANCIERA(instance=tarea, initial=initial_data)
+        
         ctx = {
-            'form': form
+            'form': form,
+            'tarea': tarea,
+            'page': page
         }
-        return render(request, 'home/TAREA/FINANCIERA/tarea_financiera_addone.html', ctx)
+        return render(request, 'home/TAREA/FINANCIERA/tarea_financiera_update.html', ctx)
     except Exception as e:
         print(e)
-        messages.error(request, f'Error, {str(e)}')
+        messages.error(request, f'Error: {str(e)}')
+        return redirect('/')
+
+def TAREA_FINANCIERA_UPDATE_ASIGNACIONES(request, pk, page):
+    try:
+        tarea = TAREA_FINANCIERA.objects.get(id=pk)
+        form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_FINANCIERA()
+        form_asignacion_contratista = formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_FINANCIERA()
+        form_asignacion_recurso = formASIGNACION_RECURSO_TAREA_FINANCIERA()
+
+        # Cargar asignaciones existentes
+        empleados_asignados = ASIGNACION_EMPLEADO_TAREA_FINANCIERA.objects.filter(AE_TAREA=tarea)
+        contratistas_asignados = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_FINANCIERA.objects.filter(AEC_TAREA=tarea)
+        recursos_asignados = ASIGNACION_RECURSO_TAREA_FINANCIERA.objects.filter(ART_TAREA=tarea)
+
+        if request.method == 'POST':
+            # Manejar asignaciones múltiples
+            empleados_ids = request.POST.getlist('empleados')
+            contratistas_ids = request.POST.getlist('contratistas')                
+            recursos_json = request.POST.get('recursos_json')
+
+            # Eliminar asignaciones existentes
+            ASIGNACION_EMPLEADO_TAREA_FINANCIERA.objects.filter(AE_TAREA=tarea).delete()
+            ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_FINANCIERA.objects.filter(AEC_TAREA=tarea).delete()
+            ASIGNACION_RECURSO_TAREA_FINANCIERA.objects.filter(ART_TAREA=tarea).delete()
+
+            # Asignar empleados
+            for empleado_id in empleados_ids:
+                id_emp = EMPLEADO.objects.get(id=empleado_id)
+                asignacion = ASIGNACION_EMPLEADO_TAREA_FINANCIERA(
+                    AE_TAREA=tarea,
+                    AE_EMPLEADO=id_emp,
+                    AE_CESTADO = 'ASIGNADO',
+                    AE_CUSUARIO_CREADOR = request.user,
+                    AE_FFECHA_ASIGNACION=tarea.TF_FFECHA_INICIO,  
+                    AE_FFECHA_FINALIZACION=tarea.TF_FFECHA_FIN_ESTIMADA                      
+                )
+                asignacion.save()
+
+            # Asignar contratistas
+            for contratista_id in contratistas_ids:
+                id_emp = EMPLEADO_CONTRATISTA.objects.get(id=contratista_id)
+                asignacion = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_FINANCIERA(
+                    AEC_TAREA=tarea,
+                    AEC_EMPLEADO=id_emp,
+                    AEC_CESTADO = 'ASIGNADO',
+                    AEC_FFECHA_ASIGNACION=tarea.TF_FFECHA_INICIO,
+                    AEC_FFECHA_FINALIZACION=tarea.TF_FFECHA_FIN_ESTIMADA,
+                    AEC_CUSUARIO_CREADOR=request.user
+                )
+                asignacion.save()
+
+            # Procesar recursos                
+            if recursos_json:
+                recursos = json.loads(recursos_json)
+                for recurso in recursos:
+                    id_rec = PRODUCTO.objects.get(id=recurso['id'])
+                    asignacion = ASIGNACION_RECURSO_TAREA_FINANCIERA(
+                        ART_TAREA=tarea,
+                        ART_PRODUCTO=id_rec,
+                        ART_FFECHA_ASIGNACION=tarea.TF_FFECHA_INICIO,
+                        ART_CUSUARIO_CREADOR=request.user,
+                        ART_CANTIDAD=int(float(recurso['cantidad'])),  # Convert to float first, then to int
+                        ART_COSTO_UNITARIO=int(float(recurso['costo'])),  # Same here
+                        ART_COSTO_TOTAL = int(float(recurso['costo'])) * int(float(recurso['cantidad']))
+                    )
+                    asignacion.save()
+
+            messages.success(request, 'Asignaciones de la tarea financiera actualizadas correctamente')
+            if page == 1:
+                return redirect('/proycli_listone/'+str(tarea.TF_PROYECTO_CLIENTE.id)+'/')
+            else:
+                return redirect('/tarea_financiera_listall/')
+        
+        # Preparar datos para mostrar en el template
+        empleados_asignados_ids = list(empleados_asignados.values_list('AE_EMPLEADO__id', flat=True))
+        contratistas_asignados_ids = list(contratistas_asignados.values_list('AEC_EMPLEADO__id', flat=True))
+        recursos_asignados_data = [
+            {
+                'id': str(recurso.ART_PRODUCTO.id),
+                'nombre': recurso.ART_PRODUCTO.PR_CNOMBRE,
+                'cantidad': str(recurso.ART_CANTIDAD),
+                'costo': str(recurso.ART_COSTO_UNITARIO)
+            } for recurso in recursos_asignados
+        ]
+        
+        ctx = {
+            'form_asignacion_empleado': form_asignacion_empleado,
+            'form_asignacion_contratista': form_asignacion_contratista,
+            'form_asignacion_recurso': form_asignacion_recurso,
+            'tarea': tarea,
+            'empleados_asignados_ids': empleados_asignados_ids,
+            'contratistas_asignados_ids': contratistas_asignados_ids,
+            'recursos_asignados_data': json.dumps(recursos_asignados_data),
+            'page': page
+        }
+        return render(request, 'home/TAREA/FINANCIERA/tarea_financiera_update_asignaciones.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error: {str(e)}')
+        return redirect('/')
+
+def TAREA_FINANCIERA_LISTONE(request, pk, page):
+    try:
+        tarea = TAREA_FINANCIERA.objects.get(id=pk)
+        empleados_asignados = ASIGNACION_EMPLEADO_TAREA_FINANCIERA.objects.filter(AE_TAREA=tarea)
+        contratistas_asignados = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_FINANCIERA.objects.filter(AEC_TAREA=tarea)
+        recursos_asignados = ASIGNACION_RECURSO_TAREA_FINANCIERA.objects.filter(ART_TAREA=tarea)
+        tarea.TF_NPROGRESO = int(round(float(tarea.TF_NPROGRESO)))
+        ctx = {
+            'tarea': tarea,
+            'empleados_asignados': empleados_asignados,
+            'contratistas_asignados': contratistas_asignados,
+            'recursos_asignados': recursos_asignados,
+            'page': page
+        }
+        return render(request, 'home/TAREA/FINANCIERA/tarea_financiera_listone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error: {str(e)}')
+        return redirect('/')
+
+def TAREA_FINANCIERA_DEPENDENCIA_ADDONE(request, pk):
+    try:
+        tarea = TAREA_FINANCIERA.objects.get(id=pk)
+        proyecto_actual = tarea.TF_PROYECTO_CLIENTE
+        dependencia_existente = TAREA_FINANCIERA_DEPENDENCIA.objects.filter(TD_TAREA_PREDECESORA=tarea)
+        if request.method == 'POST':
+            form = formTAREA_FINANCIERA_DEPENDENCIA(request.POST)
+            if form.is_valid():
+                dependencia = form.save(commit=False)
+                dependencia.TD_TAREA_PREDECESORA = tarea
+                dependencia.save()
+                messages.success(request, 'Dependencia agregada correctamente')
+                return redirect('proycli_listone', pk=proyecto_actual.id)
+        else:
+            form = formTAREA_FINANCIERA_DEPENDENCIA()
+        
+        # Filtrar las tareas financieras del proyecto actual
+        tareas_sucesoras = TAREA_FINANCIERA.objects.filter(TF_PROYECTO_CLIENTE=proyecto_actual).exclude(id=tarea.id)
+        form.fields['TD_TAREA_SUCESORA'].queryset = tareas_sucesoras
+        
+        ctx = {
+            'form': form,
+            'tarea': tarea,
+            'dependencia_existente': dependencia_existente  
+        }
+        return render(request, 'home/TAREA/FINANCIERA/tarea_financiera_dependencia_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error: {str(e)}')
         return redirect('/')
 
 #--------------------------------------
