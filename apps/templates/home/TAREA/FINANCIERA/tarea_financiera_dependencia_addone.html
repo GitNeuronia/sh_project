@@ -53,8 +53,19 @@
                                         {% endfor %}
                                     </div>
                                 {% endif %}
+                                {% if dependencia_existente %}
+                                    <div class="alert alert-warning">
+                                        Ya existe una dependencia con estos datos:
+                                        {% for dependencia in dependencia_existente %}
+                                            <p>Tarea predecesora: {{ dependencia.TD_TAREA_PREDECESORA }}</p>
+                                            <p>Tarea sucesora: {{ dependencia.TD_TAREA_SUCESORA }}</p>
+                                            <p>Tipo de dependencia: {{ dependencia.get_TD_TIPO_DEPENDENCIA_display }}</p>
+                                            <hr>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                                 <button type="submit" class="btn btn-primary">Guardar Dependencia</button>
-                                <a href="{% url 'tarea_financiera_listone' pk=tarea.id page=1 %}" class="btn btn-secondary">Cancelar</a>
+                                <a href="{% url 'proycli_listone' pk=tarea.TF_PROYECTO_CLIENTE.id %}" class="btn btn-secondary">Cancelar</a>
                             </form>
                         </div>
                     </div>

@@ -1339,7 +1339,7 @@ def TAREA_GENERAL_DEPENDENCIA_ADDONE(request, pk):
     try:
         tarea = TAREA_GENERAL.objects.get(id=pk)
         proyecto_actual = tarea.TG_PROYECTO_CLIENTE
-        
+        dependencia_existente = TAREA_GENERAL_DEPENDENCIA.objects.filter(TD_TAREA_PREDECESORA=tarea)
         if request.method == 'POST':
             form = formTAREA_GENERAL_DEPENDENCIA(request.POST)
             if form.is_valid():
@@ -1357,7 +1357,8 @@ def TAREA_GENERAL_DEPENDENCIA_ADDONE(request, pk):
         
         ctx = {
             'form': form,
-            'tarea': tarea
+            'tarea': tarea,
+            'dependencia_existente': dependencia_existente  
         }
         return render(request, 'home/TAREA/GENERAL/tarea_general_dependencia_addone.html', ctx)
     except Exception as e:
@@ -1615,7 +1616,7 @@ def TAREA_INGENIERIA_DEPENDENCIA_ADDONE(request, pk):
     try:
         tarea = TAREA_INGENIERIA.objects.get(id=pk)
         proyecto_actual = tarea.TI_PROYECTO_CLIENTE
-        
+        dependencia_existente = TAREA_INGENIERIA_DEPENDENCIA.objects.filter(TD_TAREA_PREDECESORA=tarea)
         if request.method == 'POST':
             form = formTAREA_INGENIERIA_DEPENDENCIA(request.POST)
             if form.is_valid():
@@ -1633,7 +1634,8 @@ def TAREA_INGENIERIA_DEPENDENCIA_ADDONE(request, pk):
         
         ctx = {
             'form': form,
-            'tarea': tarea
+            'tarea': tarea,
+            'dependencia_existente': dependencia_existente
         }
         return render(request, 'home/TAREA/INGENIERIA/tarea_ingenieria_dependencia_addone.html', ctx)
     except Exception as e:
@@ -1916,7 +1918,7 @@ def TAREA_FINANCIERA_DEPENDENCIA_ADDONE(request, pk):
     try:
         tarea = TAREA_FINANCIERA.objects.get(id=pk)
         proyecto_actual = tarea.TF_PROYECTO_CLIENTE
-        
+        dependencia_existente = TAREA_FINANCIERA_DEPENDENCIA.objects.filter(TD_TAREA_PREDECESORA=tarea)
         if request.method == 'POST':
             form = formTAREA_FINANCIERA_DEPENDENCIA(request.POST)
             if form.is_valid():
@@ -1934,7 +1936,8 @@ def TAREA_FINANCIERA_DEPENDENCIA_ADDONE(request, pk):
         
         ctx = {
             'form': form,
-            'tarea': tarea
+            'tarea': tarea,
+            'dependencia_existente': dependencia_existente  
         }
         return render(request, 'home/TAREA/FINANCIERA/tarea_financiera_dependencia_addone.html', ctx)
     except Exception as e:
