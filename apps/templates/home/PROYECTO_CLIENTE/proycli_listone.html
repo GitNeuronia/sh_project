@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="/static/assets/css/plugins/dataTables.bootstrap4.min.css">
     <!-- Frappe Gantt CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.css">
+    <!-- SweetAlert2 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     {% load humanize %}
     {% load i18n %}
     {% load l10n %}
@@ -37,6 +39,12 @@
         }
         .handle-group, .handle {
             display: none !important;
+        }
+        .bar-wrapper {
+            cursor: default !important;
+        }
+        .bar-wrapper:hover {
+            cursor: default !important;
         }
     </style>
 {% endblock stylesheets %}
@@ -226,9 +234,9 @@
                                             {% for tarea in tareas_financiera %}
                                             <tr>
                                                 <td>
+                                                    <a href="{% url 'tarea_financiera_listone' tarea.id 1 %}" class="btn btn-sm btn-info mr-1" title="Ver detalles"><i class="fas fa-eye"></i></a>
                                                     <a href="{% url 'tarea_financiera_update' tarea.id 1 %}" class="btn btn-sm btn-primary mr-1" title="Editar"><i class="fas fa-edit"></i></a>
-                                                    <a href="{% url 'tarea_financiera_listone' tarea.id 1 %}" class="btn btn-sm btn-info" title="Ver detalles"><i class="fas fa-eye"></i></a>
-                                                    <a class="btn btn-sm btn-info" href="{% url 'tarea_financiera_update_asignaciones' tarea.id 1 %}" title="Asignar recursos">
+                                                    <a href="{% url 'tarea_financiera_update_asignaciones' tarea.id 1 %}" class="btn btn-sm btn-info mr-1" title="Asignar recursos">
                                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-people" viewBox="0 0 16 16">
                                                             <path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8Zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002a.274.274 0 0 1-.014.002H7.022ZM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816ZM4.92 10A5.493 5.493 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275ZM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0Zm3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/>
                                                         </svg>
@@ -281,9 +289,9 @@
                                             {% for tarea in tareas_general %}
                                             <tr>
                                                 <td>
+                                                    <a href="{% url 'tarea_general_listone' tarea.id 1 %}" class="btn btn-sm btn-info mr-1" title="Ver detalles"><i class="fas fa-eye"></i></a>
                                                     <a href="{% url 'tarea_general_update' tarea.id 1 %}" class="btn btn-sm btn-primary mr-1" title="Editar"><i class="fas fa-edit"></i></a>
-                                                    <a href="{% url 'tarea_general_listone' tarea.id 1 %}" class="btn btn-sm btn-info" title="Ver detalles"><i class="fas fa-eye"></i></a>
-                                                    <a class="btn btn-sm btn-info" href="{% url 'tarea_general_update_asignaciones' tarea.id 1 %}" title="Asignar recursos">
+                                                    <a href="{% url 'tarea_general_update_asignaciones' tarea.id 1 %}" class="btn btn-sm btn-info mr-1" title="Asignar recursos">
                                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-people" viewBox="0 0 16 16">
                                                             <path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8Zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002a.274.274 0 0 1-.014.002H7.022ZM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816ZM4.92 10A5.493 5.493 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275ZM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0Zm3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/>
                                                         </svg>
@@ -336,9 +344,9 @@
                                             {% for tarea in tareas_ingenieria %}
                                             <tr>
                                                 <td>
+                                                    <a href="{% url 'tarea_ingenieria_listone' tarea.id 1 %}" class="btn btn-sm btn-info mr-1" title="Ver detalles"><i class="fas fa-eye"></i></a>
                                                     <a href="{% url 'tarea_ingenieria_update' tarea.id 1 %}" class="btn btn-sm btn-primary mr-1" title="Editar"><i class="fas fa-edit"></i></a>
-                                                    <a href="{% url 'tarea_ingenieria_listone' tarea.id 1 %}" class="btn btn-sm btn-info" title="Ver detalles"><i class="fas fa-eye"></i></a>
-                                                    <a class="btn btn-sm btn-info" href="{% url 'tarea_ingenieria_update_asignaciones' tarea.id 1 %}" title="Asignar recursos">
+                                                    <a href="{% url 'tarea_ingenieria_update_asignaciones' tarea.id 1 %}" class="btn btn-sm btn-info mr-1" title="Asignar recursos">
                                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-people" viewBox="0 0 16 16">
                                                             <path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8Zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002a.274.274 0 0 1-.014.002H7.022ZM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816ZM4.92 10A5.493 5.493 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275ZM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0Zm3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/>
                                                         </svg>
@@ -638,7 +646,10 @@
                     console.error('Error al crear tarea financiera:', error);
                 }
             {% endfor %}
-
+            // Ordenar las tareas por fecha de inicio
+            tasks.sort(function(a, b) {
+                return new Date(a.start) - new Date(b.start);
+            });
             console.log('Tareas:', tasks);
 
             var ganttElement = document.getElementById('gantt');
@@ -675,12 +686,12 @@
                     custom_popup_html: function(task) {
                         // Personalizar el popup para mostrar información adicional
                         return `
-                            <div class="details-container">
-                                <h5>${task.name}</h5>
-                                <p>Inicio: ${task.start}</p>
-                                <p>Fin: ${task.end}</p>
-                                <p>Progreso: ${task.progress}%</p>
-                                <p>${task.custom_class === 'milestone' ? 'Hito' : 'Tarea'}</p>
+                            <div class="details-container" style="width: 350px; background-color: rgba(0, 0, 0, 0.8); border-radius: 10px; padding: 15px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                                <h3 style="font-weight: bold; color: #ffffff; margin-bottom: 15px; font-size: 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.2); padding-bottom: 10px;">${task.name}</h3>
+                                <p style="color: #f0f0f0; margin: 8px 0; font-size: 15px;"><i class="fas fa-calendar-alt" style="margin-right: 8px; color: #3498db;"></i><strong>Inicio:</strong> ${task.start}</p>
+                                <p style="color: #f0f0f0; margin: 8px 0; font-size: 15px;"><i class="fas fa-calendar-check" style="margin-right: 8px; color: #2ecc71;"></i><strong>Fin:</strong> ${task.end}</p>
+                                <p style="color: #f0f0f0; margin: 8px 0; font-size: 15px;"><i class="fas fa-tasks" style="margin-right: 8px; color: #f39c12;"></i><strong>Progreso:</strong> <span style="background-color: rgba(255,255,255,0.2); padding: 3px 8px; border-radius: 12px; font-weight: bold;">${task.progress}%</span></p>
+                                <p style="color: #f0f0f0; margin: 8px 0; font-size: 15px;"><i class="fas fa-flag" style="margin-right: 8px; color: #e74c3c;"></i><strong>Tipo:</strong> <span style="text-transform: uppercase; font-weight: bold; color: ${task.custom_class === 'milestone' ? '#e74c3c' : '#3498db'};">${task.custom_class === 'milestone' ? 'Hito' : 'Tarea'}</span></p>
                             </div>
                         `;
                     }
@@ -758,6 +769,13 @@
             $('.handle').on('mousedown', (e, element) => {
                 e.preventDefault();
                 e.stopPropagation();
+            });
+            // Prevenir arrastre en elementos de Gantt
+            document.querySelectorAll('.bar-wrapper, .handle').forEach(function(element) {
+                element.addEventListener('mousedown', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
             });
         });
     </script>
