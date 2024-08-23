@@ -7,11 +7,11 @@ from decimal import Decimal
 import json
 from django import template
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseRedirect, JsonResponse
 from django.template import loader
 from django.urls import reverse
 from apps.home.models import * 
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from .models import *
@@ -1062,7 +1062,7 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
         
         dependencias_general = TAREA_GENERAL_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_general)
         dependencias_ingenieria = TAREA_INGENIERIA_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_ingenieria)
-        dependencias_financiera = TAREA_FINANCIERA_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_financiera)
+        dependencias_financiera = TAREA_FINANCIERA_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_financiera)        
         costo_real_proyecto = 0
         horas_reales_proyecto = 0
         for tarea in tareas_general:
@@ -1096,6 +1096,7 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
             print('proyecto.PC_NCOSTO_REAL', proyecto.PC_NCOSTO_REAL)
             proyecto.PC_NCOSTO_REAL = costo_real_proyecto
             proyecto.save()
+        max_costo = max(proyecto.PC_NCOSTO_REAL, proyecto.PC_NCOSTO_ESTIMADO)
         ctx = {
             'proyecto': proyecto,
             'tareas_general': tareas_general,
@@ -1105,7 +1106,8 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
             'dependencias_ingenieria': dependencias_ingenieria,
             'dependencias_financiera': dependencias_financiera,
             'costo_real_proyecto': costo_real_proyecto,
-            'horas_reales_proyecto': horas_reales_proyecto
+            'horas_reales_proyecto': horas_reales_proyecto,
+            'max_costo': max_costo
         }
         return render(request, 'home/PROYECTO_CLIENTE/proycli_listone.html', ctx)
     except Exception as e:
@@ -1393,7 +1395,7 @@ def TAREA_GENERAL_DEPENDENCIA_ADDONE(request, pk):
         print(e)
         messages.error(request, f'Error: {str(e)}')
         return redirect('/')
-    
+
 # ----------TAREA INGENIERIA--------------
 
 def TAREA_INGENIERIA_LISTALL(request):
@@ -1972,6 +1974,107 @@ def TAREA_FINANCIERA_DEPENDENCIA_ADDONE(request, pk):
         print(e)
         messages.error(request, f'Error: {str(e)}')
         return redirect('/')
+
+# ----------TAREA UPDATE DATA--------------
+def tarea_update_data(request, tipo_tarea, pk):
+    if tipo_tarea == 'general':
+        Tarea = TAREA_GENERAL
+        AsignacionEmpleado = ASIGNACION_EMPLEADO_TAREA_GENERAL
+        AsignacionContratista = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL
+        AsignacionRecurso = ASIGNACION_RECURSO_TAREA_GENERAL
+    elif tipo_tarea == 'ingenieria':
+        Tarea = TAREA_INGENIERIA
+        AsignacionEmpleado = ASIGNACION_EMPLEADO_TAREA_INGENIERIA
+        AsignacionContratista = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA
+        AsignacionRecurso = ASIGNACION_RECURSO_TAREA_INGENIERIA
+    elif tipo_tarea == 'financiera':
+        Tarea = TAREA_FINANCIERA
+        AsignacionEmpleado = ASIGNACION_EMPLEADO_TAREA_FINANCIERA
+        AsignacionContratista = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_FINANCIERA
+        AsignacionRecurso = ASIGNACION_RECURSO_TAREA_FINANCIERA
+    else:
+        return HttpResponseBadRequest("Tipo de tarea no válido")
+
+    tarea = get_object_or_404(Tarea, id=pk)
+    empleados_asignados = AsignacionEmpleado.objects.filter(AE_TAREA=tarea)
+    contratistas_asignados = AsignacionContratista.objects.filter(AEC_TAREA=tarea)
+    recursos_asignados = AsignacionRecurso.objects.filter(ART_TAREA=tarea)
+
+    if request.method == 'POST':
+        try:
+            # Actualizar datos de la tarea
+            if tipo_tarea == 'general':
+                proyecto_actual = tarea.TG_PROYECTO_CLIENTE
+                if request.POST.get('porcentajeAvance'):
+                    tarea.TG_NPROGRESO = float(request.POST.get('porcentajeAvance'))
+                if request.POST.get('horasTarea'):
+                    tarea.TG_NDURACION_REAL = float(request.POST.get('horasTarea'))
+            elif tipo_tarea == 'ingenieria':
+                proyecto_actual = tarea.TI_PROYECTO_CLIENTE
+                if request.POST.get('porcentajeAvance'):
+                    tarea.TI_NPROGRESO = float(request.POST.get('porcentajeAvance'))
+                if request.POST.get('horasTarea'):
+                    tarea.TI_NDURACION_REAL = float(request.POST.get('horasTarea'))
+            elif tipo_tarea == 'financiera':
+                proyecto_actual = tarea.TF_PROYECTO_CLIENTE
+                if request.POST.get('porcentajeAvance'):
+                    tarea.TF_NPROGRESO = float(request.POST.get('porcentajeAvance'))
+                if request.POST.get('horasTarea'):
+                    tarea.TF_NDURACION_REAL = float(request.POST.get('horasTarea'))
+            tarea.save()
+
+            # Actualizar asignaciones
+            for empleado in empleados_asignados:
+                if request.POST.get(f'costo_empleado_{empleado.id}'):
+                    empleado.AE_COSTO_REAL = float(request.POST.get(f'costo_empleado_{empleado.id}'))
+                if request.POST.get(f'horas_empleado_{empleado.id}'):
+                    empleado.AE_HORAS_REALES = float(request.POST.get(f'horas_empleado_{empleado.id}')  )
+                if request.POST.get(f'total_empleado_{empleado.id}'):
+                    empleado.AE_COSTO_TOTAL = float(request.POST.get(f'total_empleado_{empleado.id}'))
+                empleado.save()
+
+            for contratista in contratistas_asignados:
+                if request.POST.get(f'costo_contratista_{contratista.id}'):
+                    contratista.AEC_COSTO_REAL = float(request.POST.get(f'costo_contratista_{contratista.id}'))
+                if request.POST.get(f'horas_contratista_{contratista.id}'):
+                    contratista.AEC_HORAS_REALES = float(request.POST.get(f'horas_contratista_{contratista.id}'))
+                if request.POST.get(f'total_contratista_{contratista.id}'):
+                    contratista.AEC_COSTO_TOTAL = float(request.POST.get(f'total_contratista_{contratista.id}'))
+                contratista.save()
+
+            for recurso in recursos_asignados:
+                if request.POST.get(f'cantidad_recurso_{recurso.id}'):
+                    recurso.ART_CANTIDAD = float(request.POST.get(f'cantidad_recurso_{recurso.id}'))
+                if request.POST.get(f'costo_recurso_{recurso.id}'):
+                    recurso.ART_COSTO_UNITARIO = float(request.POST.get(f'costo_recurso_{recurso.id}'))
+                if request.POST.get(f'horas_recurso_{recurso.id}'):
+                    recurso.ART_HORAS_REALES = float(request.POST.get(f'horas_recurso_{recurso.id}'))
+                if request.POST.get(f'total_recurso_{recurso.id}'):   
+                    total_recurso = request.POST.get(f'total_recurso_{recurso.id}')
+                    total_recurso = total_recurso.replace(',', '.')
+                    recurso.ART_COSTO_REAL = float(total_recurso)
+                recurso.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Datos de la tarea actualizados correctamente.',
+                'redirect_url': reverse('proycli_listone', kwargs={'pk': proyecto_actual.id})
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al actualizar los datos: {str(e)}'
+            }, status=400)
+
+    ctx = {
+        'tarea': tarea,
+        'empleados_asignados': empleados_asignados,
+        'contratistas_asignados': contratistas_asignados,
+        'recursos_asignados': recursos_asignados,
+        'tipo_tarea': tipo_tarea
+    }
+    return render(request, 'home/TAREA/tarea_update_data.html', ctx)
+# ----------TAREA UPDATE DATA--------------
 
 #--------------------------------------
 #----------------TAREAS----------------

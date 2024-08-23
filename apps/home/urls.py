@@ -117,7 +117,7 @@ urlpatterns = [
     path('tarea_general_update_asignaciones/<int:pk>/<int:page>/', login_required(views.TAREA_GENERAL_UPDATE_ASIGNACIONES), name='tarea_general_update_asignaciones'),
     path('tarea_general_listone/<int:pk>/<int:page>/', login_required(views.TAREA_GENERAL_LISTONE), name='tarea_general_listone'),
     path('tarea_general_dependencia_addone/<int:pk>/', login_required(views.TAREA_GENERAL_DEPENDENCIA_ADDONE), name='tarea_general_dependencia_addone'),
-    
+
     # URLs para la gestión de tareas de ingeniería
     path('tarea_ingenieria_listall/', login_required(views.TAREA_INGENIERIA_LISTALL), name='tarea_ingenieria_listall'),
     path('tarea_ingenieria_addone/<int:page>/', login_required(views.TAREA_INGENIERIA_ADDONE), name='tarea_ingenieria_addone'),
@@ -125,7 +125,7 @@ urlpatterns = [
     path('tarea_ingenieria_update/<int:pk>/<int:page>/', login_required(views.TAREA_INGENIERIA_UPDATE), name='tarea_ingenieria_update'),
     path('tarea_ingenieria_update_asignaciones/<int:pk>/<int:page>/', login_required(views.TAREA_INGENIERIA_UPDATE_ASIGNACIONES), name='tarea_ingenieria_update_asignaciones'),
     path('tarea_ingenieria_listone/<int:pk>/<int:page>/', login_required(views.TAREA_INGENIERIA_LISTONE), name='tarea_ingenieria_listone'),
-    path('tarea_ingenieria_dependencia_addone/<int:pk>/', login_required(views.TAREA_INGENIERIA_DEPENDENCIA_ADDONE), name='tarea_ingenieria_dependencia_addone'),
+    path('tarea_ingenieria_dependencia_addone/<int:pk>/', login_required(views.TAREA_INGENIERIA_DEPENDENCIA_ADDONE), name='tarea_ingenieria_dependencia_addone'),    
     
     # URLs para la gestión de tareas financieras
     path('tarea_financiera_listall/', login_required(views.TAREA_FINANCIERA_LISTALL), name='tarea_financiera_listall'),
@@ -134,8 +134,11 @@ urlpatterns = [
     path('tarea_financiera_update/<int:pk>/<int:page>/', login_required(views.TAREA_FINANCIERA_UPDATE), name='tarea_financiera_update'),
     path('tarea_financiera_update_asignaciones/<int:pk>/<int:page>/', login_required(views.TAREA_FINANCIERA_UPDATE_ASIGNACIONES), name='tarea_financiera_update_asignaciones'),
     path('tarea_financiera_listone/<int:pk>/<int:page>/', login_required(views.TAREA_FINANCIERA_LISTONE), name='tarea_financiera_listone'),
-    path('tarea_financiera_dependencia_addone/<int:pk>/', login_required(views.TAREA_FINANCIERA_DEPENDENCIA_ADDONE), name='tarea_financiera_dependencia_addone'),
+    path('tarea_financiera_dependencia_addone/<int:pk>/', login_required(views.TAREA_FINANCIERA_DEPENDENCIA_ADDONE), name='tarea_financiera_dependencia_addone'),    
     
+    # URL para la gestión de actualización de datos de tareas
+    path('tarea/<str:tipo_tarea>/<int:pk>/update_data/', login_required(views.tarea_update_data), name='tarea_update_data'),
+
     # URLs para la gestión de etapas
     path('etapa_listall/', login_required(views.ETAPA_LISTALL), name='etapa_listall'),
     path('etapa_addone/', login_required(views.ETAPA_ADDONE), name='etapa_addone'),

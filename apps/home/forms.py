@@ -847,16 +847,16 @@ class formPROYECTO_CLIENTE(forms.ModelForm):
             'PC_FFECHA_FIN_ESTIMADA': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'PC_FFECHA_FIN_REAL': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'PC_CESTADO': forms.TextInput(attrs={'class': 'form-control'}),
-            'PC_NPRESUPUESTO': forms.NumberInput(attrs={'class': 'form-control'}),
+            'PC_NPRESUPUESTO': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'PC_COBSERVACIONES': forms.Textarea(attrs={'class': 'form-control'}),
             'PC_CONTACTO_CLIENTE': forms.Select(attrs={'class': 'form-control'}),
             'PC_DIRECCION_CLIENTE': forms.Select(attrs={'class': 'form-control'}),
-            'PC_NVALOR_HORA': forms.NumberInput(attrs={'class': 'form-control'}),
-            'PC_NHORAS_ESTIMADAS': forms.NumberInput(attrs={'class': 'form-control'}),
-            'PC_NCOSTO_ESTIMADO': forms.NumberInput(attrs={'class': 'form-control'}),
-            'PC_NHORAS_REALES': forms.NumberInput(attrs={'class': 'form-control'}),
-            'PC_NCOSTO_REAL': forms.NumberInput(attrs={'class': 'form-control'}),
-            'PC_NMARGEN': forms.NumberInput(attrs={'class': 'form-control'}),
+            'PC_NVALOR_HORA': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'PC_NHORAS_ESTIMADAS': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'PC_NCOSTO_ESTIMADO': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'PC_NHORAS_REALES': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'PC_NCOSTO_REAL': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'PC_NMARGEN': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -865,6 +865,20 @@ class formPROYECTO_CLIENTE(forms.ModelForm):
                       'PC_CUSUARIO_CREADOR', 'PC_CUSUARIO_MODIFICADOR']:
             if field in self.fields:
                 self.fields[field].widget = forms.HiddenInput()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        fecha_inicio = cleaned_data.get('PC_FFECHA_INICIO')
+        fecha_fin_estimada = cleaned_data.get('PC_FFECHA_FIN_ESTIMADA')
+        fecha_fin_real = cleaned_data.get('PC_FFECHA_FIN_REAL')
+
+        if fecha_inicio and fecha_fin_estimada and fecha_fin_estimada < fecha_inicio:
+            self.add_error('PC_FFECHA_FIN_ESTIMADA', 'La fecha de fin estimada no puede ser menor a la fecha de inicio.')
+
+        if fecha_inicio and fecha_fin_real and fecha_fin_real < fecha_inicio:
+            self.add_error('PC_FFECHA_FIN_REAL', 'La fecha de fin real no puede ser menor a la fecha de inicio.')
+
+        return cleaned_data
 
 # Form for ETAPA model
 class formETAPA(forms.ModelForm):
@@ -916,12 +930,12 @@ class formTAREA_GENERAL(forms.ModelForm):
             'TG_FFECHA_FIN_ESTIMADA': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'TG_FFECHA_FIN_REAL': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'TG_CESTADO': forms.TextInput(attrs={'class': 'form-control'}),
-            'TG_NPRESUPUESTO': forms.NumberInput(attrs={'class': 'form-control'}),
+            'TG_NPRESUPUESTO': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'TG_COBSERVACIONES': forms.Textarea(attrs={'class': 'form-control'}),
             'TG_BMILESTONE': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'}),
-            'TG_NPROGRESO': forms.NumberInput(attrs={'class': 'form-control'}),
-            'TG_NDURACION_PLANIFICADA': forms.NumberInput(attrs={'class': 'form-control'}),
-            'TG_NDURACION_REAL': forms.NumberInput(attrs={'class': 'form-control'}),
+            'TG_NPROGRESO': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'max': '100'}),
+            'TG_NDURACION_PLANIFICADA': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'TG_NDURACION_REAL': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'TG_BCRITICA': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'}),
         }
 
@@ -942,6 +956,29 @@ class formTAREA_GENERAL(forms.ModelForm):
             etapa = ETAPA.objects.get(id=self.data['TG_ETAPA'])
             tarea_count = TAREA_GENERAL.objects.filter(TG_PROYECTO_CLIENTE=proyecto, TG_ETAPA=etapa).count() + 1
             self.initial['TG_CCODIGO'] = f"{proyecto.PC_CCODIGO}-{etapa.ET_CCODIGO}-TG{tarea_count:03d}"
+
+    def clean(self):
+        cleaned_data = super().clean()
+        for field in ['TG_NPRESUPUESTO', 'TG_NPROGRESO', 'TG_NDURACION_PLANIFICADA', 'TG_NDURACION_REAL']:
+            value = cleaned_data.get(field)
+            if value is not None and value < 0:
+                self.add_error(field, "Este campo no puede ser negativo.")
+        
+        progreso = cleaned_data.get('TG_NPROGRESO')
+        if progreso is not None and progreso > 100:
+            self.add_error('TG_NPROGRESO', "El progreso no puede ser mayor a 100.")
+        
+        fecha_inicio = cleaned_data.get('TG_FFECHA_INICIO')
+        fecha_fin_estimada = cleaned_data.get('TG_FFECHA_FIN_ESTIMADA')
+        fecha_fin_real = cleaned_data.get('TG_FFECHA_FIN_REAL')
+        
+        if fecha_inicio and fecha_fin_estimada and fecha_fin_estimada < fecha_inicio:
+            self.add_error('TG_FFECHA_FIN_ESTIMADA', "La fecha fin estimada no puede ser menor a la fecha de inicio.")
+        
+        if fecha_inicio and fecha_fin_real and fecha_fin_real < fecha_inicio:
+            self.add_error('TG_FFECHA_FIN_REAL', "La fecha fin real no puede ser menor a la fecha de inicio.")
+        
+        return cleaned_data
 
     def save(self, commit=True):
         instance = super(formTAREA_GENERAL, self).save(commit=False)
@@ -975,12 +1012,12 @@ class formTAREA_INGENIERIA(forms.ModelForm):
             'TI_FFECHA_FIN_ESTIMADA': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'TI_FFECHA_FIN_REAL': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'TI_CESTADO': forms.TextInput(attrs={'class': 'form-control'}),
-            'TI_NPRESUPUESTO': forms.NumberInput(attrs={'class': 'form-control'}),
+            'TI_NPRESUPUESTO': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'TI_COBSERVACIONES': forms.Textarea(attrs={'class': 'form-control'}),
             'TI_BMILESTONE': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'}),
-            'TI_NPROGRESO': forms.NumberInput(attrs={'class': 'form-control'}),
-            'TI_NDURACION_PLANIFICADA': forms.NumberInput(attrs={'class': 'form-control'}),
-            'TI_NDURACION_REAL': forms.NumberInput(attrs={'class': 'form-control'}),
+            'TI_NPROGRESO': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'max': '100'}),
+            'TI_NDURACION_PLANIFICADA': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'TI_NDURACION_REAL': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'TG_BCRITICA': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'}),
         }
 
@@ -1001,6 +1038,29 @@ class formTAREA_INGENIERIA(forms.ModelForm):
             etapa = ETAPA.objects.get(id=self.data['TI_ETAPA'])
             tarea_count = TAREA_INGENIERIA.objects.filter(TI_PROYECTO_CLIENTE=proyecto, TI_ETAPA=etapa).count() + 1
             self.initial['TI_CCODIGO'] = f"{proyecto.PC_CCODIGO}-{etapa.ET_CCODIGO}-TI{tarea_count:03d}"
+
+    def clean(self):
+        cleaned_data = super().clean()
+        for field in ['TI_NPRESUPUESTO', 'TI_NPROGRESO', 'TI_NDURACION_PLANIFICADA', 'TI_NDURACION_REAL']:
+            value = cleaned_data.get(field)
+            if value is not None and value < 0:
+                self.add_error(field, "Este campo no puede ser negativo.")
+        
+        progreso = cleaned_data.get('TI_NPROGRESO')
+        if progreso is not None and progreso > 100:
+            self.add_error('TI_NPROGRESO', "El progreso no puede ser mayor a 100.")
+        
+        fecha_inicio = cleaned_data.get('TI_FFECHA_INICIO')
+        fecha_fin_estimada = cleaned_data.get('TI_FFECHA_FIN_ESTIMADA')
+        fecha_fin_real = cleaned_data.get('TI_FFECHA_FIN_REAL')
+        
+        if fecha_inicio and fecha_fin_estimada and fecha_fin_estimada < fecha_inicio:
+            self.add_error('TI_FFECHA_FIN_ESTIMADA', "La fecha fin estimada no puede ser menor a la fecha de inicio.")
+        
+        if fecha_inicio and fecha_fin_real and fecha_fin_real < fecha_inicio:
+            self.add_error('TI_FFECHA_FIN_REAL', "La fecha fin real no puede ser menor a la fecha de inicio.")
+        
+        return cleaned_data
 
     def save(self, commit=True):
         instance = super(formTAREA_INGENIERIA, self).save(commit=False)
@@ -1034,13 +1094,13 @@ class formTAREA_FINANCIERA(forms.ModelForm):
             'TF_FFECHA_FIN_ESTIMADA': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'TF_FFECHA_FIN_REAL': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'TF_CESTADO': forms.TextInput(attrs={'class': 'form-control'}),
-            'TF_NMONTO': forms.NumberInput(attrs={'class': 'form-control'}),
+            'TF_NMONTO': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'TF_CTIPO_TRANSACCION': forms.TextInput(attrs={'class': 'form-control'}),
             'TF_COBSERVACIONES': forms.Textarea(attrs={'class': 'form-control'}),
             'TF_BMILESTONE': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'}),
-            'TF_NPROGRESO': forms.NumberInput(attrs={'class': 'form-control'}),
-            'TF_NDURACION_PLANIFICADA': forms.NumberInput(attrs={'class': 'form-control'}),
-            'TF_NDURACION_REAL': forms.NumberInput(attrs={'class': 'form-control'}),
+            'TF_NPROGRESO': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'max': '100'}),
+            'TF_NDURACION_PLANIFICADA': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'TF_NDURACION_REAL': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'TG_BCRITICA': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'}),
         }
 
@@ -1062,6 +1122,8 @@ class formTAREA_FINANCIERA(forms.ModelForm):
             tarea_count = TAREA_FINANCIERA.objects.filter(TF_PROYECTO_CLIENTE=proyecto, TF_ETAPA=etapa).count() + 1
             self.initial['TF_CCODIGO'] = f"{proyecto.PC_CCODIGO}-{etapa.ET_CCODIGO}-TF{tarea_count:03d}"
 
+    def clean(self):
+        cleaned_data = super().clean()
     def save(self, commit=True):
         instance = super(formTAREA_FINANCIERA, self).save(commit=False)
         
@@ -1169,7 +1231,7 @@ class formASIGNACION_EMPLEADO_TAREA_INGENIERIA(forms.ModelForm):
         widgets = {
             'AE_EMPLEADO': forms.Select(attrs={'class': 'form-control'}),
             'AE_TAREA': forms.Select(attrs={'class': 'form-control'}),
-            'AE_CESTADO': forms.Select(attrs={'class': 'form-control'}),
+            'AE_CESTADO': forms.Select(attrs={'class': 'form-control'}),            
         }
 
     def __init__(self, *args, **kwargs):
@@ -1274,8 +1336,8 @@ class formASIGNACION_RECURSO_TAREA_GENERAL(forms.ModelForm):
         widgets = {
             'ART_TAREA': forms.Select(attrs={'class': 'form-control'}),
             'ART_PRODUCTO': forms.Select(attrs={'class': 'form-control'}),
-            'ART_CANTIDAD': forms.NumberInput(attrs={'class': 'form-control'}),
-            'ART_COSTO_UNITARIO': forms.NumberInput(attrs={'class': 'form-control'}),
+            'ART_CANTIDAD': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'ART_COSTO_UNITARIO': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -1284,6 +1346,18 @@ class formASIGNACION_RECURSO_TAREA_GENERAL(forms.ModelForm):
         for field in hidden_fields:
             if field in self.fields:
                 self.fields[field].widget = forms.HiddenInput()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        cantidad = cleaned_data.get('ART_CANTIDAD')
+        costo_unitario = cleaned_data.get('ART_COSTO_UNITARIO')
+
+        if cantidad is not None and cantidad < 0:
+            self.add_error('ART_CANTIDAD', 'La cantidad no puede ser negativa.')
+        if costo_unitario is not None and costo_unitario < 0:
+            self.add_error('ART_COSTO_UNITARIO', 'El costo unitario no puede ser negativo.')
+
+        return cleaned_data
 
 # Form for ASIGNACION_RECURSO_TAREA_INGENIERIA model
 class formASIGNACION_RECURSO_TAREA_INGENIERIA(forms.ModelForm):
@@ -1293,8 +1367,8 @@ class formASIGNACION_RECURSO_TAREA_INGENIERIA(forms.ModelForm):
         widgets = {
             'ART_TAREA': forms.Select(attrs={'class': 'form-control'}),
             'ART_PRODUCTO': forms.Select(attrs={'class': 'form-control'}),
-            'ART_CANTIDAD': forms.NumberInput(attrs={'class': 'form-control'}),
-            'ART_COSTO_UNITARIO': forms.NumberInput(attrs={'class': 'form-control'}),
+            'ART_CANTIDAD': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'ART_COSTO_UNITARIO': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -1303,6 +1377,18 @@ class formASIGNACION_RECURSO_TAREA_INGENIERIA(forms.ModelForm):
         for field in hidden_fields:
             if field in self.fields:
                 self.fields[field].widget = forms.HiddenInput()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        cantidad = cleaned_data.get('ART_CANTIDAD')
+        costo_unitario = cleaned_data.get('ART_COSTO_UNITARIO')
+
+        if cantidad is not None and cantidad < 0:
+            self.add_error('ART_CANTIDAD', 'La cantidad no puede ser negativa.')
+        if costo_unitario is not None and costo_unitario < 0:
+            self.add_error('ART_COSTO_UNITARIO', 'El costo unitario no puede ser negativo.')
+
+        return cleaned_data
 
 # Form for ASIGNACION_RECURSO_TAREA_FINANCIERA model
 class formASIGNACION_RECURSO_TAREA_FINANCIERA(forms.ModelForm):
@@ -1311,8 +1397,8 @@ class formASIGNACION_RECURSO_TAREA_FINANCIERA(forms.ModelForm):
         fields = ['ART_PRODUCTO', 'ART_CANTIDAD', 'ART_COSTO_UNITARIO']
         widgets = {            
             'ART_PRODUCTO': forms.Select(attrs={'class': 'form-control'}),
-            'ART_CANTIDAD': forms.NumberInput(attrs={'class': 'form-control'}),
-            'ART_COSTO_UNITARIO': forms.NumberInput(attrs={'class': 'form-control'}),
+            'ART_CANTIDAD': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'ART_COSTO_UNITARIO': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -1321,6 +1407,18 @@ class formASIGNACION_RECURSO_TAREA_FINANCIERA(forms.ModelForm):
         for field in hidden_fields:
             if field in self.fields:
                 self.fields[field].widget = forms.HiddenInput()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        cantidad = cleaned_data.get('ART_CANTIDAD')
+        costo_unitario = cleaned_data.get('ART_COSTO_UNITARIO')
+
+        if cantidad is not None and cantidad < 0:
+            self.add_error('ART_CANTIDAD', 'La cantidad no puede ser negativa.')
+        if costo_unitario is not None and costo_unitario < 0:
+            self.add_error('ART_COSTO_UNITARIO', 'El costo unitario no puede ser negativo.')
+
+        return cleaned_data
 
 # Form for ACTA_REUNION model
 class formACTA_REUNION(forms.ModelForm):

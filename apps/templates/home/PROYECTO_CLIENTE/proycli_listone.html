@@ -24,11 +24,12 @@
         .progress-bar {
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             color: white;
             text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
             transition: width 0.6s ease;
-            min-width: 2em;
+            padding-left: 10px;
+            font-weight: bold;
         }
         .progress-bar[style^="width: 100%"] {
             border-top-right-radius: 0.25rem;
@@ -154,19 +155,19 @@
                                             {% endif %}
                                         </div>
                                         <div class="progress mb-3" style="height: 20px;">
-                                            <div class="progress-bar {% if proyecto.PC_NCOSTO_REAL > proyecto.PC_NCOSTO_ESTIMADO %}bg-danger{% else %}bg-success{% endif %}" 
-                                                role="progressbar" 
-                                                style="width: {% widthratio proyecto.PC_NCOSTO_REAL proyecto.PC_NCOSTO_ESTIMADO 100 %}%" 
-                                                aria-valuenow="{{ proyecto.PC_NCOSTO_REAL }}" 
-                                                aria-valuemin="0" 
-                                                aria-valuemax="{{ proyecto.PC_NCOSTO_ESTIMADO }}"></div>
+                                            <div class="progress-bar bg-danger" role="progressbar" style="width: {% widthratio proyecto.PC_NCOSTO_REAL max_costo 100 %}%" aria-valuenow="{{ proyecto.PC_NCOSTO_REAL }}" aria-valuemin="0" aria-valuemax="{{ max_costo }}">
+                                                
+                                            </div>
                                         </div>
                                         <div class="mb-2">
                                             <strong>Costo Estimado:</strong> ${{ proyecto.PC_NCOSTO_ESTIMADO|floatformat:0|intcomma }}
                                         </div>
                                         <div class="progress mb-3" style="height: 20px;">
-                                            <div class="progress-bar bg-info" role="progressbar" style="width: 100%" aria-valuenow="{{ proyecto.PC_NCOSTO_ESTIMADO }}" aria-valuemin="0" aria-valuemax="{{ proyecto.PC_NCOSTO_ESTIMADO }}"></div>
+                                            <div class="progress-bar bg-info" role="progressbar" style="width: {% widthratio proyecto.PC_NCOSTO_ESTIMADO max_costo 100 %}%" aria-valuenow="{{ proyecto.PC_NCOSTO_ESTIMADO }}" aria-valuemin="0" aria-valuemax="{{ max_costo }}">
+                                                
+                                            </div>
                                         </div>
+                                        
                                     </div>
                                 </div>
                             </div>
@@ -256,6 +257,10 @@
                                                     <a href="{% url 'tarea_financiera_dependencia_addone' tarea.id %}" class="btn btn-sm btn-warning" title="Agregar dependencia">
                                                         <i class="fas fa-link"></i>
                                                     </a>
+                                                    <!-- En la sección de tareas financieras -->
+                                                    <a href="#" class="btn btn-sm btn-secondary" title="Actualizar datos" style="background-color: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 3px; transition: background-color 0.3s;" data-toggle="modal" data-target="#updateDataModal" data-url="{% url 'tarea_update_data' 'financiera' tarea.id %}">
+                                                        <i class="fas fa-sync-alt"></i>
+                                                    </a>
                                                 </td>
                                                 <td>{{ tarea.TF_CNOMBRE }}</td>
                                                 <td>{{ tarea.TF_CDESCRIPCION }}</td>                                                
@@ -311,6 +316,10 @@
                                                     <a href="{% url 'tarea_general_dependencia_addone' tarea.id %}" class="btn btn-sm btn-warning" title="Agregar dependencia">
                                                         <i class="fas fa-link"></i>
                                                     </a>
+                                                    <!-- En la sección de tareas generales -->
+                                                    <a href="#" class="btn btn-sm btn-secondary" title="Actualizar datos" style="background-color: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 3px; transition: background-color 0.3s;" data-toggle="modal" data-target="#updateDataModal" data-url="{% url 'tarea_update_data' 'general' tarea.id %}">
+                                                        <i class="fas fa-sync-alt"></i>
+                                                    </a>                                                   
                                                 </td>
                                                 <td>{{ tarea.TG_CNOMBRE }}</td>
                                                 <td>{{ tarea.TG_CDESCRIPCION }}</td>
@@ -366,6 +375,10 @@
                                                     <a href="{% url 'tarea_ingenieria_dependencia_addone' tarea.id %}" class="btn btn-sm btn-warning" title="Agregar dependencia">
                                                         <i class="fas fa-link"></i>
                                                     </a>
+                                                    <!-- En la sección de tareas de ingeniería -->
+                                                    <a href="#" class="btn btn-sm btn-secondary" title="Actualizar datos" style="background-color: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 3px; transition: background-color 0.3s;" data-toggle="modal" data-target="#updateDataModal" data-url="{% url 'tarea_update_data' 'ingenieria' tarea.id %}">
+                                                        <i class="fas fa-sync-alt"></i>
+                                                    </a>
                                                 </td>
                                                 <td>{{ tarea.TI_CNOMBRE }}</td>
                                                 <td>{{ tarea.TI_CDESCRIPCION }}</td>
@@ -398,11 +411,22 @@
                     </div>
                 </div>
             </div>
-            <!-- [ Main Content ] end -->
+            <!-- [ Main Content ] end -->             
         </div>
     </section>
     <!-- [ Main Content ] end -->
+    <!-- Modal -->
+    <div class="modal fade" id="updateDataModal" tabindex="-1" role="dialog" aria-labelledby="updateDataModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">                
+                <div class="modal-body">
+                    <!-- El contenido del modal se cargará aquí -->
+                </div>
+            </div>
+        </div>
+    </div>
 
+    
 {% endblock content %}
 
 <!-- Specific Page JS goes HERE  -->
@@ -421,7 +445,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Frappe Gantt JS -->
     <script src="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.min.js"></script>
-    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Gráfico de avance
@@ -787,6 +811,95 @@
                 element.addEventListener('mousedown', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
+                });
+            });
+        });
+    </script>
+    <script>
+        // Variable global para almacenar el estado de validación
+        let horasValidas = true;
+
+        // Función para validar las horas
+        function validarHoras() {
+            const horasTarea = parseFloat($('#horasTarea').val()) || 0;
+            let totalHorasAsignadas = 0;
+
+            // Sumar horas de empleados, contratistas y recursos
+            $('input[name^="horas_"]').each(function() {
+                totalHorasAsignadas += parseFloat($(this).val()) || 0;
+            });
+
+            const mensajeError = $('#mensajeErrorHoras');
+            if (totalHorasAsignadas > horasTarea) {
+                mensajeError.text('La suma de las horas asignadas no puede ser mayor a las horas totales de la tarea.');
+                mensajeError.show();
+                horasValidas = false;
+            } else {
+                mensajeError.hide();
+                horasValidas = true;
+            }
+
+            // Actualizar el estado del botón de envío
+            $('#btnGuardarCambios').prop('disabled', !horasValidas);
+        }
+
+        $(document).ready(function() {
+            $('#updateDataModal').on('show.bs.modal', function (event) {
+                var button = $(event.relatedTarget);
+                var url = button.data('url');
+                var modal = $(this);
+                modal.find('.modal-body').load(url, function() {
+                    // Agregar mensaje de error al formulario
+                    $('#formEditarTarea').append('<div id="mensajeErrorHoras" class="alert alert-danger mt-3" style="display: none;"></div>');
+
+                    $('#formEditarTarea').on('submit', function(e) {
+                        e.preventDefault();
+                        if (horasValidas) {
+                            $.ajax({
+                                url: url,
+                                method: 'POST',
+                                data: $(this).serialize(),
+                                dataType: 'json',
+                                success: function(response) {
+                                    if (response.success) {
+                                        $('#updateDataModal').modal('hide');
+                                        Swal.fire({
+                                            icon: 'success',
+                                            title: 'Éxito',
+                                            text: response.message,
+                                            showConfirmButton: false,
+                                            timer: 1500
+                                        }).then(() => {
+                                            if (response.redirect_url) {
+                                                window.location.href = response.redirect_url;
+                                            } else {
+                                                location.reload();
+                                            }
+                                        });
+                                    } else {
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: 'Error',
+                                            text: response.message
+                                        });
+                                    }
+                                },
+                                error: function(xhr, status, error) {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error',
+                                        text: 'Hubo un problema al procesar la solicitud. Por favor, inténtelo de nuevo.'
+                                    });
+                                }
+                            });
+                        }
+                    });
+
+                    // Agregar evento para validar en tiempo real
+                    $('input[name^="horas_"], #horasTarea').on('input', validarHoras);
+
+                    // Validación inicial
+                    validarHoras();
                 });
             });
         });
