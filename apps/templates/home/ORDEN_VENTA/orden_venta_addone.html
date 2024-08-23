@@ -1,0 +1,188 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Orden de Venta {% endblock %} 
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}{% endblock stylesheets %}
+
+{% block content %}		
+    <!-- [ Main Content ] start -->
+    <section class="pcoded-main-container">
+        <div class="pcoded-content">
+            <!-- [ breadcrumb ] start -->
+            <div class="page-header">
+                <div class="page-block">
+                    <div class="row align-items-center">
+                        <div class="col-md-12">
+                            <div class="page-header-title">
+                                <h5 class="m-b-10">Órdenes de Venta</h5>
+                            </div>
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="/"><i class="feather icon-home"></i></a></li>
+                                <li class="breadcrumb-item"><a href="{% url 'orden_venta_listall' %}">Órdenes de Venta</a></li>
+                                <li class="breadcrumb-item"><a href="#!">Agregar Orden de Venta</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- [ breadcrumb ] end -->
+            <!-- [ Main Content ] start -->
+            <div class="row">
+                <!-- [ form-element ] start -->
+                <div class="col-sm-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Orden de Venta</h5>
+                        </div>
+                        <div class="card-body">
+                            <h5>Ingrese datos de la orden de venta</h5>
+                            <hr>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <form method="POST" id="validation-form123" enctype="multipart/form-data">
+                                    {% csrf_token %}
+                                        {{ form.non_field_errors }}
+                                        {% for field in form %}
+                                            <div class="fieldWrapper">
+                                                {{ field.errors }}
+                                                <label class="my-1 me-2" for="{{ field.id_for_label }}">{{ field.label }}:</label>
+                                                {% if field.name == 'OV_FFECHA' or field.name == 'OV_FFECHA_ENTREGA' %}
+                                                    <input type="date" name="{{ field.name }}" id="{{ field.id_for_label }}" class="form-control" style="width: 480px;" value="{{ field.value|date:'Y-m-d' }}" required>
+                                                {% else %}
+                                                    {{ field }}
+                                                {% endif %}
+                                            </div>
+                                        {% endfor %}
+                                        {{ form.errors }}
+                                        <br>
+                                        <div class="form-group nav justify-content-end">
+                                            <button class="btn btn-success mr-4" type="submit">Guardar</button>
+                                            <a class="btn btn-danger mr-1" onclick="window.history.go(-1); return false;">Volver</a>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- [ form-element ] end -->
+            </div>
+            <!-- [ Main Content ] end -->
+        </div>
+    </section>
+    <!-- [ Main Content ] end -->
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}
+    <!-- bootstrap-tagsinput-latest Js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/typeahead.js/0.11.1/typeahead.bundle.min.js"></script>
+    <script src="/static/assets/js/plugins/bootstrap-tagsinput.min.js"></script>
+    <!-- bootstrap-maxlength Js -->
+    <script src="/static/assets/js/plugins/bootstrap-maxlength.js"></script>
+    <!-- form-advance custom js -->
+    <script src="/static/assets/js/pages/form-advance-custom.js"></script>
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+$(document).ready(function() {
+    $('#id_OV_COTIZACION').change(function() {
+        var cotizacionId = $(this).val();
+        if (cotizacionId) {
+            $.ajax({
+                url: "{% url 'cotizacion_getdata' 0 %}".replace('0', cotizacionId),
+                type: 'GET',
+                dataType: 'json',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(data) {
+                    console.log('data',data);
+                    $('#id_OV_CCLIENTE').val(data.cotizacion.CO_CCLIENTE.id);
+                    $('#id_OV_NTOTAL').val(data.cotizacion.CO_NTOTAL);
+                    $('#id_OV_COBSERVACIONES').val(data.cotizacion.CO_COBSERVACIONES);
+                    $('#id_OV_CCOMENTARIO').val(data.cotizacion.CO_CCOMENTARIO);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error fetching cotizacion data:', error);
+                }
+            }); 
+        } else {
+            // Clear fields if no cotizacion is selected
+            $('#id_OV_CCLIENTE, #id_OV_NTOTAL, #id_OV_COBSERVACIONES, #id_OV_CCOMENTARIO').val('');
+        }
+    });
+});
+</script>
+<script>
+$(document).ready(function() {
+    // Create the button
+    var $button = $('<button>', {
+        text: 'Generar Número',
+        class: 'btn btn-primary ml-2',
+        click: function(e) {
+            e.preventDefault();
+            var currentYear = new Date().getFullYear();
+            var generatedNumber = 'OV-' + currentYear + '-0000';
+            $('#id_OV_CNUMERO').val(generatedNumber);
+        }
+    });
+
+    // Insert the button after the OV_CNUMERO field
+    $('#id_OV_CNUMERO').after($button);
+
+    $('form').on('submit', function(e) {
+        e.preventDefault();
+        console.log('submit');
+        var ovNumero = $('#id_OV_CNUMERO').val();
+        
+        $.ajax({
+            url: "{% url 'check_ov_numero' %}",
+            type: 'POST',
+            data: {
+                'ov_numero': ovNumero
+            },
+            dataType: 'json',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.exists) {
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'Número OV ya existe',
+                        icon: 'error',
+                        confirmButtonText: 'Ok'
+                    });
+                } else {
+                    $('form')[0].submit();
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error checking OV number:', error);
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Ocurrió un error al verificar el número OV',
+                    icon: 'error',
+                    confirmButtonText: 'Ok'
+                });
+            }
+        });
+    });
+});
+
+
+
+
+
+
+</script>
+
+
+
+
+
+
+{% endblock javascripts %}
