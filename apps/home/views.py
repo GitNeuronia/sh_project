@@ -1064,29 +1064,81 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
         dependencias_general = TAREA_GENERAL_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_general)
         dependencias_ingenieria = TAREA_INGENIERIA_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_ingenieria)
         dependencias_financiera = TAREA_FINANCIERA_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_financiera)        
+        
+        asignacion_empleado_general = ASIGNACION_EMPLEADO_TAREA_GENERAL.objects.filter(AE_TAREA__in=tareas_general)
+        asignacion_empleado_ingenieria = ASIGNACION_EMPLEADO_TAREA_INGENIERIA.objects.filter(AE_TAREA__in=tareas_ingenieria)
+        asignacion_empleado_financiera = ASIGNACION_EMPLEADO_TAREA_FINANCIERA.objects.filter(AE_TAREA__in=tareas_financiera)
+        
+        asignacion_empleado_recurso_general = ASIGNACION_RECURSO_TAREA_GENERAL.objects.filter(ART_TAREA__in=tareas_general)
+        asignacion_empleado_recurso_ingenieria = ASIGNACION_RECURSO_TAREA_INGENIERIA.objects.filter(ART_TAREA__in=tareas_ingenieria)
+        asignacion_empleado_recurso_financiera = ASIGNACION_RECURSO_TAREA_FINANCIERA.objects.filter(ART_TAREA__in=tareas_financiera)
+        
+        asignacion_contratista_general = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL.objects.filter(AEC_TAREA__in=tareas_general)
+        asignacion_contratista_ingenieria = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA.objects.filter(AEC_TAREA__in=tareas_ingenieria)
+        asignacion_contratista_financiera = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_FINANCIERA.objects.filter(AEC_TAREA__in=tareas_financiera)
+        
         costo_real_proyecto = 0
         horas_reales_proyecto = 0
+
         for tarea in tareas_general:
             tarea.TG_NPROGRESO = int(round(float(tarea.TG_NPROGRESO)))
-            if tarea.TG_NPROGRESO == 100 and tarea.TG_NDURACION_REAL is not None and tarea.TG_NDURACION_REAL > 0:
-                    # proyecto.PC_NHORAS_REALES += tarea.TG_NDURACION_REAL
-                    horas_reales_proyecto += tarea.TG_NDURACION_REAL
-                    # proyecto.PC_NCOSTO_REAL +=  tarea.TG_NDURACION_REAL * proyecto.PC_NVALOR_HORA
-                    costo_real_proyecto +=  tarea.TG_NDURACION_REAL * proyecto.PC_NVALOR_HORA
+            if tarea.TG_NPROGRESO == 100 and tarea.TG_NDURACION_REAL is not None and tarea.TG_NDURACION_REAL > 0:                
+                    horas_reales_proyecto += tarea.TG_NDURACION_REAL    
+
+                    if not (asignacion_empleado_general.filter(AE_TAREA=tarea).exists() or
+                            asignacion_empleado_recurso_general.filter(ART_TAREA=tarea).exists() or
+                            asignacion_contratista_general.filter(AEC_TAREA=tarea).exists()):
+                        costo_real_proyecto +=  tarea.TG_NPRESUPUESTO
+
+                    for asignacion in asignacion_empleado_general:
+                        if asignacion.AE_TAREA == tarea:                            
+                            costo_real_proyecto +=  asignacion.AE_COSTO_TOTAL
+                    for asignacion in asignacion_empleado_recurso_general:
+                        if asignacion.ART_TAREA == tarea:                            
+                            costo_real_proyecto +=  asignacion.ART_COSTO_TOTAL
+                    for asignacion in asignacion_contratista_general:
+                        if asignacion.AEC_TAREA == tarea:                            
+                            costo_real_proyecto +=  asignacion.AEC_COSTO_TOTAL
         for tarea in tareas_ingenieria:
             tarea.TI_NPROGRESO = int(round(float(tarea.TI_NPROGRESO)))
             if tarea.TI_NPROGRESO == 100 and tarea.TI_NDURACION_REAL is not None and tarea.TI_NDURACION_REAL > 0:
-                    # proyecto.PC_NHORAS_REALES += tarea.TG_NDURACION_REAL                    
+                    
                     horas_reales_proyecto += tarea.TI_NDURACION_REAL
-                    # proyecto.PC_NCOSTO_REAL +=  tarea.TI_NDURACION_REAL * proyecto.PC_NVALOR_HORA
-                    costo_real_proyecto +=  tarea.TI_NDURACION_REAL * proyecto.PC_NVALOR_HORA
+                    
+                    if not (asignacion_empleado_ingenieria.filter(AE_TAREA=tarea).exists() or
+                            asignacion_empleado_recurso_ingenieria.filter(ART_TAREA=tarea).exists() or
+                            asignacion_contratista_ingenieria.filter(AEC_TAREA=tarea).exists()):
+                        costo_real_proyecto +=  tarea.TI_NPRESUPUESTO
+
+                    for asignacion in asignacion_empleado_ingenieria:
+                        if asignacion.AE_TAREA == tarea:                            
+                            costo_real_proyecto +=  asignacion.AE_COSTO_TOTAL
+                    for asignacion in asignacion_empleado_recurso_ingenieria:
+                        if asignacion.ART_TAREA == tarea:                            
+                            costo_real_proyecto +=  asignacion.ART_COSTO_TOTAL
+                    for asignacion in asignacion_contratista_ingenieria:
+                        if asignacion.AEC_TAREA == tarea:                            
+                            costo_real_proyecto +=  asignacion.AEC_COSTO_TOTAL
         for tarea in tareas_financiera:
             tarea.TF_NPROGRESO = int(round(float(tarea.TF_NPROGRESO)))
             if tarea.TF_NPROGRESO == 100 and tarea.TF_NDURACION_REAL is not None and tarea.TF_NDURACION_REAL > 0:
-                    # proyecto.PC_NHORAS_REALES += tarea.TF_NDURACION_REAL
+                    
                     horas_reales_proyecto += tarea.TF_NDURACION_REAL
-                    # proyecto.PC_NCOSTO_REAL +=  tarea.TF_NDURACION_REAL * proyecto.PC_NVALOR_HORA
-                    costo_real_proyecto +=  tarea.TF_NMONTO
+                    # Si la tarea no tiene asignaciones, se suma este valor
+                    if not (asignacion_empleado_financiera.filter(AE_TAREA=tarea).exists() or
+                            asignacion_empleado_recurso_financiera.filter(ART_TAREA=tarea).exists() or
+                            asignacion_contratista_financiera.filter(AEC_TAREA=tarea).exists()):
+                        costo_real_proyecto +=  tarea.TF_NMONTO                    
+
+                    for asignacion in asignacion_empleado_financiera:
+                        if asignacion.AE_TAREA == tarea:                            
+                            costo_real_proyecto +=  asignacion.AE_COSTO_TOTAL
+                    for asignacion in asignacion_empleado_recurso_financiera:
+                        if asignacion.ART_TAREA == tarea:                            
+                            costo_real_proyecto +=  asignacion.ART_COSTO_TOTAL
+                    for asignacion in asignacion_contratista_financiera:
+                        if asignacion.AEC_TAREA == tarea:                            
+                            costo_real_proyecto +=  asignacion.AEC_COSTO_TOTAL
         if horas_reales_proyecto != proyecto.PC_NHORAS_REALES:
             print('horas_reales_proyecto', horas_reales_proyecto)
             print('proyecto.PC_NHORAS_REALES', proyecto.PC_NHORAS_REALES)
