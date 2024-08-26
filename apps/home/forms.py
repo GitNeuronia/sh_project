@@ -1521,3 +1521,22 @@ class formTAREA_INGENIERIA_DEPENDENCIA(forms.ModelForm):
             'TD_TAREA_SUCESORA': forms.Select(attrs={'class': 'form-control'}),
             'TD_TIPO_DEPENDENCIA': forms.Select(attrs={'class': 'form-control'}),
         }
+
+class formQUERY(forms.ModelForm):
+    class Meta:
+        model = QUERY
+        fields = ['QR_CNOMBRE', 'QR_CLABEL_FIELDS' , 'QR_CDESCRIPCION', 'QR_CQUERY', 'QR_NHABILITADO']
+        labels = {
+            'QR_CNOMBRE': 'Ingrese nombre',
+            'QR_CLABEL_FIELDS': 'Ingrese etiquetas',
+            'QR_CDESCRIPCION': 'Ingrese descripción',
+            'QR_CQUERY': 'Ingrese consulta',
+            'QR_NHABILITADO': 'Habilitado',
+        }
+        widgets = {
+            'QR_CNOMBRE': forms.TextInput(attrs={'class': 'form-control', 'autofocus': True, 'placeholder': 'Ingrese nombre'}),
+            'QR_CLABEL_FIELDS': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ingrese etiquetas'}),
+            'QR_CDESCRIPCION': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ingrese descripción'}),
+            'QR_CQUERY': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Ingrese consulta'}),
+            'QR_NHABILITADO': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'switch-s-2'}),
+        }

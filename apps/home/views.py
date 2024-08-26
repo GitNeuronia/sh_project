@@ -5,8 +5,10 @@ Copyright (c) 2019 - present AppSeed.us
 
 from decimal import Decimal
 import json
+import re
 from django import template
 from django.contrib.auth.decorators import login_required
+from django.db import connection
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseRedirect, JsonResponse
 from django.template import loader
 from django.urls import reverse
@@ -2817,6 +2819,306 @@ def CHECK_OV_NUMERO(request):
         return JsonResponse({'exists': exists})
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
+#--------------------------------------
+#------------QUERY MANAGER-------------
+#--------------------------------------
+def QUERY_LISTALL(request):
+    try:
+        queries = QUERY.objects.filter(QR_NHABILITADO = True)
+        ctx = {
+            "object_list": queries
+        }
+        return render(request, 'home/QUERY_MANAGER/query_listall.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, 'Error: ' + str(e))
+        return redirect('/')
+    
+def QUERY_ADDONE(request):
+    try:
+        if request.method == 'POST':
+            form = formQUERY(request.POST)
+            if form.is_valid():
+                form.cleaned_data["USER_CREATOR_ID"] = request.user
+                form.cleaned_data["USER_UPD_ID"] = request.user
+                form.save()
+                messages.success(request, 'Query agregada correctamente')
+                return redirect('/query_listall/')
+        form = formQUERY()
+        ctx = {
+            "form": form
+        }
+        return render(request, 'home/QUERY_MANAGER/query_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, 'Error: ' + str(e))
+        return redirect('/query_listall/')
+
+def QUERY_UPDATE(request, pk):
+    try:
+        query = QUERY.objects.get(id = pk)
+        if request.method == 'POST':
+            form = formQUERY(request.POST, instance=query)
+            if form.is_valid():
+                form.cleaned_data["USER_UPD_ID"] = request.user
+                form.save()
+                messages.success(request, 'Query actualizada correctamente')
+                return redirect('/query_listall/')
+        form = formQUERY(instance=query)
+        ctx = {
+            "form": form,
+            "object": query
+        }
+        return render(request, 'home/QUERY_MANAGER/query_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, 'Error: ' + str(e))
+        return redirect('/query_listall/')
+    
+def QUERY_RUN(request, pk):
+    try:
+        query = QUERY.objects.get(id = pk)
+
+        lstParamctx=[]
+        documentos = []
+        lstParam=getQueryParam(query.QR_CQUERY)
+        cantidad_documentos = 0
+
+        if lstParam!=None:
+            print("Estos son los parametros de la consulta",lstParam)
+            for param in lstParam:
+                try:
+                    print("param",param)
+                    tipo=param.split(";")[0].replace('[','').replace("'","")[0]
+                    nombre=param.split(";")[0].replace('[','').replace("'","")
+                    etiqueta=param.split(";")[1].replace('[','').replace("'","")
+                    valor=param.split(";")[2].replace(']','').replace("'","")
+                    datalst=[]
+                    if tipo=='L':
+                        datalst,qCols,cMsgRet = run_query_sql(valor)
+                        lstParamctx.append([tipo,nombre,etiqueta,json.dumps(datalst)])    
+                    else:
+                        lstParamctx.append([tipo,nombre,etiqueta,valor])    
+                except Exception as e:
+                    print(e)
+
+            if documentos:
+                cantidad_documentos = len(documentos)
+            context = {
+                        'lstParamctx':lstParamctx,
+                        'id_query':pk,
+                        'documentos':documentos,
+                        'cantidad_documentos':cantidad_documentos
+                    }
+            return render(request,'home/QUERY_MANAGER/query_listone_param.html',context)
+
+
+        else:
+            documentos = []
+            listado,qCols,cMsgRet = run_query_sql(query.QR_CQUERY)
+            for linea in listado:
+                for dato in linea:
+                    try:
+                        if dato.__contains__('https://labbe-files.s3.amazonaws.com'):
+                            documentos.append(dato)
+                    except Exception as e:
+                        next
+            if documentos:
+                cantidad_documentos = len(documentos)
+            if listado!=False:
+                if query.QR_CLABEL_FIELDS != None and query.QR_CLABEL_FIELDS != '':
+                    lCols = query.QR_CLABEL_FIELDS.split(",")
+                    if lCols[0]=='*':
+                        lCols.clear()
+                else:
+                    lCols = []
+                if len(lCols)<qCols:
+                    nCols = range(qCols-len(lCols))
+                    for n in nCols:
+                        lCols.append(f"Columna {str(n+1)}")
+                
+                context = {
+                    'listado':listado,
+                    'qcols':range(qCols),
+                    'lcols':lCols,
+                    'id_query':pk,
+                    'documentos':documentos,
+                    'cantidad_documentos':cantidad_documentos
+                }
+                return render(request,'home/QUERY_MANAGER/query_listone.html',context)
+            else:
+                listado=[]
+                documentos = []
+                lstmsg=[]
+                lstmsg.append(cMsgRet+'\n Edite y vuelva a intentar')
+
+                listado.append(lstmsg)
+                qCols=1
+                lCols=[]
+                lCols.append('Descripción del error')
+                context = {
+                    'listado':listado,
+                    'qcols':range(qCols),
+                    'lcols':lCols,
+                    'id_query':pk,
+                    'documentos':documentos
+                }
+                return render(request,'home/QUERY_MANAGER/query_listone.html',context)
+    except Exception as e:
+        print(e)
+        messages.error(request, 'Error: ' + str(e))
+        return redirect('/query_listall/')
+
+def QUERY_DELETE(request, pk):
+    try:
+        query = QUERY.objects.get(id = pk)
+        query.QR_NHABILITADO = False
+        query.USER_UPD_ID = request.user
+        query.save()
+        messages.success(request, 'Query eliminada correctamente')
+        return redirect('/query_listall/')
+    except Exception as e:
+        print(e)
+        messages.error(request, 'Error: ' + str(e))
+        return redirect('/query_listall/')
+    
+def run_query_param(request):
+    try:
+        id = request.POST.get('id')
+        query = QUERY.objects.get(id=id)
+        tableData = json.loads(request.POST.get('tableData'))
+
+        for data in tableData:        
+            if data[0]!=None and str(data[0]).strip()!="":
+                query.QR_CQUERY = query.QR_CQUERY.replace(f"[%{data[0]}]",data[1])
+        
+        print(query.QR_CQUERY)
+        listado,qCols,cMsgRet = run_query_sql(query.QR_CQUERY)
+
+        if listado!=False:
+            if query.QR_CLABEL_FIELDS != None and query.QR_CLABEL_FIELDS != '':
+                lCols = query.QR_CLABEL_FIELDS.split(",")
+                if lCols[0]=='*':
+                    lCols.clear()
+            else:
+                lCols = []
+            if len(lCols)<qCols:
+                nCols = range(qCols-len(lCols))
+                for n in nCols:
+                    lCols.append(f"Columna {str(n+1)}")
+            
+            context = {
+                'listado':listado,
+                'qcols':list(range(qCols)),
+                'lcols':lCols,
+                'id_query':id
+            }
+            #return render(request,'home/query_listone.html',context)
+            return JsonResponse(context,safe=False)
+        else:
+            listado=[]
+            lstmsg=[]
+            lstmsg.append(cMsgRet+'\n Edite y vuelva a intentar')
+
+            listado.append(lstmsg)
+            qCols=1
+            lCols=[]
+            lCols.append('Descripción del error')
+            context = {
+                'listado':listado,
+                'qcols':list(range(qCols)),
+                'lcols':lCols,
+                'id_query':id
+            }
+            return JsonResponse(context,safe=False)
+    except Exception as e:
+        print(e)
+        messages.error(request, 'Error: ' + str(e))
+        return redirect('/query_listall/')
+
+def getQueryParam(sql_query):
+
+    try:       
+        # Define a regular expression pattern to match the entire list inside comments
+        pattern = r'\{(.*?)\}'
+
+        # Use re.search to find the pattern in the SQL query
+        match = re.search(pattern, str(sql_query), re.DOTALL)
+
+        # Check if a match is found
+        print(match)
+        if match:
+            # Extract the matched list
+            comment_list = match.group(1)
+            
+            # Split the comment list into individual items
+            list_items = comment_list.split(':')
+
+            # Remove leading and trailing spaces from each item and display them
+            cleaned_items = [item.strip() for item in list_items]
+            
+            # Display the cleaned list items
+            lstParam=[]
+            for item in cleaned_items:
+                lstParam.append(item)
+            return lstParam
+        else:
+            print("No hay parametros para la consulta")
+            return None
+    except Exception as e:
+        print(e)
+        return None
+
+def run_query_sql(query):
+    try:
+        with connection.cursor() as cursor:
+
+            if query.lower().find('insert') != -1:
+                # NO SE PUEDE
+                print('CONTIENE insert!!!!')
+                return False, 0, 'La consulta contiene elementos reservados, no se ejecutará'
+            if query.lower().find('update') != -1:
+                # NO SE PUEDE
+                print('CONTIENE update!!!!')
+                return False, 0, 'La consulta contiene elementos reservados, no se ejecutará'
+            if query.lower().find('delete') != -1:
+                # NO SE PUEDE
+                print('CONTIENE delete!!!!')
+                return False, 0, 'La consulta contiene elementos reservados, no se ejecutará'
+            if query.lower().find('cursor') != -1:
+                # NO SE PUEDE
+                print('CONTIENE CURSOR!!!!')
+                return False, 0, 'La consulta contiene elementos reservados, no se ejecutará'
+            if query.lower().find('execute') != -1:
+                # NO SE PUEDE
+                print('CONTIENE EXECUTE!!!!')
+                return False, 0, 'La consulta contiene elementos reservados, no se ejecutará'
+            if query.find('drop') != -1:
+                # NO SE PUEDE
+                print('CONTIENE DROP!!!!')
+                return False, 0, 'La consulta contiene elementos reservados, no se ejecutará'
+            if query.lower().find('create') != -1:
+                # NO SE PUEDE
+                print('CONTIENE CREATE!!!!')
+                return False, 0, 'La consulta contiene elementos reservados, no se ejecutará'
+            if query.lower().find('alter') != -1:
+                # NO SE PUEDE
+                print('CONTIENE ALTER!!!!')
+                return False, 0, 'La consulta contiene elementos reservados, no se ejecutará'
+
+            cquery = f'''{query} 
+                        '''
+            cursor.execute(cquery)
+            resultado = cursor.fetchall()
+            if resultado == None:
+                resultado = False, 0, ''
+            qCol = len(resultado[0])
+            return resultado, qCol, ''
+    except Exception as e:
+        return False, 0, str(e)
+#--------------------------------------
+#------------QUERY MANAGER-------------
+#--------------------------------------
 
 
 # def BOLETA_GARANTIA_LISTALL(request):

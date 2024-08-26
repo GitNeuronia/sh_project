@@ -1,0 +1,106 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Query manager {% endblock %} 
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}{% endblock stylesheets %}
+
+{% block content %}		
+    <!-- [ Main Content ] start -->
+    <section class="pcoded-main-container">
+        <div class="pcoded-content">
+            <!-- [ breadcrumb ] start -->
+            <div class="page-header">
+                <div class="page-block">
+                    <div class="row align-items-center">
+                        <div class="col-md-12">
+                            <div class="page-header-title">
+                                <h5 class="m-b-10">Query manager</h5>
+                            </div>
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="/"><i class="feather icon-home"></i></a></li>
+                                <li class="breadcrumb-item"><a href="#">Pronto Agua</a></li>
+                                <li class="breadcrumb-item"><a href="#!">Agregar query</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- [ breadcrumb ] end -->
+            <!-- [ Main Content ] start -->
+            <div class="row">
+                <!-- [ form-element ] start -->
+                <div class="col-sm-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Agregar query</h5>
+                        </div>
+                        <div class="card-body">
+                            <h5>Ingrese datos</h5>
+                            <hr>
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <form method="POST" id="validation-form123" enctype="multipart/form-data">
+                                        {% csrf_token %}
+                                        {{ form.non_field_errors }}
+                                        <div class="fieldWrapper">
+                                            {{ form.QR_CNOMBRE.errors }}
+                                            <label class="my-1 me-2" for="{{ form.QR_CNOMBRE.id_for_label }}">{{ form.QR_CNOMBRE.label }}:</label>
+                                            {{ form.QR_CNOMBRE }}
+                                        </div>
+                                        <div class="fieldWrapper">
+                                            {{ form.QR_CDESCRIPCION.errors }}
+                                            <label class="my-1 me-2" for="{{ form.QR_CDESCRIPCION.id_for_label }}">{{ form.QR_CDESCRIPCION.label }}:</label>
+                                            {{ form.QR_CDESCRIPCION }}
+                                        </div>
+                                        <div class="fieldWrapper">
+                                            {{ form.QR_CLABEL_FIELDS.errors }}
+                                            <label class="my-1 me-2" for="{{ form.QR_CLABEL_FIELDS.id_for_label }}">{{ form.QR_CLABEL_FIELDS.label }}:</label>
+                                            {{ form.QR_CLABEL_FIELDS }}
+                                        </div>
+                                        <div class="fieldWrapper">
+                                            {{ form.QR_CQUERY.errors }}
+                                            <label class="my-1 me-2" for="{{ form.QR_CQUERY.id_for_label }}">{{ form.QR_CQUERY.label }}:</label>
+                                            {{ form.QR_CQUERY }}
+                                        </div>                                        
+                                        <div class="form-group">
+                                            {{ form.QR_NHABILITADO.errors }}
+                                            <label class=" font-weight-bold mr-3">{{form.QR_NHABILITADO.label}} </label>
+                                            <div class="switch switch-success d-inline m-r-10">
+                                                <label>No</label>
+                                                {{form.QR_NHABILITADO}}
+                                                <label for="switch-s-2" class="cr"></label>
+                                            </div>
+                                            <label>Si</label>
+                                        </div>
+                                        <br>
+                                        <hr>
+                                        <div class="form-group nav justify-content-end">
+                                            <button class="btn btn-success mr-4" type="submit">Guardar</button>
+                                            <a class="btn btn-danger mr-1" onclick="window.history.go(-1); return false;">Volver</a>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- [ form-element ] end -->
+            </div>
+            <!-- [ Main Content ] end -->
+        </div>
+    </section>
+    <!-- [ Main Content ] end -->
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}
+    <!-- bootstrap-tagsinput-latest Js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/typeahead.js/0.11.1/typeahead.bundle.min.js"></script>
+    <script src="/static/assets/js/plugins/bootstrap-tagsinput.min.js"></script>
+    <!-- bootstrap-maxlength Js -->
+    <script src="/static/assets/js/plugins/bootstrap-maxlength.js"></script>
+    <!-- form-advance custom js -->
+    <script src="/static/assets/js/pages/form-advance-custom.js"></script>
+    
+{% endblock javascripts %}

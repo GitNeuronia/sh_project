@@ -1269,4 +1269,15 @@ class TAREA_INGENIERIA_DEPENDENCIA(models.Model):
         verbose_name = 'Dependencia de Tarea de Ingeniería'
         verbose_name_plural = 'Dependencias de Tareas de Ingeniería'
 
+class QUERY(models.Model):
+    USER_CREATOR_ID    = models.ForeignKey(User, verbose_name='id usuario creador', on_delete=models.PROTECT, related_name='query_user_creator', null=True, blank=True)
+    USER_UPD_ID    = models.ForeignKey(User, verbose_name='id usuario actualizador', on_delete=models.PROTECT, related_name='query_user_upd', null=True, blank=True)    
+    QR_CNOMBRE = models.CharField("Nombre",max_length=64)
+    QR_CDESCRIPCION = models.CharField("Descripción",max_length=1024)
+    QR_FFECHACREACION = models.DateTimeField(("Fecha Creacion"), auto_now_add=True)
+    QR_NHABILITADO = models.BooleanField(default=True)
+    QR_CLABEL_FIELDS = models.CharField("Etiquetas",max_length=1024,blank=True,null=True)
+    QR_CQUERY = models.TextField("Contenido")
 
+    class Meta:
+        db_table = "QUERY"

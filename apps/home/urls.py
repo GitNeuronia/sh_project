@@ -176,6 +176,11 @@ urlpatterns = [
     path('orden_venta_addline/', login_required(views.ORDEN_VENTA_ADD_LINE), name='orden_venta_addline'),
     path('check_ov_numero/', login_required(views.CHECK_OV_NUMERO), name='check_ov_numero'),
 
+    path('query_listall/', login_required(views.QUERY_LISTALL), name='query_listall'),
+    path('query_addone/', login_required(views.QUERY_ADDONE), name='query_addone'),
+    path('query_update/<int:pk>/', login_required(views.QUERY_UPDATE), name='query_update'),    
+    path('query_run/<int:pk>', login_required(views.QUERY_RUN), name='query_run'),
+    path('query_delete/<int:pk>', login_required(views.QUERY_DELETE), name='query_delete'),
 
     # Coincide con cualquier archivo html
     re_path(r'^.*\.*', views.pages, name='pages'),
