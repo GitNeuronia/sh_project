@@ -48,6 +48,15 @@
         .bar-wrapper:hover {
             cursor: default !important;
         }
+        .fa-exclamation-triangle {
+            color: #ffc107;
+            font-size: 1.2em;
+            vertical-align: middle;
+            cursor: pointer;
+        }
+        .fa-exclamation-triangle:hover {
+            color: #e0a800;
+        }
     </style>
 {% endblock stylesheets %}
 
@@ -262,7 +271,12 @@
                                                         <i class="fas fa-sync-alt"></i>
                                                     </a>
                                                 </td>
-                                                <td>{{ tarea.TF_CNOMBRE }}</td>
+                                                <td>
+                                                    {{ tarea.TF_CNOMBRE }}
+                                                    {% if tarea.tiene_asignacion_cero %}
+                                                    <i class="fas fa-exclamation-triangle text-warning ml-2" title="Esta tarea tiene asignaciones con horas o costo en 0"></i>
+                                                    {% endif %}
+                                                </td>
                                                 <td>{{ tarea.TF_CDESCRIPCION }}</td>                                                
                                                 <td style="width: 150px;">
                                                     <div class="progress" style="height: 20px; width: 100%;">
@@ -321,7 +335,12 @@
                                                         <i class="fas fa-sync-alt"></i>
                                                     </a>                                                   
                                                 </td>
-                                                <td>{{ tarea.TG_CNOMBRE }}</td>
+                                                <td>
+                                                    {{ tarea.TG_CNOMBRE }}
+                                                    {% if tarea.tiene_asignacion_cero %}
+                                                    <i class="fas fa-exclamation-triangle text-warning ml-2" title="Esta tarea tiene asignaciones con horas o costo en 0"></i>
+                                                    {% endif %}
+                                                </td>
                                                 <td>{{ tarea.TG_CDESCRIPCION }}</td>
                                                 <td style="width: 150px;">
                                                     <div class="progress" style="height: 20px; width: 100%;">
@@ -380,7 +399,12 @@
                                                         <i class="fas fa-sync-alt"></i>
                                                     </a>
                                                 </td>
-                                                <td>{{ tarea.TI_CNOMBRE }}</td>
+                                                <td>
+                                                    {{ tarea.TI_CNOMBRE }}
+                                                    {% if tarea.tiene_asignacion_cero %}
+                                                    <i class="fas fa-exclamation-triangle text-warning ml-2" title="Esta tarea tiene asignaciones con horas o costo en 0"></i>
+                                                    {% endif %}
+                                                </td>
                                                 <td>{{ tarea.TI_CDESCRIPCION }}</td>
                                                 <td style="width: 150px;">
                                                     <div class="progress" style="height: 20px; width: 100%;">
@@ -913,4 +937,5 @@
             });
         });
     </script>
+    
 {% endblock javascripts %}

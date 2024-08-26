@@ -61,8 +61,8 @@
                             </div>
                         </div>
                         <div class="mt-2 text-right">
-                            <strong>Total:</strong> $<span id="total_empleado_{{ empleado.id }}">{% if empleado.AE_COSTO_REAL and empleado.AE_HORAS_REALES %}{{ empleado.AE_COSTO_REAL|multiply:empleado.AE_HORAS_REALES|floatformat:2 }}{% else %}0.00{% endif %}</span>
-                            <input type="hidden" name="total_empleado_{{ empleado.id }}" value="{% if empleado.AE_COSTO_REAL and empleado.AE_HORAS_REALES %}{{ empleado.AE_COSTO_REAL|multiply:empleado.AE_HORAS_REALES|floatformat:2 }}{% else %}0.00{% endif %}">
+                            <strong>Total:</strong> $<span id="total_empleado_{{ empleado.id }}">0.00</span>
+                            <input type="hidden" name="total_empleado_{{ empleado.id }}" value="0.00">
                         </div>
                     </div>
                 </div>
@@ -105,9 +105,10 @@
                             </div>
                         </div>
                         <div class="mt-2 text-right">
-                            <strong>Total:</strong> $<span id="total_contratista_{{ contratista.id }}">{% if contratista.AEC_COSTO_REAL and contratista.AEC_HORAS_REALES %}{{ contratista.AEC_COSTO_REAL|multiply:contratista.AEC_HORAS_REALES|floatformat:2 }}{% else %}0.00{% endif %}</span>
-                            <input type="hidden" name="total_contratista_{{ contratista.id }}" value="{% if contratista.AEC_COSTO_REAL and contratista.AEC_HORAS_REALES %}{{ contratista.AEC_COSTO_REAL|multiply:contratista.AEC_HORAS_REALES|floatformat:2 }}{% else %}0.00{% endif %}">
+                            <strong>Total:</strong> $<span id="total_contratista_{{ contratista.id }}">0.00</span>
+                            <input type="hidden" name="total_contratista_{{ contratista.id }}" value="0.00">
                         </div>
+                        
                     </div>
                 </div>
                 {% endfor %}
@@ -159,8 +160,8 @@
                             </div>
                         </div>
                         <div class="mt-2 text-right">
-                            <strong>Total:</strong> $<span id="total_recurso_{{ recurso.id }}">{% if recurso.ART_CANTIDAD and recurso.ART_COSTO_UNITARIO and recurso.ART_HORAS_REALES %}{{ recurso.ART_CANTIDAD|multiply:recurso.ART_COSTO_UNITARIO|multiply:recurso.ART_HORAS_REALES|floatformat:2 }}{% else %}0.00{% endif %}</span>
-                            <input type="hidden" name="total_recurso_{{ recurso.id }}" value="{% if recurso.ART_CANTIDAD and recurso.ART_COSTO_UNITARIO and recurso.ART_HORAS_REALES %}{{ recurso.ART_CANTIDAD|multiply:recurso.ART_COSTO_UNITARIO|multiply:recurso.ART_HORAS_REALES|floatformat:2 }}{% else %}0.00{% endif %}">
+                            <strong>Total:</strong> $<span id="total_recurso_{{ recurso.id }}">0.00</span>
+                            <input type="hidden" name="total_recurso_{{ recurso.id }}" value="0.00">
                         </div>
                     </div>
                 </div>
@@ -176,3 +177,71 @@
         <button type="submit" form="formEditarTarea" class="btn btn-primary"><i class="fas fa-save mr-2"></i>Guardar Cambios</button>
     </div>
 </div>
+
+<script>
+    function calcularTotalEmpleado(id) {
+        var costo = parseFloat($(`input[name="costo_empleado_${id}"]`).val()) || 0;
+        var horas = parseFloat($(`input[name="horas_empleado_${id}"]`).val()) || 0;
+        var total = costo * horas;
+        $(`#total_empleado_${id}`).text(total.toFixed(2));
+        $(`input[name="total_empleado_${id}"]`).val(total.toFixed(2));
+        console.log(`Total empleado ${id}: ${total.toFixed(2)}`);
+    }
+
+    function calcularTotalContratista(id) {
+        var costo = parseFloat($(`input[name="costo_contratista_${id}"]`).val()) || 0;
+        var horas = parseFloat($(`input[name="horas_contratista_${id}"]`).val()) || 0;
+        var total = costo * horas;
+        $(`#total_contratista_${id}`).text(total.toFixed(2));
+        $(`input[name="total_contratista_${id}"]`).val(total.toFixed(2));
+        console.log(`Total contratista ${id}: ${total.toFixed(2)}`);
+    }
+
+    function calcularTotalRecurso(id) {
+        var cantidad = parseFloat($(`input[name="cantidad_recurso_${id}"]`).val()) || 0;
+        var costo = parseFloat($(`input[name="costo_recurso_${id}"]`).val()) || 0;
+        var horas = parseFloat($(`input[name="horas_recurso_${id}"]`).val()) || 0;
+        var total = cantidad * costo * horas;
+        $(`#total_recurso_${id}`).text(total.toFixed(2));
+        $(`input[name="total_recurso_${id}"]`).val(total.toFixed(2));
+        console.log(`Total recurso ${id}: ${total.toFixed(2)}`);
+    }
+
+    $(document).ready(function() {
+        console.log('Documento listo, iniciando cálculos');
+        
+        // Empleados
+        $('.costo-empleado, .horas-empleado').on('input', function() {
+            var id = $(this).data('empleado-id');
+            calcularTotalEmpleado(id);
+            console.log(`Total empleado ${id}: ${total.toFixed(2)}`);
+        });
+
+        // Contratistas
+        $('.costo-contratista, .horas-contratista').on('input', function() {
+            var id = $(this).data('contratista-id');
+            calcularTotalContratista(id);
+            console.log(`Total contratista ${id}: ${total.toFixed(2)}`);
+        });
+
+        // Recursos
+        $('.cantidad-recurso, .costo-recurso, .horas-recurso').on('input', function() {
+            var id = $(this).data('recurso-id');
+            calcularTotalRecurso(id);
+            console.log(`Total recurso ${id}: ${total.toFixed(2)}`);
+        });
+
+        // Calcular totales iniciales
+        {% for empleado in empleados_asignados %}
+            calcularTotalEmpleado({{ empleado.id }});
+        {% endfor %}
+        {% for contratista in contratistas_asignados %}
+            calcularTotalContratista({{ contratista.id }});
+        {% endfor %}
+        {% for recurso in recursos_asignados %}
+            calcularTotalRecurso({{ recurso.id }});
+        {% endfor %}
+        
+        console.log('Cálculos iniciales completados');
+    });
+</script>

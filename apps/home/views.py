@@ -53,6 +53,16 @@ def pages(request):
         html_template = loader.get_template('home/page-500.html')
         return HttpResponse(html_template.render(context, request))
 
+def crear_log(usuario, accion, descripcion):
+    try:
+        SYSTEM_LOG.objects.create(
+            USER_CREATOR_ID=usuario,
+            LG_ACTION=accion,
+            LG_DESCRIPTION=descripcion,
+            LG_TIMESTAMP=datetime.datetime.now()
+        )
+    except Exception as e:
+        print(f"Error al crear el log: {str(e)}")
 
 def REGION_LISTALL(request):
     try:
@@ -72,8 +82,10 @@ def REGION_ADDONE(request):
             form = formREGION(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Región', f'Se creó la región: {form.instance.RG_CNOMBRE}')
                 messages.success(request, 'Región guardada correctamente')
                 return redirect('/reg_listall/')
+                
         form = formREGION()
         ctx = {
             'form': form
@@ -91,6 +103,7 @@ def REGION_UPDATE(request, pk):
             form = formREGION(request.POST, instance=region)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Región', f'Se actualizó la región: {form.instance.RG_CNOMBRE}')
                 messages.success(request, 'Región actualizada correctamente')
                 return redirect('/reg_listall/')
         form = formREGION(instance=region)
@@ -121,6 +134,7 @@ def PROVINCIA_ADDONE(request):
             form = formPROVINCIA(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Provincia', f'Se creó la provincia: {form.instance.PV_CNOMBRE}')
                 messages.success(request, 'Provincia guardada correctamente')
                 return redirect('/prov_listall/')
         form = formPROVINCIA()
@@ -140,6 +154,7 @@ def PROVINCIA_UPDATE(request, pk):
             form = formPROVINCIA(request.POST, instance=provincia)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Provincia', f'Se actualizó la provincia: {form.instance.PV_CNOMBRE}')
                 messages.success(request, 'Provincia actualizada correctamente')
                 return redirect('/prov_listall/')
         form = formPROVINCIA(instance=provincia)
@@ -170,6 +185,7 @@ def COMUNA_ADDONE(request):
             form = formCOMUNA(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Comuna', f'Se creó la comuna: {form.instance.COM_CNOMBRE}')
                 messages.success(request, 'Comuna guardada correctamente')
                 return redirect('/com_listall/')
         form = formCOMUNA()
@@ -189,6 +205,7 @@ def COMUNA_UPDATE(request, pk):
             form = formCOMUNA(request.POST, instance=comuna)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Comuna', f'Se actualizó la comuna: {form.instance.COM_CNOMBRE}')
                 messages.success(request, 'Comuna actualizada correctamente')
                 return redirect('/com_listall/')
         form = formCOMUNA(instance=comuna)
@@ -219,6 +236,7 @@ def PARAMETRO_ADDONE(request):
             form = formPARAMETRO(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Parámetro', f'Se creó el parámetro: {form.instance.PM_CDESCRIPCION}')
                 messages.success(request, 'Parámetro guardado correctamente')
                 return redirect('/param_listall/')
         form = formPARAMETRO()
@@ -238,6 +256,7 @@ def PARAMETRO_UPDATE(request, pk):
             form = formPARAMETRO(request.POST, instance=parametro)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Parámetro', f'Se actualizó el parámetro: {form.instance.PM_CDESCRIPCION}')
                 messages.success(request, 'Parámetro actualizado correctamente')
                 return redirect('/param_listall/')
         form = formPARAMETRO(instance=parametro)
@@ -268,6 +287,7 @@ def ROL_ADDONE(request):
             form = formROL(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Rol', f'Se creó el rol: {form.instance.RO_CNOMBRE}')
                 messages.success(request, 'Rol guardado correctamente')
                 return redirect('/rol_listall/')
         form = formROL()
@@ -287,6 +307,7 @@ def ROL_UPDATE(request, pk):
             form = formROL(request.POST, instance=rol)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Rol', f'Se actualizó el rol: {form.instance.RO_CNOMBRE}')
                 messages.success(request, 'Rol actualizado correctamente')
                 return redirect('/rol_listall/')
         form = formROL(instance=rol)
@@ -317,6 +338,7 @@ def CATEGORIA_PROYECTO_ADDONE(request):
             form = formCATEGORIA_PROYECTO(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Categoría de Proyecto', f'Se creó la categoría de proyecto: {form.instance.CA_CNOMBRE}')
                 messages.success(request, 'Categoría de proyecto guardada correctamente')
                 return redirect('/catproy_listall/')
         form = formCATEGORIA_PROYECTO()
@@ -336,6 +358,7 @@ def CATEGORIA_PROYECTO_UPDATE(request, pk):
             form = formCATEGORIA_PROYECTO(request.POST, instance=categoria_proyecto)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Categoría de Proyecto', f'Se actualizó la categoría de proyecto: {form.instance.CA_CNOMBRE}')
                 messages.success(request, 'Categoría de proyecto actualizada correctamente')
                 return redirect('/catproy_listall/')
         form = formCATEGORIA_PROYECTO(instance=categoria_proyecto)
@@ -366,6 +389,7 @@ def CATEGORIA_CLIENTE_ADDONE(request):
             form = formCATEGORIA_CLIENTE(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Categoría de Cliente', f'Se creó la categoría de cliente: {form.instance.CA_CNOMBRE}')
                 messages.success(request, 'Categoría de cliente guardada correctamente')
                 return redirect('/catcli_listall/')
         form = formCATEGORIA_CLIENTE()
@@ -385,6 +409,7 @@ def CATEGORIA_CLIENTE_UPDATE(request, pk):
             form = formCATEGORIA_CLIENTE(request.POST, instance=categoria_cliente)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Categoría de Cliente', f'Se actualizó la categoría de cliente: {form.instance.CA_CNOMBRE}')
                 messages.success(request, 'Categoría de cliente actualizada correctamente')
                 return redirect('/catcli_listall/')
         form = formCATEGORIA_CLIENTE(instance=categoria_cliente)
@@ -415,6 +440,7 @@ def TIPO_PROYECTO_ADDONE(request):
             form = formTIPO_PROYECTO(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Tipo de Proyecto', f'Se creó el tipo de proyecto: {form.instance.TP_CNOMBRE}')
                 messages.success(request, 'Tipo de proyecto guardado correctamente')
                 return redirect('/tipoproy_listall/')
         form = formTIPO_PROYECTO()
@@ -434,6 +460,7 @@ def TIPO_PROYECTO_UPDATE(request, pk):
             form = formTIPO_PROYECTO(request.POST, instance=tipo_proyecto)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Tipo de Proyecto', f'Se actualizó el tipo de proyecto: {form.instance.TP_CNOMBRE}')
                 messages.success(request, 'Tipo de proyecto actualizado correctamente')
                 return redirect('/tipoproy_listall/')
         form = formTIPO_PROYECTO(instance=tipo_proyecto)
@@ -464,6 +491,7 @@ def PERMISO_ADDONE(request):
             form = formPERMISO(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Permiso', f'Se creó el permiso: {form.instance.PE_CNOMBRE}')
                 messages.success(request, 'Permiso guardado correctamente')
                 return redirect('/permiso_listall/')
         form = formPERMISO()
@@ -483,6 +511,7 @@ def PERMISO_UPDATE(request, pk):
             form = formPERMISO(request.POST, instance=permiso)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Permiso', f'Se actualizó el permiso: {form.instance.PR_CNOMBRE}')
                 messages.success(request, 'Permiso actualizado correctamente')
                 return redirect('/permiso_listall/')
         form = formPERMISO(instance=permiso)
@@ -513,6 +542,7 @@ def PERMISO_ROL_ADDONE(request):
             form = formPERMISO_ROL(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Permiso de Rol', f'Se creó el permiso de rol: {form.instance.PR_CPERMISO} para el rol: {form.instance.PR_CROL}')
                 messages.success(request, 'Permiso de rol guardado correctamente')
                 return redirect('/permisorol_listall/')
         form = formPERMISO_ROL()
@@ -532,6 +562,7 @@ def PERMISO_ROL_UPDATE(request, pk):
             form = formPERMISO_ROL(request.POST, instance=permiso_rol)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Permiso de Rol', f'Se actualizó el permiso de rol: {form.instance.PR_CPERMISO} para el rol: {form.instance.PR_CROL}')
                 messages.success(request, 'Permiso de rol actualizado correctamente')
                 return redirect('/permisorol_listall/')
         form = formPERMISO_ROL(instance=permiso_rol)
@@ -562,6 +593,7 @@ def USUARIO_ROL_ADDONE(request):
             form = formUSUARIO_ROL(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Usuario de Rol', f'Se creó el usuario de rol: {form.instance.UR_CUSUARIO} para el rol: {form.instance.UR_CROL}')
                 messages.success(request, 'Usuario rol guardado correctamente')
                 return redirect('/usuariorol_listall/')
         form = formUSUARIO_ROL()
@@ -581,6 +613,7 @@ def USUARIO_ROL_UPDATE(request, pk):
             form = formUSUARIO_ROL(request.POST, instance=usuario_rol)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Usuario de Rol', f'Se actualizó el usuario de rol: {form.instance.UR_CUSUARIO} para el rol: {form.instance.UR_CROL}')
                 messages.success(request, 'Usuario rol actualizado correctamente')
                 return redirect('/usuariorol_listall/')
         form = formUSUARIO_ROL(instance=usuario_rol)
@@ -611,6 +644,7 @@ def CLIENTE_ADDONE(request):
             form = formCLIENTE(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Cliente', f'Se creó el cliente: {form.instance.CL_CNOMBRE}')
                 messages.success(request, 'Cliente guardado correctamente')
                 return redirect('/cliente_listall/')
         form = formCLIENTE()
@@ -630,6 +664,7 @@ def CLIENTE_UPDATE(request, pk):
             form = formCLIENTE(request.POST, instance=cliente)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Cliente', f'Se actualizó el cliente: {form.instance.CL_CNOMBRE}')
                 messages.success(request, 'Cliente actualizado correctamente')
                 return redirect('/cliente_listall/')
         form = formCLIENTE(instance=cliente)
@@ -660,6 +695,7 @@ def CONTACTO_CLIENTE_ADDONE(request):
             form = formCONTACTO_CLIENTE(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Contacto de Cliente', f'Se creó el contacto de cliente: {form.instance.CC_CNOMBRE} para el cliente: {form.instance.CC_CLIENTE}')
                 messages.success(request, 'Contacto de cliente guardado correctamente')
                 return redirect('/contactocli_listall/')
         form = formCONTACTO_CLIENTE()
@@ -679,6 +715,7 @@ def CONTACTO_CLIENTE_UPDATE(request, pk):
             form = formCONTACTO_CLIENTE(request.POST, instance=contacto_cliente)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Contacto de Cliente', f'Se actualizó el contacto de cliente: {form.instance.CC_CNOMBRE} para el cliente: {form.instance.CC_CLIENTE}')
                 messages.success(request, 'Contacto de cliente actualizado correctamente')
                 return redirect('/contactocli_listall/')
         form = formCONTACTO_CLIENTE(instance=contacto_cliente)
@@ -709,6 +746,7 @@ def DIRECCION_CLIENTE_ADDONE(request):
             form = formDIRECCION_CLIENTE(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Dirección de Cliente', f'Se creó la dirección de cliente: {form.instance.DR_CDIRECCION} para el cliente: {form.instance.DR_CLIENTE}')
                 messages.success(request, 'Dirección de cliente guardada correctamente')
                 return redirect('/direccioncli_listall/')
         form = formDIRECCION_CLIENTE()
@@ -728,6 +766,7 @@ def DIRECCION_CLIENTE_UPDATE(request, pk):
             form = formDIRECCION_CLIENTE(request.POST, instance=direccion_cliente)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Dirección de Cliente', f'Se actualizó la dirección de cliente: {form.instance.DR_CDIRECCION} para el cliente: {form.instance.DR_CLIENTE}')
                 messages.success(request, 'Dirección de cliente actualizada correctamente')
                 return redirect('/direccioncli_listall/')
         form = formDIRECCION_CLIENTE(instance=direccion_cliente)
@@ -758,6 +797,7 @@ def PRODUCTO_ADDONE(request):
             form = formPRODUCTO(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Producto', f'Se creó el producto: {form.instance.PR_CNOMBRE}')
                 messages.success(request, 'Producto guardado correctamente')
                 return redirect('/producto_listall/')
         form = formPRODUCTO()
@@ -777,6 +817,7 @@ def PRODUCTO_UPDATE(request, pk):
             form = formPRODUCTO(request.POST, instance=producto)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Producto', f'Se actualizó el producto: {form.instance.PR_CNOMBRE}')
                 messages.success(request, 'Producto actualizado correctamente')
                 return redirect('/producto_listall/')
         form = formPRODUCTO(instance=producto)
@@ -807,6 +848,7 @@ def EMPLEADO_ADDONE(request):
             form = formEMPLEADO(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Empleado', f'Se creó el empleado: {form.instance.EM_CNOMBRE}')
                 messages.success(request, 'Empleado guardado correctamente')
                 return redirect('/empleado_listall/')
         form = formEMPLEADO()
@@ -826,6 +868,7 @@ def EMPLEADO_UPDATE(request, pk):
             form = formEMPLEADO(request.POST, instance=empleado)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Empleado', f'Se actualizó el empleado: {form.instance.EM_CNOMBRE}')
                 messages.success(request, 'Empleado actualizado correctamente')
                 return redirect('/empleado_listall/')
         form = formEMPLEADO(instance=empleado)
@@ -856,6 +899,7 @@ def CONTRATISTA_ADDONE(request):
             form = formCONTRATISTA(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Contratista', f'Se creó el contratista: {form.instance.CO_CNOMBRE}')
                 messages.success(request, 'Contratista guardado correctamente')
                 return redirect('/contratista_listall/')
         form = formCONTRATISTA()
@@ -875,6 +919,7 @@ def CONTRATISTA_UPDATE(request, pk):
             form = formCONTRATISTA(request.POST, instance=contratista)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Contratista', f'Se actualizó el contratista: {form.instance.CO_CNOMBRE}')
                 messages.success(request, 'Contratista actualizado correctamente')
                 return redirect('/contratista_listall/')
         form = formCONTRATISTA(instance=contratista)
@@ -905,6 +950,7 @@ def EMPLEADO_EXTERNO_ADDONE(request):
             form = formEMPLEADO_CONTRATISTA(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Empleado Externo', f'Se creó el empleado externo: {form.instance.EC_CNOMBRE}')
                 messages.success(request, 'Empleado externo guardado correctamente')
                 return redirect('/empleado_externo_listall/')
         form = formEMPLEADO_CONTRATISTA()
@@ -926,6 +972,7 @@ def EMPLEADO_EXTERNO_UPDATE(request, pk):
                 empleado = form.save(commit=False)
                 empleado.EC_CUSUARIO_MODIFICADOR = request.user
                 empleado.save()
+                crear_log(request.user, 'Actualizar Empleado Externo', f'Se actualizó el empleado externo: {form.instance.EC_CNOMBRE}')
                 messages.success(request, 'Empleado externo actualizado correctamente')
                 return redirect('/empleado_externo_listall/')
         else:
@@ -964,6 +1011,7 @@ def ETAPA_ADDONE(request):
             form = formETAPA(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Etapa', f'Se creó la etapa: {form.instance.ET_CNOMBRE}')
                 messages.success(request, 'Etapa guardada correctamente')
                 return redirect('/etapa_listall/')
         form = formETAPA()
@@ -983,6 +1031,7 @@ def ETAPA_UPDATE(request, pk):
             form = formETAPA(request.POST, instance=etapa)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Etapa', f'Se actualizó la etapa: {form.instance.ET_CNOMBRE}')
                 messages.success(request, 'Etapa actualizada correctamente')
                 return redirect('/etapa_listall/')
         form = formETAPA(instance=etapa)
@@ -1015,6 +1064,7 @@ def PROYECTO_CLIENTE_ADDONE(request):
                 proyecto = form.save(commit=False)
                 proyecto.PC_CUSUARIO_CREADOR = request.user
                 proyecto.save()
+                crear_log(request.user, 'Crear Proyecto de Cliente', f'Se creó el proyecto de cliente: {form.instance.PC_CNOMBRE}')
                 messages.success(request, 'Proyecto de cliente guardado correctamente')
                 return redirect('/proycli_listall/')
         form = formPROYECTO_CLIENTE()
@@ -1036,6 +1086,7 @@ def PROYECTO_CLIENTE_UPDATE(request, pk, page):
                 proyecto = form.save(commit=False)
                 proyecto.PC_CUSUARIO_MODIFICADOR = request.user
                 proyecto.save()
+                crear_log(request.user, 'Actualizar Proyecto de Cliente', f'Se actualizó el proyecto de cliente: {form.instance.PC_CNOMBRE}')
                 messages.success(request, 'Proyecto de cliente actualizado correctamente')
                 if page == 1:
                     return redirect('/proycli_listone/'+str(proyecto.id)+'/')
@@ -1071,9 +1122,9 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
         asignacion_empleado_ingenieria = ASIGNACION_EMPLEADO_TAREA_INGENIERIA.objects.filter(AE_TAREA__in=tareas_ingenieria)
         asignacion_empleado_financiera = ASIGNACION_EMPLEADO_TAREA_FINANCIERA.objects.filter(AE_TAREA__in=tareas_financiera)
         
-        asignacion_empleado_recurso_general = ASIGNACION_RECURSO_TAREA_GENERAL.objects.filter(ART_TAREA__in=tareas_general)
-        asignacion_empleado_recurso_ingenieria = ASIGNACION_RECURSO_TAREA_INGENIERIA.objects.filter(ART_TAREA__in=tareas_ingenieria)
-        asignacion_empleado_recurso_financiera = ASIGNACION_RECURSO_TAREA_FINANCIERA.objects.filter(ART_TAREA__in=tareas_financiera)
+        asignacion_recurso_general = ASIGNACION_RECURSO_TAREA_GENERAL.objects.filter(ART_TAREA__in=tareas_general)
+        asignacion_recurso_ingenieria = ASIGNACION_RECURSO_TAREA_INGENIERIA.objects.filter(ART_TAREA__in=tareas_ingenieria)
+        asignacion_recurso_financiera = ASIGNACION_RECURSO_TAREA_FINANCIERA.objects.filter(ART_TAREA__in=tareas_financiera)
         
         asignacion_contratista_general = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL.objects.filter(AEC_TAREA__in=tareas_general)
         asignacion_contratista_ingenieria = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA.objects.filter(AEC_TAREA__in=tareas_ingenieria)
@@ -1082,65 +1133,97 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
         costo_real_proyecto = 0
         horas_reales_proyecto = 0
 
+        # Función auxiliar para comprobar asignaciones en cero
+        def tiene_asignacion_cero(tarea, asignaciones_empleado, asignaciones_recurso, asignaciones_contratista):
+            return (
+                asignaciones_empleado.filter(AE_TAREA=tarea, AE_HORAS_REALES=0).exists() or
+                asignaciones_empleado.filter(AE_TAREA=tarea, AE_COSTO_TOTAL=0).exists() or
+                asignaciones_recurso.filter(ART_TAREA=tarea, ART_HORAS_REALES=0).exists() or
+                asignaciones_recurso.filter(ART_TAREA=tarea, ART_COSTO_TOTAL=0).exists() or
+                asignaciones_contratista.filter(AEC_TAREA=tarea, AEC_HORAS_REALES=0).exists() or
+                asignaciones_contratista.filter(AEC_TAREA=tarea, AEC_COSTO_TOTAL=0).exists()
+            )
+
         for tarea in tareas_general:
             tarea.TG_NPROGRESO = int(round(float(tarea.TG_NPROGRESO)))
+            tarea.tiene_asignacion_cero = tiene_asignacion_cero(
+                tarea, asignacion_empleado_general, asignacion_recurso_general, asignacion_contratista_general
+            )
             if tarea.TG_NPROGRESO == 100 and tarea.TG_NDURACION_REAL is not None and tarea.TG_NDURACION_REAL > 0:                
                     horas_reales_proyecto += tarea.TG_NDURACION_REAL    
 
-                    if not (asignacion_empleado_general.filter(AE_TAREA=tarea).exists() or
-                            asignacion_empleado_recurso_general.filter(ART_TAREA=tarea).exists() or
-                            asignacion_contratista_general.filter(AEC_TAREA=tarea).exists()):
+                    if not asignacion_empleado_general.filter(AE_TAREA=tarea).exists():
                         costo_real_proyecto +=  tarea.TG_NPRESUPUESTO
-
-                    for asignacion in asignacion_empleado_general:
-                        if asignacion.AE_TAREA == tarea:                            
-                            costo_real_proyecto +=  asignacion.AE_COSTO_TOTAL
-                    for asignacion in asignacion_empleado_recurso_general:
-                        if asignacion.ART_TAREA == tarea:                            
-                            costo_real_proyecto +=  asignacion.ART_COSTO_TOTAL
-                    for asignacion in asignacion_contratista_general:
-                        if asignacion.AEC_TAREA == tarea:                            
-                            costo_real_proyecto +=  asignacion.AEC_COSTO_TOTAL
+                    else:
+                        for asignacion in asignacion_empleado_general:
+                            if asignacion.AE_TAREA == tarea:                            
+                                costo_real_proyecto +=  asignacion.AE_COSTO_TOTAL
+                    if not asignacion_recurso_general.filter(ART_TAREA=tarea).exists():
+                        costo_real_proyecto +=  tarea.TG_NPRESUPUESTO
+                    else:
+                        for asignacion in asignacion_recurso_general:
+                            if asignacion.ART_TAREA == tarea:                            
+                                costo_real_proyecto +=  asignacion.ART_COSTO_TOTAL
+                    if not asignacion_contratista_general.filter(AEC_TAREA=tarea).exists():
+                        costo_real_proyecto +=  tarea.TG_NPRESUPUESTO
+                    else:
+                        for asignacion in asignacion_contratista_general:
+                            if asignacion.AEC_TAREA == tarea:                            
+                                costo_real_proyecto +=  asignacion.AEC_COSTO_TOTAL
         for tarea in tareas_ingenieria:
             tarea.TI_NPROGRESO = int(round(float(tarea.TI_NPROGRESO)))
+            tarea.tiene_asignacion_cero = tiene_asignacion_cero(
+                tarea, asignacion_empleado_ingenieria, asignacion_recurso_ingenieria, asignacion_contratista_ingenieria
+            )
             if tarea.TI_NPROGRESO == 100 and tarea.TI_NDURACION_REAL is not None and tarea.TI_NDURACION_REAL > 0:
                     
                     horas_reales_proyecto += tarea.TI_NDURACION_REAL
                     
-                    if not (asignacion_empleado_ingenieria.filter(AE_TAREA=tarea).exists() or
-                            asignacion_empleado_recurso_ingenieria.filter(ART_TAREA=tarea).exists() or
-                            asignacion_contratista_ingenieria.filter(AEC_TAREA=tarea).exists()):
+                    if not asignacion_empleado_ingenieria.filter(AE_TAREA=tarea).exists():
                         costo_real_proyecto +=  tarea.TI_NPRESUPUESTO
-
-                    for asignacion in asignacion_empleado_ingenieria:
-                        if asignacion.AE_TAREA == tarea:                            
-                            costo_real_proyecto +=  asignacion.AE_COSTO_TOTAL
-                    for asignacion in asignacion_empleado_recurso_ingenieria:
-                        if asignacion.ART_TAREA == tarea:                            
-                            costo_real_proyecto +=  asignacion.ART_COSTO_TOTAL
-                    for asignacion in asignacion_contratista_ingenieria:
-                        if asignacion.AEC_TAREA == tarea:                            
-                            costo_real_proyecto +=  asignacion.AEC_COSTO_TOTAL
+                    else:
+                        for asignacion in asignacion_empleado_ingenieria:
+                            if asignacion.AE_TAREA == tarea:                            
+                                costo_real_proyecto +=  asignacion.AE_COSTO_TOTAL
+                    if not asignacion_recurso_ingenieria.filter(ART_TAREA=tarea).exists():
+                        costo_real_proyecto +=  tarea.TI_NPRESUPUESTO
+                    else:
+                        for asignacion in asignacion_recurso_ingenieria:
+                            if asignacion.ART_TAREA == tarea:                            
+                                costo_real_proyecto +=  asignacion.ART_COSTO_TOTAL
+                    if not asignacion_contratista_ingenieria.filter(AEC_TAREA=tarea).exists():
+                        costo_real_proyecto +=  tarea.TI_NPRESUPUESTO
+                    else:
+                        for asignacion in asignacion_contratista_ingenieria:
+                            if asignacion.AEC_TAREA == tarea:                            
+                                costo_real_proyecto +=  asignacion.AEC_COSTO_TOTAL
         for tarea in tareas_financiera:
             tarea.TF_NPROGRESO = int(round(float(tarea.TF_NPROGRESO)))
+            tarea.tiene_asignacion_cero = tiene_asignacion_cero(
+                tarea, asignacion_empleado_financiera, asignacion_recurso_financiera, asignacion_contratista_financiera
+            )
             if tarea.TF_NPROGRESO == 100 and tarea.TF_NDURACION_REAL is not None and tarea.TF_NDURACION_REAL > 0:
                     
                     horas_reales_proyecto += tarea.TF_NDURACION_REAL
                     # Si la tarea no tiene asignaciones, se suma este valor
-                    if not (asignacion_empleado_financiera.filter(AE_TAREA=tarea).exists() or
-                            asignacion_empleado_recurso_financiera.filter(ART_TAREA=tarea).exists() or
-                            asignacion_contratista_financiera.filter(AEC_TAREA=tarea).exists()):
+                    if not asignacion_empleado_financiera.filter(AE_TAREA=tarea).exists():                            
                         costo_real_proyecto +=  tarea.TF_NMONTO                    
-
-                    for asignacion in asignacion_empleado_financiera:
-                        if asignacion.AE_TAREA == tarea:                            
-                            costo_real_proyecto +=  asignacion.AE_COSTO_TOTAL
-                    for asignacion in asignacion_empleado_recurso_financiera:
-                        if asignacion.ART_TAREA == tarea:                            
-                            costo_real_proyecto +=  asignacion.ART_COSTO_TOTAL
-                    for asignacion in asignacion_contratista_financiera:
-                        if asignacion.AEC_TAREA == tarea:                            
-                            costo_real_proyecto +=  asignacion.AEC_COSTO_TOTAL
+                    else:
+                        for asignacion in asignacion_empleado_financiera:
+                            if asignacion.AE_TAREA == tarea:                            
+                                costo_real_proyecto +=  asignacion.AE_COSTO_TOTAL
+                    if not asignacion_recurso_financiera.filter(ART_TAREA=tarea).exists():
+                        costo_real_proyecto +=  tarea.TF_NMONTO
+                    else:
+                        for asignacion in asignacion_recurso_financiera:
+                            if asignacion.ART_TAREA == tarea:                            
+                                costo_real_proyecto +=  asignacion.ART_COSTO_TOTAL
+                    if not asignacion_contratista_financiera.filter(AEC_TAREA=tarea).exists():
+                        costo_real_proyecto +=  tarea.TF_NMONTO
+                    else:
+                        for asignacion in asignacion_contratista_financiera:
+                            if asignacion.AEC_TAREA == tarea:                            
+                                costo_real_proyecto +=  asignacion.AEC_COSTO_TOTAL
         if horas_reales_proyecto != proyecto.PC_NHORAS_REALES:
             print('horas_reales_proyecto', horas_reales_proyecto)
             print('proyecto.PC_NHORAS_REALES', proyecto.PC_NHORAS_REALES)
@@ -1200,7 +1283,7 @@ def TAREA_GENERAL_ADDONE(request, page):
                 tarea = form.save(commit=False)
                 tarea.TG_CUSUARIO_CREADOR = request.user                                                
                 tarea.save()
-
+                crear_log(request.user, 'Crear Tarea General', f'Se creó la tarea general: {tarea.TG_CNOMBRE}')
                 # Manejar asignaciones múltiples
                 empleados_ids = request.POST.getlist('empleados')
                 contratistas_ids = request.POST.getlist('contratistas')                
@@ -1217,6 +1300,7 @@ def TAREA_GENERAL_ADDONE(request, page):
                         AE_FFECHA_ASIGNACION=tarea.TG_FFECHA_INICIO,  
                         AE_FFECHA_FINALIZACION=tarea.TG_FFECHA_FIN_ESTIMADA                      
                     )
+                    crear_log(request.user, 'Crear Asignación de Empleado a Tarea General', f'Se creó la asignación de empleado a tarea general: {tarea.TG_CNOMBRE} para el empleado: {id_emp.EM_CNOMBRE}')
                     asignacion.save()
 
                 # Asignar contratistas
@@ -1230,6 +1314,7 @@ def TAREA_GENERAL_ADDONE(request, page):
                         AEC_FFECHA_FINALIZACION=tarea.TG_FFECHA_FIN_ESTIMADA,
                         AEC_CUSUARIO_CREADOR=request.user
                     )
+                    crear_log(request.user, 'Crear Asignación de Contratista a Tarea General', f'Se creó la asignación de contratista a tarea general: {tarea.TG_CNOMBRE} para el contratista: {id_emp.EM_CNOMBRE}')
                     asignacion.save()
 
                 # Procesar recursos                
@@ -1246,6 +1331,7 @@ def TAREA_GENERAL_ADDONE(request, page):
                             ART_COSTO_UNITARIO=int(float(recurso['costo'])),
                             ART_COSTO_TOTAL = int(float(recurso['costo'])) * int(float(recurso['cantidad']))
                         )
+                        crear_log(request.user, 'Crear Asignación de Recurso a Tarea General', f'Se creó la asignación de recurso a tarea general: {tarea.TG_CNOMBRE} para el recurso: {id_rec.PR_CNOMBRE}')
                         asignacion.save()
 
                 messages.success(request, 'Tarea general guardada correctamente con las asignaciones seleccionadas')
@@ -1277,6 +1363,7 @@ def TAREA_GENERAL_UPDATE(request, pk, page):
                 tarea = form.save(commit=False)
                 tarea.TG_CUSUARIO_MODIFICADOR = request.user
                 tarea.save()
+                crear_log(request.user, 'Actualizar Tarea General', f'Se actualizó la tarea general: {tarea.TG_CNOMBRE}')
                 messages.success(request, 'Tarea general actualizada correctamente')
                 if page == 1:
                     return redirect('/proycli_listone/'+str(tarea.TG_PROYECTO_CLIENTE.id)+'/')
@@ -1335,6 +1422,7 @@ def TAREA_GENERAL_UPDATE_ASIGNACIONES(request, pk, page):
                     AE_FFECHA_ASIGNACION=tarea.TG_FFECHA_INICIO,  
                     AE_FFECHA_FINALIZACION=tarea.TG_FFECHA_FIN_ESTIMADA                      
                 )
+                crear_log(request.user, 'Actualizar Asignación de Empleado a Tarea General', f'Se actualizó la asignación de empleado a tarea general: {tarea.TG_CNOMBRE} para el empleado: {id_emp.EM_CNOMBRE}')
                 asignacion.save()
 
             # Asignar contratistas
@@ -1348,6 +1436,7 @@ def TAREA_GENERAL_UPDATE_ASIGNACIONES(request, pk, page):
                     AEC_FFECHA_FINALIZACION=tarea.TG_FFECHA_FIN_ESTIMADA,
                     AEC_CUSUARIO_CREADOR=request.user
                 )
+                crear_log(request.user, 'Actualizar Asignación de Contratista a Tarea General', f'Se actualizó la asignación de contratista a tarea general: {tarea.TG_CNOMBRE} para el contratista: {id_emp.EC_CNOMBRE}')
                 asignacion.save()
 
             # Procesar recursos                
@@ -1364,6 +1453,7 @@ def TAREA_GENERAL_UPDATE_ASIGNACIONES(request, pk, page):
                         ART_COSTO_UNITARIO=int(float(recurso['costo'])),
                         ART_COSTO_TOTAL = int(float(recurso['costo'])) * int(float(recurso['cantidad']))
                     )
+                    crear_log(request.user, 'Actualizar Asignación de Recurso a Tarea General', f'Se actualizó la asignación de recurso a tarea general: {tarea.TG_CNOMBRE} para el recurso: {id_rec.PR_CNOMBRE}')
                     asignacion.save()
 
             messages.success(request, 'Asignaciones de la tarea general actualizadas correctamente')
@@ -1431,6 +1521,7 @@ def TAREA_GENERAL_DEPENDENCIA_ADDONE(request, pk):
                 dependencia = form.save(commit=False)
                 dependencia.TD_TAREA_PREDECESORA = tarea
                 dependencia.save()
+                crear_log(request.user, 'Crear Dependencia de Tarea General', f'Se creó la dependencia de tarea general: {tarea.TG_CNOMBRE} para la tarea: {dependencia.TD_TAREA_SUCESORA.TG_CNOMBRE}')
                 messages.success(request, 'Dependencia agregada correctamente')
                 return redirect('proycli_listone', pk=proyecto_actual.id)
         else:
@@ -1476,7 +1567,8 @@ def TAREA_INGENIERIA_ADDONE(request, page):
             form = formTAREA_INGENIERIA(request.POST)
             if form.is_valid():
                 tarea = form.save(commit=False)
-                tarea.TI_CUSUARIO_CREADOR = request.user                                                
+                tarea.TI_CUSUARIO_CREADOR = request.user
+                crear_log(request.user, 'Crear Tarea de Ingeniería', f'Se creó la tarea de ingeniería: {tarea.TI_CNOMBRE}')
                 tarea.save()
 
                 # Manejar asignaciones múltiples
@@ -1495,6 +1587,7 @@ def TAREA_INGENIERIA_ADDONE(request, page):
                         AE_FFECHA_ASIGNACION=tarea.TI_FFECHA_INICIO,  
                         AE_FFECHA_FINALIZACION=tarea.TI_FFECHA_FIN_ESTIMADA                      
                     )
+                    crear_log(request.user, 'Crear Asignación de Empleado a Tarea de Ingeniería', f'Se creó la asignación de empleado a tarea de ingeniería: {tarea.TI_CNOMBRE} para el empleado: {id_emp.EM_CNOMBRE}')
                     asignacion.save()
 
                 # Asignar contratistas
@@ -1508,6 +1601,7 @@ def TAREA_INGENIERIA_ADDONE(request, page):
                         AEC_FFECHA_FINALIZACION=tarea.TI_FFECHA_FIN_ESTIMADA,
                         AEC_CUSUARIO_CREADOR=request.user
                     )
+                    crear_log(request.user, 'Crear Asignación de Contratista a Tarea de Ingeniería', f'Se creó la asignación de contratista a tarea de ingeniería: {tarea.TI_CNOMBRE} para el contratista: {id_emp.EM_CNOMBRE}')
                     asignacion.save()
 
                 # Procesar recursos                
@@ -1524,6 +1618,7 @@ def TAREA_INGENIERIA_ADDONE(request, page):
                             ART_COSTO_UNITARIO=int(recurso['costo']),
                             ART_COSTO_TOTAL = int(recurso['costo']) * int(recurso['cantidad'])
                         )
+                        crear_log(request.user, 'Crear Asignación de Recurso a Tarea de Ingeniería', f'Se creó la asignación de recurso a tarea de ingeniería: {tarea.TI_CNOMBRE} para el recurso: {id_rec.PR_CNOMBRE}')
                         asignacion.save()
 
                 messages.success(request, 'Tarea de ingeniería guardada correctamente con las asignaciones seleccionadas')
@@ -1556,6 +1651,7 @@ def TAREA_INGENIERIA_UPDATE(request, pk, page):
                 tarea = form.save(commit=False)
                 tarea.TI_CUSUARIO_MODIFICADOR = request.user
                 tarea.save()
+                crear_log(request.user, 'Actualizar Tarea de Ingeniería', f'Se actualizó la tarea de ingeniería: {tarea.TI_CNOMBRE}')
                 messages.success(request, 'Tarea de ingeniería actualizada correctamente')
                 if page == 1:
                     return redirect('/proycli_listone/'+str(tarea.TI_PROYECTO_CLIENTE.id)+'/')
@@ -1612,6 +1708,7 @@ def TAREA_INGENIERIA_UPDATE_ASIGNACIONES(request, pk, page):
                     AE_FFECHA_ASIGNACION=tarea.TI_FFECHA_INICIO,  
                     AE_FFECHA_FINALIZACION=tarea.TI_FFECHA_FIN_ESTIMADA                      
                 )
+                crear_log(request.user, 'Actualizar Asignación de Empleado a Tarea de Ingeniería', f'Se actualizó la asignación de empleado a tarea de ingeniería: {tarea.TI_CNOMBRE} para el empleado: {id_emp.EM_CNOMBRE}')
                 asignacion.save()
 
             # Asignar contratistas
@@ -1625,6 +1722,7 @@ def TAREA_INGENIERIA_UPDATE_ASIGNACIONES(request, pk, page):
                     AEC_FFECHA_FINALIZACION=tarea.TI_FFECHA_FIN_ESTIMADA,
                     AEC_CUSUARIO_CREADOR=request.user
                 )
+                crear_log(request.user, 'Actualizar Asignación de Contratista a Tarea de Ingeniería', f'Se actualizó la asignación de contratista a tarea de ingeniería: {tarea.TI_CNOMBRE} para el contratista: {id_emp.EC_CNOMBRE}')
                 asignacion.save()
 
             # Procesar recursos                
@@ -1641,6 +1739,7 @@ def TAREA_INGENIERIA_UPDATE_ASIGNACIONES(request, pk, page):
                         ART_COSTO_UNITARIO=int(float(recurso['costo'])),
                         ART_COSTO_TOTAL = int(float(recurso['costo'])) * int(float(recurso['cantidad']))
                     )
+                    crear_log(request.user, 'Actualizar Asignación de Recurso a Tarea de Ingeniería', f'Se actualizó la asignación de recurso a tarea de ingeniería: {tarea.TI_CNOMBRE} para el recurso: {id_rec.PR_CNOMBRE}')
                     asignacion.save()
 
             messages.success(request, 'Asignaciones de la tarea de ingeniería actualizadas correctamente')
@@ -1708,6 +1807,7 @@ def TAREA_INGENIERIA_DEPENDENCIA_ADDONE(request, pk):
                 dependencia = form.save(commit=False)
                 dependencia.TD_TAREA_PREDECESORA = tarea
                 dependencia.save()
+                crear_log(request.user, 'Crear Dependencia de Tarea de Ingeniería', f'Se creó la dependencia de tarea de ingeniería: {tarea.TI_CNOMBRE} para la tarea: {dependencia.TD_TAREA_SUCESORA.TI_CNOMBRE}')
                 messages.success(request, 'Dependencia agregada correctamente')
                 return redirect('proycli_listone', pk=proyecto_actual.id)
         else:
@@ -1764,7 +1864,8 @@ def TAREA_FINANCIERA_ADDONE(request, page):
                     tarea.TF_FFECHA_INICIO = fecha_fin_estimada
                 
                 tarea.save()
-
+                crear_log(request.user, 'Crear Tarea Financiera', f'Se creó la tarea financiera: {tarea.TF_CNOMBRE}')
+                
                 # Manejar asignaciones múltiples
                 empleados_ids = request.POST.getlist('empleados')
                 contratistas_ids = request.POST.getlist('contratistas')                
@@ -1781,6 +1882,7 @@ def TAREA_FINANCIERA_ADDONE(request, page):
                         AE_FFECHA_ASIGNACION=fecha_inicio,  
                         AE_FFECHA_FINALIZACION=fecha_fin_estimada                      
                     )
+                    crear_log(request.user, 'Crear Asignación de Empleado a Tarea Financiera', f'Se creó la asignación de empleado a tarea financiera: {tarea.TF_CNOMBRE} para el empleado: {id_emp.EM_CNOMBRE}')
                     asignacion.save()
 
                 # Asignar contratistas
@@ -1794,6 +1896,7 @@ def TAREA_FINANCIERA_ADDONE(request, page):
                         AEC_FFECHA_FINALIZACION=fecha_fin_estimada,
                         AEC_CUSUARIO_CREADOR=request.user
                     )
+                    crear_log(request.user, 'Crear Asignación de Contratista a Tarea Financiera', f'Se creó la asignación de contratista a tarea financiera: {tarea.TF_CNOMBRE} para el contratista: {id_emp.EM_CNOMBRE}')
                     asignacion.save()
 
                 # Procesar recursos                
@@ -1810,6 +1913,7 @@ def TAREA_FINANCIERA_ADDONE(request, page):
                             ART_COSTO_UNITARIO=int(recurso['costo']),
                             ART_COSTO_TOTAL = int(recurso['costo']) * int(recurso['cantidad'])
                         )
+                        crear_log(request.user, 'Crear Asignación de Recurso a Tarea Financiera', f'Se creó la asignación de recurso a tarea financiera: {tarea.TF_CNOMBRE} para el recurso: {id_rec.PR_CNOMBRE}')
                         asignacion.save()
                 
                 messages.success(request, 'Tarea financiera guardada correctamente con las asignaciones seleccionadas')
@@ -1852,7 +1956,7 @@ def TAREA_FINANCIERA_UPDATE(request, pk, page):
                     tarea.TF_FFECHA_INICIO = fecha_fin_estimada
                 
                 tarea.save()
-
+                crear_log(request.user, 'Actualizar Tarea Financiera', f'Se actualizó la tarea financiera: {tarea.TF_CNOMBRE}')
                 messages.success(request, 'Tarea financiera actualizada correctamente')
                 if page == 1:
                     return redirect('/proycli_listone/'+str(tarea.TF_PROYECTO_CLIENTE.id)+'/')
@@ -1914,6 +2018,7 @@ def TAREA_FINANCIERA_UPDATE_ASIGNACIONES(request, pk, page):
                     AE_FFECHA_ASIGNACION=tarea.TF_FFECHA_INICIO,  
                     AE_FFECHA_FINALIZACION=tarea.TF_FFECHA_FIN_ESTIMADA                      
                 )
+                crear_log(request.user, 'Actualizar Asignación de Empleado a Tarea Financiera', f'Se actualizó la asignación de empleado a tarea financiera: {tarea.TF_CNOMBRE} para el empleado: {id_emp.EM_CNOMBRE}')
                 asignacion.save()
 
             # Asignar contratistas
@@ -1927,6 +2032,7 @@ def TAREA_FINANCIERA_UPDATE_ASIGNACIONES(request, pk, page):
                     AEC_FFECHA_FINALIZACION=tarea.TF_FFECHA_FIN_ESTIMADA,
                     AEC_CUSUARIO_CREADOR=request.user
                 )
+                crear_log(request.user, 'Actualizar Asignación de Contratista a Tarea Financiera', f'Se actualizó la asignación de contratista a tarea financiera: {tarea.TF_CNOMBRE} para el contratista: {id_emp.EC_CNOMBRE}')
                 asignacion.save()
 
             # Procesar recursos                
@@ -1944,7 +2050,7 @@ def TAREA_FINANCIERA_UPDATE_ASIGNACIONES(request, pk, page):
                         ART_COSTO_TOTAL = int(float(recurso['costo'])) * int(float(recurso['cantidad']))
                     )
                     asignacion.save()
-
+                    crear_log(request.user, 'Actualizar Asignación de Recurso a Tarea Financiera', f'Se actualizó la asignación de recurso a tarea financiera: {tarea.TF_CNOMBRE} para el recurso: {id_rec.PR_CNOMBRE}')
             messages.success(request, 'Asignaciones de la tarea financiera actualizadas correctamente')
             if page == 1:
                 return redirect('/proycli_listone/'+str(tarea.TF_PROYECTO_CLIENTE.id)+'/')
@@ -2010,6 +2116,7 @@ def TAREA_FINANCIERA_DEPENDENCIA_ADDONE(request, pk):
                 dependencia = form.save(commit=False)
                 dependencia.TD_TAREA_PREDECESORA = tarea
                 dependencia.save()
+                crear_log(request.user, 'Crear Dependencia de Tarea Financiera', f'Se creó la dependencia de tarea financiera: {tarea.TF_CNOMBRE} para la tarea: {dependencia.TD_TAREA_SUCESORA.TF_CNOMBRE}')                                                                               
                 messages.success(request, 'Dependencia agregada correctamente')
                 return redirect('proycli_listone', pk=proyecto_actual.id)
         else:
@@ -2077,7 +2184,7 @@ def tarea_update_data(request, tipo_tarea, pk):
                 if request.POST.get('horasTarea'):
                     tarea.TF_NDURACION_REAL = float(request.POST.get('horasTarea'))
             tarea.save()
-
+            crear_log(request.user, f'Actualizar Tarea {tipo_tarea}', f'Se actualizó la tarea: {tarea.TG_CNOMBRE if tipo_tarea == "general" else tarea.TI_CNOMBRE if tipo_tarea == "ingenieria" else tarea.TF_CNOMBRE}')
             # Actualizar asignaciones
             for empleado in empleados_asignados:
                 if request.POST.get(f'costo_empleado_{empleado.id}'):
@@ -2086,6 +2193,7 @@ def tarea_update_data(request, tipo_tarea, pk):
                     empleado.AE_HORAS_REALES = float(request.POST.get(f'horas_empleado_{empleado.id}')  )
                 if request.POST.get(f'total_empleado_{empleado.id}'):
                     empleado.AE_COSTO_TOTAL = float(request.POST.get(f'total_empleado_{empleado.id}'))
+                crear_log(request.user, f'Actualizar Asignación de Empleado a Tarea {tipo_tarea}', f'Se actualizó la asignación de empleado a tarea: {tarea.TG_CNOMBRE if tipo_tarea == "general" else tarea.TI_CNOMBRE if tipo_tarea == "ingenieria" else tarea.TF_CNOMBRE} para el empleado: {empleado.AE_EMPLEADO}')
                 empleado.save()
 
             for contratista in contratistas_asignados:
@@ -2095,6 +2203,7 @@ def tarea_update_data(request, tipo_tarea, pk):
                     contratista.AEC_HORAS_REALES = float(request.POST.get(f'horas_contratista_{contratista.id}'))
                 if request.POST.get(f'total_contratista_{contratista.id}'):
                     contratista.AEC_COSTO_TOTAL = float(request.POST.get(f'total_contratista_{contratista.id}'))
+                crear_log(request.user, f'Actualizar Asignación de Contratista a Tarea {tipo_tarea}', f'Se actualizó la asignación de contratista a tarea: {tarea.TG_CNOMBRE if tipo_tarea == "general" else tarea.TI_CNOMBRE if tipo_tarea == "ingenieria" else tarea.TF_CNOMBRE} para el contratista: {contratista.AEC_EMPLEADO}')
                 contratista.save()
 
             for recurso in recursos_asignados:
@@ -2108,6 +2217,7 @@ def tarea_update_data(request, tipo_tarea, pk):
                     total_recurso = request.POST.get(f'total_recurso_{recurso.id}')
                     total_recurso = total_recurso.replace(',', '.')
                     recurso.ART_COSTO_REAL = float(total_recurso)
+                crear_log(request.user, f'Actualizar Asignación de Recurso a Tarea {tipo_tarea}', f'Se actualizó la asignación de recurso a tarea: {tarea.TG_CNOMBRE if tipo_tarea == "general" else tarea.TI_CNOMBRE if tipo_tarea == "ingenieria" else tarea.TF_CNOMBRE} para el recurso: {recurso.ART_PRODUCTO}')
                 recurso.save()
 
             return JsonResponse({
