@@ -246,7 +246,7 @@
             console.log(tableData);
             $.ajax({
                 type:'POST',
-                url:'{% url "query_run_param" %}',
+                url:'{% url "run_query_param" %}',
                 data:{
                     id: {{id_query}},
                     tableData: JSON.stringify(tableData),

@@ -3006,6 +3006,13 @@ def QUERY_UPDATE(request, pk):
         print(e)
         messages.error(request, 'Error: ' + str(e))
         return redirect('/query_listall/')
+
+def QUERY_LISTONE(request):
+    try:
+        pass
+    except Exception as e:
+        print("ERROR:", e)
+        return JsonResponse({'valid': False, 'error': str(e)})
     
 def QUERY_RUN(request, pk):
     try:
@@ -3077,7 +3084,7 @@ def QUERY_RUN(request, pk):
                     'documentos':documentos,
                     'cantidad_documentos':cantidad_documentos
                 }
-                return render(request,'home/QUERY_MANAGER/query_listone.html',context)
+                return render(request,'home/QUERY_MANAGER/query_listone_param.html',context)
             else:
                 listado=[]
                 documentos = []
