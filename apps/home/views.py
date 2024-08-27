@@ -2263,6 +2263,7 @@ def ACTA_REUNION_ADDONE(request):
             form = formACTA_REUNION(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, f'Crear Acta de Reunión', f'Se creó el acta de reunión: {form.instance.AR_CTITULO}')
                 messages.success(request, 'Acta de reunión guardada correctamente')
                 return redirect('/actareunion_listall/')
         form = formACTA_REUNION()
@@ -2282,6 +2283,7 @@ def ACTA_REUNION_UPDATE(request, pk):
             form = formACTA_REUNION(request.POST, instance=acta_reunion)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, f'Actualizar Acta de Reunión', f'Se actualizó el acta de reunión: {acta_reunion.AR_CTITULO}')
                 messages.success(request, 'Acta de reunión actualizada correctamente')
                 return redirect('/actareunion_listall/')
         form = formACTA_REUNION(instance=acta_reunion)
@@ -2314,6 +2316,7 @@ def COTIZACION_ADDONE(request):
                 cotizacion = form.save(commit=False)
                 cotizacion.CO_CUSUARIO_CREADOR = request.user
                 cotizacion.save()
+                crear_log(request.user, f'Crear Cotización', f'Se creó la cotización: {cotizacion.CO_CNUMERO}')
                 messages.success(request, 'Cotización guardada correctamente')
                 return redirect('/cotizacion_listall/')
         form = formCOTIZACION()
@@ -2370,11 +2373,13 @@ def COTIZACION_ADD_LINE(request):
                 CD_NTOTAL=total,
                 CD_CUSUARIO_CREADOR=request.user
             )
+            crear_log(request.user, f'Crear Línea de Cotización', f'Se creó la línea de cotización: {detalle.CD_PRODUCTO}')
             detalle.save()
 
             # Recalculate COTIZACION.CO_NTOTAL
             total_cotizacion = COTIZACION_DETALLE.objects.filter(CD_COTIZACION=cotizacion).aggregate(Sum('CD_NTOTAL'))['CD_NTOTAL__sum'] or 0
             cotizacion.CO_NTOTAL = total_cotizacion
+            crear_log(request.user, f'Actualizar Cotización', f'Se actualizó la cotización: {cotizacion.CO_CNUMERO}')
             cotizacion.save()
 
             messages.success(request, 'Línea de cotización agregada correctamente')
@@ -2395,13 +2400,14 @@ def COTIZACION_UPDATE(request, pk):
                 cotizacion = form.save(commit=False)
                 cotizacion.CO_CUSUARIO_MODIFICADOR = request.user
                 cotizacion.save()
+                crear_log(request.user, f'Actualizar Cotización', f'Se actualizó la cotización: {cotizacion.CO_CNUMERO}')
                 messages.success(request, 'Cotización actualizada correctamente')
                 return redirect('/cotizacion_listall/')
         form = formCOTIZACION(instance=cotizacion)
         ctx = {
             'form': form
         }
-        return render(request, 'home/COTIZACION/cotizacion_addone.html', ctx)
+        return render(request, 'home/COTIZACION/cotizacion_update.html', ctx)
     except Exception as e:
         print(e)
         messages.error(request, f'Error, {str(e)}')
@@ -2489,11 +2495,13 @@ def COTIZACION_DELETE_LINE(request, pk):
         detalle = COTIZACION_DETALLE.objects.get(id=pk)
         cotizacion_id = detalle.CD_COTIZACION.id
         detalle.delete()
+        crear_log(request.user, f'Eliminar Línea de Cotización', f'Se eliminó la línea de cotización: {detalle.CD_PRODUCTO}')
         # Recalculate COTIZACION.CO_NTOTAL
         cotizacion = detalle.CD_COTIZACION
         total_cotizacion = COTIZACION_DETALLE.objects.filter(CD_COTIZACION=cotizacion).aggregate(Sum('CD_NTOTAL'))['CD_NTOTAL__sum'] or 0
         cotizacion.CO_NTOTAL = total_cotizacion
         cotizacion.save()
+        crear_log(request.user, f'Actualizar Cotización', f'Se actualizó la cotización: {cotizacion.CO_CNUMERO}')
         return JsonResponse({'success': 'Línea de cotización eliminada correctamente', 'cotizacion_id': cotizacion_id})
     except COTIZACION_DETALLE.DoesNotExist:
         return JsonResponse({'error': 'Línea de cotización no encontrada'}, status=404)
@@ -2546,6 +2554,7 @@ def ORDEN_VENTA_ADDONE(request):
                                 OVD_NTOTAL=cotizacion_detalle.CD_NTOTAL,
                                 OVD_CUSUARIO_CREADOR=request.user
                             )
+                            crear_log(request.user, f'Crear Línea de Orden de Venta', f'Se creó la línea de orden de venta: {cotizacion_detalle.CD_COTIZACION}')
                     except Exception as e:
                         print(f"Error al copiar detalles de cotización: {str(e)}")
 
@@ -2594,6 +2603,7 @@ def ORDEN_VENTA_ADD_LINE(request):
             existing_detail = ORDEN_VENTA_DETALLE.objects.filter(OVD_ORDEN_VENTA=orden_venta, OVD_PRODUCTO=producto).first()
             if existing_detail:
                 existing_detail.delete()
+                crear_log(request.user, f'Eliminar Línea de Orden de Venta', f'Se eliminó la línea de orden de venta: {orden_venta}')
 
             # Recalculate total
             total = subtotal - descuento
@@ -2609,11 +2619,13 @@ def ORDEN_VENTA_ADD_LINE(request):
                 OVD_CUSUARIO_CREADOR=request.user
             )
             detalle.save()
+            crear_log(request.user, f'Crear Línea de Orden de Venta', f'Se creó la línea de orden de venta: {orden_venta}')
 
             # Recalculate ORDEN_VENTA.OV_NTOTAL
             total_orden_venta = ORDEN_VENTA_DETALLE.objects.filter(OVD_ORDEN_VENTA=orden_venta).aggregate(Sum('OVD_NTOTAL'))['OVD_NTOTAL__sum'] or 0
             orden_venta.OV_NTOTAL = total_orden_venta
             orden_venta.save()
+            crear_log(request.user, f'Actualizar Orden de Venta', f'Se actualizó la orden de venta: {orden_venta.OV_CNUMERO}')
 
             messages.success(request, 'Línea de orden de venta agregada correctamente')
             return redirect(f'/orden_venta_listone/{orden_venta_id}')
@@ -2633,6 +2645,7 @@ def ORDEN_VENTA_UPDATE(request, pk):
                 orden_venta = form.save(commit=False)
                 orden_venta.OV_CUSUARIO_MODIFICADOR = request.user
                 orden_venta.save()
+                crear_log(request.user, f'Actualizar Orden de Venta', f'Se actualizó la orden de venta: {orden_venta.OV_CNUMERO}')
                 messages.success(request, 'Orden de venta actualizada correctamente')
                 return redirect('/orden_venta_listall/')
         form = formORDEN_VENTA(instance=orden_venta)
@@ -2699,11 +2712,13 @@ def ORDEN_VENTA_DELETE_LINE(request, pk):
         detalle = ORDEN_VENTA_DETALLE.objects.get(id=pk)
         orden_venta_id = detalle.OVD_ORDEN_VENTA.id
         detalle.delete()
+        crear_log(request.user, f'Eliminar Línea de Orden de Venta', f'Se eliminó la línea de orden de venta: {detalle.OVD_ORDEN_VENTA}')
         # Recalculate ORDEN_VENTA.OV_NTOTAL
         orden_venta = detalle.OVD_ORDEN_VENTA
         total_orden_venta = ORDEN_VENTA_DETALLE.objects.filter(OVD_ORDEN_VENTA=orden_venta).aggregate(Sum('OVD_NTOTAL'))['OVD_NTOTAL__sum'] or 0
         orden_venta.OV_NTOTAL = total_orden_venta
         orden_venta.save()
+        crear_log(request.user, f'Actualizar Orden de Venta', f'Se actualizó la orden de venta: {orden_venta.OV_CNUMERO}')
         return JsonResponse({'success': 'Línea de orden de venta eliminada correctamente', 'orden_venta_id': orden_venta_id})
     except ORDEN_VENTA_DETALLE.DoesNotExist:
         return JsonResponse({'error': 'Línea de orden de venta no encontrada'}, status=404)
@@ -2740,6 +2755,7 @@ def ORDEN_VENTA_ADDONE(request):
                 orden_venta = form.save(commit=False)
                 orden_venta.OV_CUSUARIO_CREADOR = request.user
                 orden_venta.save()
+                crear_log(request.user, f'Crear Orden de Venta', f'Se creó la orden de venta: {orden_venta.OV_CNUMERO}')
                 print("orden_venta saved")
                 # If there's a related cotización, copy its details
                 if orden_venta.OV_COTIZACION:
@@ -2757,6 +2773,7 @@ def ORDEN_VENTA_ADDONE(request):
                                 OVD_NTOTAL=cotizacion_detalle.CD_NTOTAL,
                                 OVD_CUSUARIO_CREADOR=request.user
                             )
+                            crear_log(request.user, f'Crear Línea de Orden de Venta', f'Se creó la línea de orden de venta: {cotizacion_detalle.CD_PRODUCTO}')
                     except Exception as e:
                         print(f"Error al copiar detalles de cotización: {str(e)}")
 
@@ -2820,7 +2837,7 @@ def ORDEN_VENTA_ADD_LINE(request):
                 OVD_CUSUARIO_CREADOR=request.user
             )
             detalle.save()
-
+            crear_log(request.user, f'Crear Línea de Orden de Venta', f'Se creó la línea de orden de venta: {orden_venta}')
             # Recalculate ORDEN_VENTA.OV_NTOTAL
             total_orden_venta = ORDEN_VENTA_DETALLE.objects.filter(OVD_ORDEN_VENTA=orden_venta).aggregate(Sum('OVD_NTOTAL'))['OVD_NTOTAL__sum'] or 0
             orden_venta.OV_NTOTAL = total_orden_venta
@@ -2844,13 +2861,14 @@ def ORDEN_VENTA_UPDATE(request, pk):
                 orden_venta = form.save(commit=False)
                 orden_venta.OV_CUSUARIO_MODIFICADOR = request.user
                 orden_venta.save()
+                crear_log(request.user, f'Actualizar Orden de Venta', f'Se actualizó la orden de venta: {orden_venta.OV_CNUMERO}')
                 messages.success(request, 'Orden de venta actualizada correctamente')
                 return redirect('/orden_venta_listall/')
         form = formORDEN_VENTA(instance=orden_venta)
         ctx = {
             'form': form
         }
-        return render(request, 'home/ORDEN_VENTA/orden_venta_addone.html', ctx)
+        return render(request, 'home/ORDEN_VENTA/orden_venta_update.html', ctx)
     except Exception as e:
         print(e)
         messages.error(request, f'Error, {str(e)}')
@@ -2910,11 +2928,13 @@ def ORDEN_VENTA_DELETE_LINE(request, pk):
         detalle = ORDEN_VENTA_DETALLE.objects.get(id=pk)
         orden_venta_id = detalle.OVD_ORDEN_VENTA.id
         detalle.delete()
+        crear_log(request.user, f'Eliminar Línea de Orden de Venta', f'Se eliminó la línea de orden de venta: {detalle.OVD_PRODUCTO}')
         # Recalculate ORDEN_VENTA.OV_NTOTAL
         orden_venta = detalle.OVD_ORDEN_VENTA
         total_orden_venta = ORDEN_VENTA_DETALLE.objects.filter(OVD_ORDEN_VENTA=orden_venta).aggregate(Sum('OVD_NTOTAL'))['OVD_NTOTAL__sum'] or 0
         orden_venta.OV_NTOTAL = total_orden_venta
         orden_venta.save()
+        crear_log(request.user, f'Actualizar Orden de Venta', f'Se actualizó la orden de venta: {orden_venta.OV_CNUMERO}')
         return JsonResponse({'success': 'Línea de orden de venta eliminada correctamente', 'orden_venta_id': orden_venta_id})
     except ORDEN_VENTA_DETALLE.DoesNotExist:
         return JsonResponse({'error': 'Línea de orden de venta no encontrada'}, status=404)
@@ -2952,6 +2972,7 @@ def QUERY_ADDONE(request):
                 form.cleaned_data["USER_CREATOR_ID"] = request.user
                 form.cleaned_data["USER_UPD_ID"] = request.user
                 form.save()
+                crear_log(request.user, f'Crear Query', f'Se creó la query: {form.cleaned_data["QR_CNOMBRE"]}')
                 messages.success(request, 'Query agregada correctamente')
                 return redirect('/query_listall/')
         form = formQUERY()
@@ -2972,6 +2993,7 @@ def QUERY_UPDATE(request, pk):
             if form.is_valid():
                 form.cleaned_data["USER_UPD_ID"] = request.user
                 form.save()
+                crear_log(request.user, f'Actualizar Query', f'Se actualizó la query: {form.cleaned_data["QR_CNOMBRE"]}')
                 messages.success(request, 'Query actualizada correctamente')
                 return redirect('/query_listall/')
         form = formQUERY(instance=query)
@@ -3085,6 +3107,7 @@ def QUERY_DELETE(request, pk):
         query.QR_NHABILITADO = False
         query.USER_UPD_ID = request.user
         query.save()
+        crear_log(request.user, f'Eliminar Query', f'Se eliminó la query: {query.QR_CNOMBRE}')
         messages.success(request, 'Query eliminada correctamente')
         return redirect('/query_listall/')
     except Exception as e:

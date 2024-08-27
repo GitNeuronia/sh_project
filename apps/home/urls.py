@@ -181,7 +181,7 @@ urlpatterns = [
     path('query_update/<int:pk>/', login_required(views.QUERY_UPDATE), name='query_update'),    
     path('query_run/<int:pk>', login_required(views.QUERY_RUN), name='query_run'),
     path('query_delete/<int:pk>', login_required(views.QUERY_DELETE), name='query_delete'),
-
+    path('run_query_param/', login_required(views.run_query_param), name='run_query_param'),
     # Coincide con cualquier archivo html
     re_path(r'^.*\.*', views.pages, name='pages'),
 
