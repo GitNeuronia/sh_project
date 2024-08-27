@@ -64,7 +64,36 @@ def crear_log(usuario, accion, descripcion):
     except Exception as e:
         print(f"Error al crear el log: {str(e)}")
 
+def has_auth(user, permission_name):
+    try:
+        # Get the user's roles
+        user_roles = USUARIO_ROL.objects.filter(UR_CUSUARIO=user, UR_BACTIVO=True)
+        
+        # Check if the user has the ADMIN role
+        if user_roles.filter(UR_CROL__RO_CNOMBRE='ADMIN').exists():
+            return True
+        
+        # Check if any of the user's roles have the required permission
+        for user_role in user_roles:
+            permission_exists = PERMISO_ROL.objects.filter(
+                PR_CROL=user_role.UR_CROL,
+                PR_CPERMISO__PE_CNOMBRE=permission_name,
+                PR_BACTIVO=True,
+                PR_CPERMISO__PE_BACTIVO=True
+            ).exists()
+            
+            if permission_exists:
+                return True
+        
+        return False
+    except Exception as e:
+        print(f"Error checking authorization: {str(e)}")
+        return False
+
 def REGION_LISTALL(request):
+    if not has_auth(request.user, 'VER_UBICACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = REGION.objects.all()
         ctx = {
@@ -77,6 +106,9 @@ def REGION_LISTALL(request):
         return redirect('/')
 
 def REGION_ADDONE(request):
+    if not has_auth(request.user, 'ADD_UBICACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method =='POST':
             form = formREGION(request.POST)
@@ -97,6 +129,9 @@ def REGION_ADDONE(request):
         return redirect('/')
 
 def REGION_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_UBICACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         region = REGION.objects.get(id=pk)
         if request.method == 'POST':
@@ -117,6 +152,9 @@ def REGION_UPDATE(request, pk):
         return redirect('/')
 
 def PROVINCIA_LISTALL(request):
+    if not has_auth(request.user, 'VER_UBICACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = PROVINCIA.objects.all()
         ctx = {
@@ -129,6 +167,9 @@ def PROVINCIA_LISTALL(request):
         return redirect('/')
 
 def PROVINCIA_ADDONE(request):
+    if not has_auth(request.user, 'ADD_UBICACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method =='POST':
             form = formPROVINCIA(request.POST)
@@ -148,6 +189,9 @@ def PROVINCIA_ADDONE(request):
         return redirect('/')
 
 def PROVINCIA_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_UBICACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         provincia = PROVINCIA.objects.get(id=pk)
         if request.method == 'POST':
@@ -168,6 +212,9 @@ def PROVINCIA_UPDATE(request, pk):
         return redirect('/')
 
 def COMUNA_LISTALL(request):
+    if not has_auth(request.user, 'VER_UBICACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = COMUNA.objects.all()
         ctx = {
@@ -180,6 +227,9 @@ def COMUNA_LISTALL(request):
         return redirect('/')
 
 def COMUNA_ADDONE(request):
+    if not has_auth(request.user, 'ADD_UBICACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method =='POST':
             form = formCOMUNA(request.POST)
@@ -199,6 +249,9 @@ def COMUNA_ADDONE(request):
         return redirect('/')
 
 def COMUNA_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_UBICACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         comuna = COMUNA.objects.get(id=pk)
         if request.method == 'POST':
@@ -219,6 +272,9 @@ def COMUNA_UPDATE(request, pk):
         return redirect('/')
 
 def PARAMETRO_LISTALL(request):
+    if not has_auth(request.user, 'VER_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = PARAMETRO.objects.all()
         ctx = {
@@ -231,6 +287,9 @@ def PARAMETRO_LISTALL(request):
         return redirect('/')
 
 def PARAMETRO_ADDONE(request):
+    if not has_auth(request.user, 'ADD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method =='POST':
             form = formPARAMETRO(request.POST)
@@ -250,6 +309,9 @@ def PARAMETRO_ADDONE(request):
         return redirect('/')
 
 def PARAMETRO_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         parametro = PARAMETRO.objects.get(id=pk)
         if request.method == 'POST':
@@ -270,6 +332,9 @@ def PARAMETRO_UPDATE(request, pk):
         return redirect('/')
 
 def ROL_LISTALL(request):
+    if not has_auth(request.user, 'VER_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = ROL.objects.all()
         ctx = {
@@ -282,6 +347,9 @@ def ROL_LISTALL(request):
         return redirect('/')
 
 def ROL_ADDONE(request):
+    if not has_auth(request.user, 'ADD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method =='POST':
             form = formROL(request.POST)
@@ -301,6 +369,9 @@ def ROL_ADDONE(request):
         return redirect('/')
 
 def ROL_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         rol = ROL.objects.get(id=pk)
         if request.method == 'POST':
@@ -321,6 +392,9 @@ def ROL_UPDATE(request, pk):
         return redirect('/')
 
 def CATEGORIA_PROYECTO_LISTALL(request):
+    if not has_auth(request.user, 'VER_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = CATEGORIA_PROYECTO.objects.all()
         ctx = {
@@ -333,6 +407,9 @@ def CATEGORIA_PROYECTO_LISTALL(request):
         return redirect('/')
 
 def CATEGORIA_PROYECTO_ADDONE(request):
+    if not has_auth(request.user, 'ADD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method =='POST':
             form = formCATEGORIA_PROYECTO(request.POST)
@@ -352,6 +429,9 @@ def CATEGORIA_PROYECTO_ADDONE(request):
         return redirect('/')
 
 def CATEGORIA_PROYECTO_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         categoria_proyecto = CATEGORIA_PROYECTO.objects.get(id=pk)
         if request.method == 'POST':
@@ -372,6 +452,9 @@ def CATEGORIA_PROYECTO_UPDATE(request, pk):
         return redirect('/')
 
 def CATEGORIA_CLIENTE_LISTALL(request):
+    if not has_auth(request.user, 'VER_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = CATEGORIA_CLIENTE.objects.all()
         ctx = {
@@ -384,6 +467,9 @@ def CATEGORIA_CLIENTE_LISTALL(request):
         return redirect('/')
 
 def CATEGORIA_CLIENTE_ADDONE(request):
+    if not has_auth(request.user, 'ADD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formCATEGORIA_CLIENTE(request.POST)
@@ -403,6 +489,9 @@ def CATEGORIA_CLIENTE_ADDONE(request):
         return redirect('/')
 
 def CATEGORIA_CLIENTE_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         categoria_cliente = CATEGORIA_CLIENTE.objects.get(id=pk)
         if request.method == 'POST':
@@ -423,6 +512,9 @@ def CATEGORIA_CLIENTE_UPDATE(request, pk):
         return redirect('/')
 
 def TIPO_PROYECTO_LISTALL(request):
+    if not has_auth(request.user, 'VER_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = TIPO_PROYECTO.objects.all()
         ctx = {
@@ -435,6 +527,9 @@ def TIPO_PROYECTO_LISTALL(request):
         return redirect('/')
 
 def TIPO_PROYECTO_ADDONE(request):
+    if not has_auth(request.user, 'ADD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formTIPO_PROYECTO(request.POST)
@@ -454,6 +549,9 @@ def TIPO_PROYECTO_ADDONE(request):
         return redirect('/')
 
 def TIPO_PROYECTO_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tipo_proyecto = TIPO_PROYECTO.objects.get(id=pk)
         if request.method == 'POST':
@@ -474,6 +572,9 @@ def TIPO_PROYECTO_UPDATE(request, pk):
         return redirect('/')
 
 def PERMISO_LISTALL(request):
+    if not has_auth(request.user, 'VER_AUTORIZACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = PERMISO.objects.all()
         ctx = {
@@ -486,6 +587,9 @@ def PERMISO_LISTALL(request):
         return redirect('/')
 
 def PERMISO_ADDONE(request):
+    if not has_auth(request.user, 'ADD_AUTORIZACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formPERMISO(request.POST)
@@ -505,13 +609,16 @@ def PERMISO_ADDONE(request):
         return redirect('/')
 
 def PERMISO_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_AUTORIZACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         permiso = PERMISO.objects.get(id=pk)
         if request.method == 'POST':
             form = formPERMISO(request.POST, instance=permiso)
             if form.is_valid():
                 form.save()
-                crear_log(request.user, 'Actualizar Permiso', f'Se actualizó el permiso: {form.instance.PR_CNOMBRE}')
+                crear_log(request.user, 'Actualizar Permiso', f'Se actualizó el permiso: {form.instance.PE_CNOMBRE}')
                 messages.success(request, 'Permiso actualizado correctamente')
                 return redirect('/permiso_listall/')
         form = formPERMISO(instance=permiso)
@@ -525,6 +632,9 @@ def PERMISO_UPDATE(request, pk):
         return redirect('/')
 
 def PERMISO_ROL_LISTALL(request):
+    if not has_auth(request.user, 'VER_AUTORIZACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = PERMISO_ROL.objects.all()
         ctx = {
@@ -537,6 +647,9 @@ def PERMISO_ROL_LISTALL(request):
         return redirect('/')
 
 def PERMISO_ROL_ADDONE(request):
+    if not has_auth(request.user, 'ADD_AUTORIZACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formPERMISO_ROL(request.POST)
@@ -556,6 +669,9 @@ def PERMISO_ROL_ADDONE(request):
         return redirect('/')
 
 def PERMISO_ROL_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_AUTORIZACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         permiso_rol = PERMISO_ROL.objects.get(id=pk)
         if request.method == 'POST':
@@ -576,6 +692,9 @@ def PERMISO_ROL_UPDATE(request, pk):
         return redirect('/')
 
 def USUARIO_ROL_LISTALL(request):
+    if not has_auth(request.user, 'VER_AUTORIZACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = USUARIO_ROL.objects.all()
         ctx = {
@@ -588,6 +707,9 @@ def USUARIO_ROL_LISTALL(request):
         return redirect('/')
 
 def USUARIO_ROL_ADDONE(request):
+    if not has_auth(request.user, 'ADD_AUTORIZACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formUSUARIO_ROL(request.POST)
@@ -607,6 +729,9 @@ def USUARIO_ROL_ADDONE(request):
         return redirect('/')
 
 def USUARIO_ROL_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_AUTORIZACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         usuario_rol = USUARIO_ROL.objects.get(id=pk)
         if request.method == 'POST':
@@ -627,6 +752,9 @@ def USUARIO_ROL_UPDATE(request, pk):
         return redirect('/')
 
 def CLIENTE_LISTALL(request):
+    if not has_auth(request.user, 'VER_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = CLIENTE.objects.all()
         ctx = {
@@ -639,6 +767,9 @@ def CLIENTE_LISTALL(request):
         return redirect('/')
 
 def CLIENTE_ADDONE(request):
+    if not has_auth(request.user, 'ADD_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formCLIENTE(request.POST)
@@ -658,6 +789,9 @@ def CLIENTE_ADDONE(request):
         return redirect('/')
 
 def CLIENTE_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         cliente = CLIENTE.objects.get(id=pk)
         if request.method == 'POST':
@@ -678,6 +812,9 @@ def CLIENTE_UPDATE(request, pk):
         return redirect('/')
 
 def CONTACTO_CLIENTE_LISTALL(request):
+    if not has_auth(request.user, 'VER_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = CONTACTO_CLIENTE.objects.all()
         ctx = {
@@ -690,6 +827,9 @@ def CONTACTO_CLIENTE_LISTALL(request):
         return redirect('/')
 
 def CONTACTO_CLIENTE_ADDONE(request):
+    if not has_auth(request.user, 'ADD_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formCONTACTO_CLIENTE(request.POST)
@@ -709,6 +849,9 @@ def CONTACTO_CLIENTE_ADDONE(request):
         return redirect('/')
 
 def CONTACTO_CLIENTE_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         contacto_cliente = CONTACTO_CLIENTE.objects.get(id=pk)
         if request.method == 'POST':
@@ -729,6 +872,9 @@ def CONTACTO_CLIENTE_UPDATE(request, pk):
         return redirect('/')
 
 def DIRECCION_CLIENTE_LISTALL(request):
+    if not has_auth(request.user, 'VER_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = DIRECCION_CLIENTE.objects.all()
         ctx = {
@@ -741,6 +887,9 @@ def DIRECCION_CLIENTE_LISTALL(request):
         return redirect('/')
 
 def DIRECCION_CLIENTE_ADDONE(request):
+    if not has_auth(request.user, 'ADD_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formDIRECCION_CLIENTE(request.POST)
@@ -760,6 +909,9 @@ def DIRECCION_CLIENTE_ADDONE(request):
         return redirect('/')
 
 def DIRECCION_CLIENTE_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         direccion_cliente = DIRECCION_CLIENTE.objects.get(id=pk)
         if request.method == 'POST':
@@ -780,6 +932,9 @@ def DIRECCION_CLIENTE_UPDATE(request, pk):
         return redirect('/')
 
 def PRODUCTO_LISTALL(request):
+    if not has_auth(request.user, 'VER_PRODUCTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = PRODUCTO.objects.all()
         ctx = {
@@ -792,6 +947,9 @@ def PRODUCTO_LISTALL(request):
         return redirect('/')
 
 def PRODUCTO_ADDONE(request):
+    if not has_auth(request.user, 'ADD_PRODUCTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formPRODUCTO(request.POST)
@@ -811,6 +969,9 @@ def PRODUCTO_ADDONE(request):
         return redirect('/')
 
 def PRODUCTO_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_PRODUCTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         producto = PRODUCTO.objects.get(id=pk)
         if request.method == 'POST':
@@ -831,6 +992,9 @@ def PRODUCTO_UPDATE(request, pk):
         return redirect('/')
 
 def EMPLEADO_LISTALL(request):
+    if not has_auth(request.user, 'VER_PERSONAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = EMPLEADO.objects.all()
         ctx = {
@@ -843,6 +1007,9 @@ def EMPLEADO_LISTALL(request):
         return redirect('/')
 
 def EMPLEADO_ADDONE(request):
+    if not has_auth(request.user, 'ADD_PERSONAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formEMPLEADO(request.POST)
@@ -862,6 +1029,9 @@ def EMPLEADO_ADDONE(request):
         return redirect('/')
 
 def EMPLEADO_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_PERSONAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         empleado = EMPLEADO.objects.get(id=pk)
         if request.method == 'POST':
@@ -882,6 +1052,9 @@ def EMPLEADO_UPDATE(request, pk):
         return redirect('/')
 
 def CONTRATISTA_LISTALL(request):
+    if not has_auth(request.user, 'VER_PERSONAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = CONTRATISTA.objects.all()
         ctx = {
@@ -894,6 +1067,9 @@ def CONTRATISTA_LISTALL(request):
         return redirect('/')
 
 def CONTRATISTA_ADDONE(request):
+    if not has_auth(request.user, 'ADD_PERSONAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formCONTRATISTA(request.POST)
@@ -913,6 +1089,9 @@ def CONTRATISTA_ADDONE(request):
         return redirect('/')
 
 def CONTRATISTA_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_PERSONAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         contratista = CONTRATISTA.objects.get(id=pk)
         if request.method == 'POST':
@@ -933,6 +1112,9 @@ def CONTRATISTA_UPDATE(request, pk):
         return redirect('/')
 
 def EMPLEADO_EXTERNO_LISTALL(request):
+    if not has_auth(request.user, 'VER_PERSONAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = EMPLEADO_CONTRATISTA.objects.all()
         ctx = {
@@ -945,6 +1127,9 @@ def EMPLEADO_EXTERNO_LISTALL(request):
         return redirect('/')
 
 def EMPLEADO_EXTERNO_ADDONE(request):
+    if not has_auth(request.user, 'ADD_PERSONAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formEMPLEADO_CONTRATISTA(request.POST)
@@ -964,6 +1149,9 @@ def EMPLEADO_EXTERNO_ADDONE(request):
         return redirect('/')
 
 def EMPLEADO_EXTERNO_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_PERSONAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         empleado_externo = EMPLEADO_CONTRATISTA.objects.get(id=pk)
         if request.method == 'POST':
@@ -994,6 +1182,9 @@ def EMPLEADO_EXTERNO_UPDATE(request, pk):
         return redirect('/')
 
 def ETAPA_LISTALL(request):
+    if not has_auth(request.user, 'VER_PROYECTOS_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = ETAPA.objects.all()
         ctx = {
@@ -1006,6 +1197,9 @@ def ETAPA_LISTALL(request):
         return redirect('/')
 
 def ETAPA_ADDONE(request):
+    if not has_auth(request.user, 'ADD_PROYECTOS_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formETAPA(request.POST)
@@ -1025,6 +1219,9 @@ def ETAPA_ADDONE(request):
         return redirect('/')
 
 def ETAPA_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_PROYECTOS_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         etapa = ETAPA.objects.get(id=pk)
         if request.method == 'POST':
@@ -1045,6 +1242,9 @@ def ETAPA_UPDATE(request, pk):
         return redirect('/')
 
 def PROYECTO_CLIENTE_LISTALL(request):
+    if not has_auth(request.user, 'VER_PROYECTOS_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = PROYECTO_CLIENTE.objects.all()
         ctx = {
@@ -1057,6 +1257,9 @@ def PROYECTO_CLIENTE_LISTALL(request):
         return redirect('/')
 
 def PROYECTO_CLIENTE_ADDONE(request):
+    if not has_auth(request.user, 'ADD_PROYECTOS_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formPROYECTO_CLIENTE(request.POST)
@@ -1078,6 +1281,9 @@ def PROYECTO_CLIENTE_ADDONE(request):
         return redirect('/')
 
 def PROYECTO_CLIENTE_UPDATE(request, pk, page):
+    if not has_auth(request.user, 'UPD_PROYECTOS_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         proyecto = PROYECTO_CLIENTE.objects.get(id=pk)
         if request.method == 'POST':
@@ -1108,6 +1314,9 @@ def PROYECTO_CLIENTE_UPDATE(request, pk, page):
         return redirect('/')
 
 def PROYECTO_CLIENTE_LISTONE(request, pk):
+    if not has_auth(request.user, 'VER_PROYECTOS_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         proyecto = PROYECTO_CLIENTE.objects.get(id=pk)
         tareas_general = TAREA_GENERAL.objects.filter(TG_PROYECTO_CLIENTE=proyecto)
@@ -1259,6 +1468,9 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
 # ----------TAREA GENERAL--------------
 
 def TAREA_GENERAL_LISTALL(request):
+    if not has_auth(request.user, 'VER_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tareas_generales = TAREA_GENERAL.objects.all()
         ctx = {
@@ -1271,6 +1483,9 @@ def TAREA_GENERAL_LISTALL(request):
         return redirect('/')
 
 def TAREA_GENERAL_ADDONE(request, page):
+    if not has_auth(request.user, 'ADD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         form = formTAREA_GENERAL()
         form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_GENERAL()
@@ -1355,6 +1570,9 @@ def TAREA_GENERAL_ADDONE(request, page):
         return redirect('/')
 
 def TAREA_GENERAL_UPDATE(request, pk, page):
+    if not has_auth(request.user, 'UPD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tarea = TAREA_GENERAL.objects.get(id=pk)
         if request.method == 'POST':
@@ -1389,6 +1607,9 @@ def TAREA_GENERAL_UPDATE(request, pk, page):
         return redirect('/')
 
 def TAREA_GENERAL_UPDATE_ASIGNACIONES(request, pk, page):
+    if not has_auth(request.user, 'UPD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tarea = TAREA_GENERAL.objects.get(id=pk)
         form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_GENERAL()
@@ -1491,6 +1712,9 @@ def TAREA_GENERAL_UPDATE_ASIGNACIONES(request, pk, page):
         return redirect('/')
 
 def TAREA_GENERAL_LISTONE(request, pk, page):
+    if not has_auth(request.user, 'VER_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tarea = TAREA_GENERAL.objects.get(id=pk)
         empleados_asignados = ASIGNACION_EMPLEADO_TAREA_GENERAL.objects.filter(AE_TAREA=tarea)
@@ -1511,6 +1735,9 @@ def TAREA_GENERAL_LISTONE(request, pk, page):
         return redirect('/')
 
 def TAREA_GENERAL_DEPENDENCIA_ADDONE(request, pk):
+    if not has_auth(request.user, 'ADD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tarea = TAREA_GENERAL.objects.get(id=pk)
         proyecto_actual = tarea.TG_PROYECTO_CLIENTE
@@ -1545,6 +1772,9 @@ def TAREA_GENERAL_DEPENDENCIA_ADDONE(request, pk):
 # ----------TAREA INGENIERIA--------------
 
 def TAREA_INGENIERIA_LISTALL(request):
+    if not has_auth(request.user, 'VER_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tareas_ingenieria = TAREA_INGENIERIA.objects.all()
         ctx = {
@@ -1557,6 +1787,9 @@ def TAREA_INGENIERIA_LISTALL(request):
         return redirect('/')
 
 def TAREA_INGENIERIA_ADDONE(request, page):
+    if not has_auth(request.user, 'ADD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         form = formTAREA_INGENIERIA()
         form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_INGENIERIA()
@@ -1643,6 +1876,9 @@ def TAREA_INGENIERIA_ADDONE(request, page):
         return redirect('/')
 
 def TAREA_INGENIERIA_UPDATE(request, pk, page):
+    if not has_auth(request.user, 'UPD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tarea = TAREA_INGENIERIA.objects.get(id=pk)
         if request.method == 'POST':
@@ -1675,6 +1911,9 @@ def TAREA_INGENIERIA_UPDATE(request, pk, page):
         return redirect('/')
 
 def TAREA_INGENIERIA_UPDATE_ASIGNACIONES(request, pk, page):
+    if not has_auth(request.user, 'UPD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tarea = TAREA_INGENIERIA.objects.get(id=pk)
         form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_INGENIERIA()
@@ -1777,6 +2016,9 @@ def TAREA_INGENIERIA_UPDATE_ASIGNACIONES(request, pk, page):
         return redirect('/')
 
 def TAREA_INGENIERIA_LISTONE(request, pk, page):
+    if not has_auth(request.user, 'VER_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tarea = TAREA_INGENIERIA.objects.get(id=pk)
         empleados_asignados = ASIGNACION_EMPLEADO_TAREA_INGENIERIA.objects.filter(AE_TAREA=tarea)
@@ -1797,6 +2039,9 @@ def TAREA_INGENIERIA_LISTONE(request, pk, page):
         return redirect('/')
 
 def TAREA_INGENIERIA_DEPENDENCIA_ADDONE(request, pk):
+    if not has_auth(request.user, 'ADD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tarea = TAREA_INGENIERIA.objects.get(id=pk)
         proyecto_actual = tarea.TI_PROYECTO_CLIENTE
@@ -1831,6 +2076,9 @@ def TAREA_INGENIERIA_DEPENDENCIA_ADDONE(request, pk):
 # ----------TAREA FINANCIERA--------------
 
 def TAREA_FINANCIERA_LISTALL(request):
+    if not has_auth(request.user, 'VER_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tareas_financiera = TAREA_FINANCIERA.objects.all()
         ctx = {
@@ -1843,6 +2091,9 @@ def TAREA_FINANCIERA_LISTALL(request):
         return redirect('/')
 
 def TAREA_FINANCIERA_ADDONE(request, page):
+    if not has_auth(request.user, 'ADD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         form = formTAREA_FINANCIERA()
         form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_FINANCIERA()
@@ -1938,6 +2189,9 @@ def TAREA_FINANCIERA_ADDONE(request, page):
         return redirect('/')
 
 def TAREA_FINANCIERA_UPDATE(request, pk, page):
+    if not has_auth(request.user, 'UPD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tarea = TAREA_FINANCIERA.objects.get(id=pk)
         if request.method == 'POST':
@@ -1985,6 +2239,9 @@ def TAREA_FINANCIERA_UPDATE(request, pk, page):
         return redirect('/')
 
 def TAREA_FINANCIERA_UPDATE_ASIGNACIONES(request, pk, page):
+    if not has_auth(request.user, 'UPD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tarea = TAREA_FINANCIERA.objects.get(id=pk)
         form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_FINANCIERA()
@@ -2086,6 +2343,9 @@ def TAREA_FINANCIERA_UPDATE_ASIGNACIONES(request, pk, page):
         return redirect('/')
 
 def TAREA_FINANCIERA_LISTONE(request, pk, page):
+    if not has_auth(request.user, 'VER_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tarea = TAREA_FINANCIERA.objects.get(id=pk)
         empleados_asignados = ASIGNACION_EMPLEADO_TAREA_FINANCIERA.objects.filter(AE_TAREA=tarea)
@@ -2106,6 +2366,9 @@ def TAREA_FINANCIERA_LISTONE(request, pk, page):
         return redirect('/')
 
 def TAREA_FINANCIERA_DEPENDENCIA_ADDONE(request, pk):
+    if not has_auth(request.user, 'ADD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tarea = TAREA_FINANCIERA.objects.get(id=pk)
         proyecto_actual = tarea.TF_PROYECTO_CLIENTE
@@ -2139,6 +2402,9 @@ def TAREA_FINANCIERA_DEPENDENCIA_ADDONE(request, pk):
 
 # ----------TAREA UPDATE DATA--------------
 def tarea_update_data(request, tipo_tarea, pk):
+    if not has_auth(request.user, 'UPD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     if tipo_tarea == 'general':
         Tarea = TAREA_GENERAL
         AsignacionEmpleado = ASIGNACION_EMPLEADO_TAREA_GENERAL
@@ -2246,6 +2512,9 @@ def tarea_update_data(request, tipo_tarea, pk):
 #--------------------------------------
 
 def ACTA_REUNION_LISTALL(request):
+    if not has_auth(request.user, 'VER_PROYECTOS_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = ACTA_REUNION.objects.all()
         ctx = {
@@ -2258,6 +2527,9 @@ def ACTA_REUNION_LISTALL(request):
         return redirect('/')
 
 def ACTA_REUNION_ADDONE(request):
+    if not has_auth(request.user, 'ADD_PROYECTOS_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formACTA_REUNION(request.POST)
@@ -2277,6 +2549,9 @@ def ACTA_REUNION_ADDONE(request):
         return redirect('/')
 
 def ACTA_REUNION_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_PROYECTOS_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         acta_reunion = ACTA_REUNION.objects.get(id=pk)
         if request.method == 'POST':
@@ -2297,6 +2572,9 @@ def ACTA_REUNION_UPDATE(request, pk):
         return redirect('/')
 
 def COTIZACION_LISTALL(request):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = COTIZACION.objects.all()
         ctx = {
@@ -2309,6 +2587,9 @@ def COTIZACION_LISTALL(request):
         return redirect('/')
 
 def COTIZACION_ADDONE(request):
+    if not has_auth(request.user, 'ADD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formCOTIZACION(request.POST)
@@ -2330,6 +2611,9 @@ def COTIZACION_ADDONE(request):
         return redirect('/')
 
 def COTIZACION_ADD_LINE(request):
+    if not has_auth(request.user, 'ADD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
 
@@ -2392,6 +2676,9 @@ def COTIZACION_ADD_LINE(request):
         return JsonResponse({'error': str(errMsg)}, status=400)
 
 def COTIZACION_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         cotizacion = COTIZACION.objects.get(id=pk)
         if request.method == 'POST':
@@ -2414,6 +2701,9 @@ def COTIZACION_UPDATE(request, pk):
         return redirect('/')
 
 def COTIZACION_LISTONE(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         cotizacion = COTIZACION.objects.get(id=pk)
         product_list = list(PRODUCTO.objects.filter(PR_BACTIVO=True).values_list('id', 'PR_CNOMBRE'))
@@ -2429,6 +2719,9 @@ def COTIZACION_LISTONE(request, pk):
         return redirect('/cotizacion_listall/')
     
 def COTIZACION_GET_DATA(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         cotizacion = COTIZACION.objects.get(id=pk)
         data = {
@@ -2454,9 +2747,10 @@ def COTIZACION_GET_DATA(request, pk):
         print("ERROR:", e)
         return JsonResponse({'error': str(e)}, status=500)
 
-
-
 def COTIZACION_LISTONE_FORMAT(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         cotizacion = COTIZACION.objects.get(id=pk)
         product_list = list(PRODUCTO.objects.filter(PR_BACTIVO=True).values_list('id', 'PR_CNOMBRE'))
@@ -2472,6 +2766,9 @@ def COTIZACION_LISTONE_FORMAT(request, pk):
         return redirect('/cotizacion_listall/')
 
 def COTIZACION_GET_LINE(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         print("id linea:", pk)
         detalle = COTIZACION_DETALLE.objects.get(id=pk)
@@ -2491,6 +2788,9 @@ def COTIZACION_GET_LINE(request, pk):
         return JsonResponse({'error': str(e)}, status=500)
 
 def COTIZACION_DELETE_LINE(request, pk):
+    if not has_auth(request.user, 'UPD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         detalle = COTIZACION_DETALLE.objects.get(id=pk)
         cotizacion_id = detalle.CD_COTIZACION.id
@@ -2517,6 +2817,9 @@ def CHECK_CO_NUMERO(request):
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 def ORDEN_VENTA_LISTALL(request):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = ORDEN_VENTA.objects.all()
         ctx = {
@@ -2529,6 +2832,9 @@ def ORDEN_VENTA_LISTALL(request):
         return redirect('/')
 
 def ORDEN_VENTA_ADDONE(request):
+    if not has_auth(request.user, 'ADD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formORDEN_VENTA(request.POST)
@@ -2574,6 +2880,9 @@ def ORDEN_VENTA_ADDONE(request):
         return redirect('/')
     
 def ORDEN_VENTA_ADD_LINE(request):
+    if not has_auth(request.user, 'ADD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
 
@@ -2637,6 +2946,9 @@ def ORDEN_VENTA_ADD_LINE(request):
         return JsonResponse({'error': str(errMsg)}, status=400)
 
 def ORDEN_VENTA_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         orden_venta = ORDEN_VENTA.objects.get(id=pk)
         if request.method == 'POST':
@@ -2659,6 +2971,9 @@ def ORDEN_VENTA_UPDATE(request, pk):
         return redirect('/')
 
 def ORDEN_VENTA_LISTONE(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         orden_venta = ORDEN_VENTA.objects.get(id=pk)
         product_list = list(PRODUCTO.objects.filter(PR_BACTIVO=True).values_list('id', 'PR_CNOMBRE'))
@@ -2674,6 +2989,9 @@ def ORDEN_VENTA_LISTONE(request, pk):
         return redirect('/orden_venta_listall/')
 
 def ORDEN_VENTA_LISTONE_FORMAT(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         orden_venta = ORDEN_VENTA.objects.get(id=pk)
         product_list = list(PRODUCTO.objects.filter(PR_BACTIVO=True).values_list('id', 'PR_CNOMBRE'))
@@ -2689,6 +3007,9 @@ def ORDEN_VENTA_LISTONE_FORMAT(request, pk):
         return redirect('/orden_venta_listall/')
 
 def ORDEN_VENTA_GET_LINE(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         print("id linea:", pk)
         detalle = ORDEN_VENTA_DETALLE.objects.get(id=pk)
@@ -2708,6 +3029,9 @@ def ORDEN_VENTA_GET_LINE(request, pk):
         return JsonResponse({'error': str(e)}, status=500)
 
 def ORDEN_VENTA_DELETE_LINE(request, pk):
+    if not has_auth(request.user, 'UPD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         detalle = ORDEN_VENTA_DETALLE.objects.get(id=pk)
         orden_venta_id = detalle.OVD_ORDEN_VENTA.id
@@ -2953,6 +3277,9 @@ def CHECK_OV_NUMERO(request):
 #------------QUERY MANAGER-------------
 #--------------------------------------
 def QUERY_LISTALL(request):
+    if not has_auth(request.user, 'VER_QUERYS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         queries = QUERY.objects.filter(QR_NHABILITADO = True)
         ctx = {
@@ -2965,6 +3292,9 @@ def QUERY_LISTALL(request):
         return redirect('/')
     
 def QUERY_ADDONE(request):
+    if not has_auth(request.user, 'ADD_QUERYS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formQUERY(request.POST)
@@ -2986,6 +3316,9 @@ def QUERY_ADDONE(request):
         return redirect('/query_listall/')
 
 def QUERY_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_QUERYS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         query = QUERY.objects.get(id = pk)
         if request.method == 'POST':
@@ -3008,6 +3341,9 @@ def QUERY_UPDATE(request, pk):
         return redirect('/query_listall/')
 
 def QUERY_LISTONE(request):
+    if not has_auth(request.user, 'VER_QUERYS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         pass
     except Exception as e:
@@ -3015,6 +3351,9 @@ def QUERY_LISTONE(request):
         return JsonResponse({'valid': False, 'error': str(e)})
     
 def QUERY_RUN(request, pk):
+    if not has_auth(request.user, 'VER_QUERYS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         query = QUERY.objects.get(id = pk)
 
@@ -3109,6 +3448,9 @@ def QUERY_RUN(request, pk):
         return redirect('/query_listall/')
 
 def QUERY_DELETE(request, pk):
+    if not has_auth(request.user, 'UPD_QUERYS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         query = QUERY.objects.get(id = pk)
         query.QR_NHABILITADO = False
