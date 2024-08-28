@@ -1,0 +1,270 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Consultas {% endblock %} 
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}
+
+    <!-- data tables css -->
+    <link rel="stylesheet" href="/static/assets/css/plugins/dataTables.bootstrap4.min.css">
+
+{% endblock stylesheets %}
+
+{% block content %}
+    <style>
+        /* En tu CSS o en un bloque de estilo en el head del HTML */
+        #loading-overlay {
+            display: none;
+            position: fixed;
+            left: 0px;
+            top: 0px;
+            width: 100%;
+            height: 100%;
+            z-index: 9999;
+            opacity: .7;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.7); /* Fondo oscuro */
+            align-items: center;
+        }
+
+        #loading-overlay img{
+            width: 400px;
+            height: 400px;
+        }
+        #loading-indicator {
+            text-align: center;
+        }
+
+        #progress-bar-container {
+            width: 100%;
+            height: 10px;
+            background-color: #ddd;
+            margin-top: 10px;
+        }
+
+        #progress-bar {
+            height: 100%;
+            background-color: #4caf50; /* Color de la barra de carga */
+            width: 0%;
+        }
+
+    </style>	
+
+	<!-- [ chat user list ] start -->
+	<!-- chatbot -->
+	<!-- [ chat user list ] end -->
+
+	<!---->
+
+    <!-- [ Main Content ] start -->
+    <section class="pcoded-main-container">
+        <div class="pcoded-content">
+            <!-- [ breadcrumb ] start -->
+            <div class="page-header">
+                <div class="page-block">
+                    <div class="row align-items-center">
+                        <div class="col-md-12">
+                            <div class="page-header-title">
+                                <h5 class="m-b-10">Lista de queries</h5>
+                            </div>
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="/"><i class="feather icon-home"></i></a></li>
+                                <li class="breadcrumb-item"><a href="/">Gestión de Proyectos</a></li>
+                                <li class="breadcrumb-item"><a href="{% url 'query_listall' %}">Query Manager (límitado a 50000)</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- [ breadcrumb ] end -->
+            <!-- [ Main Content ] start -->
+            <div class="row">
+                <!-- HTML5 Export Buttons table start -->
+                <div class="col-sm-12">
+                    <div class="card">
+                        <div class="d-flex justify-content-between">
+                            <div class="card-header table-card-header">
+                                <h5>Opciones de exportación</h5>
+                            </div>
+                            <div class=" mb-2 mb-md-0" style="margin-right: 50px;margin-top: 20px;">
+                                {% if request.user.is_superuser == 1 or request.user.userb.UX_IS_CONTROL_GESTION == 1 %}
+                                    <a href="{% url 'query_addone' %}" class="btn  btn-primary d-inline-flex align-items-center"><i class="fas fa-user-plus"></i>
+                                        &nbsp&nbsp Nuevo
+                                    </a>
+                                    <a class="btn  btn-primary" href="{% url 'query_update' id_query  %}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+                                            <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                                            <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
+                                        </svg>
+                                        Editar
+                                    </a>
+                                {% endif %}
+                                <a class="btn  btn-primary" href="{% url 'query_run' id_query  %}">
+                                    <i class="fas fa-play"></i>
+                                    Actualizar
+                                </a>
+                                {% if documentos %}
+                                    <button class="btn btn-success" type="button" onclick="btn_descargar_archivos()"><i class="fas fa-download mr-1"></i> Descargar documentos</button>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="dt-responsive table-responsive">
+                                <table id="basic-btn" class="table table-striped table-bordered nowrap" data-page-length='100'>
+                                    <thead>
+                                        <tr>
+                                            {% for col in lcols %}
+                                                <th>{{ col }}</th>
+                                            {% endfor %}
+                                            
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for objeto in listado %}
+                                            <tr>   
+                                            {% for item in objeto %}
+                                                <td>{{ item }}</td>
+                                            {% endfor %}
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+               
+            </div>
+            <!-- [ Main Content ] end -->
+        </div>
+        <!-- IMAGEN DE CARGA -->
+        <div id="loading-overlay">
+            <div class="row">
+                <div id="loading-indicator">
+                    <img src="/static/assets/images/carga_gif.gif" alt="Cargando...">
+                </div>
+                <div id="progress-bar-container">
+                    <div id="progress-bar"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- [ Main Content ] end -->
+
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}
+
+    <!-- datatable Js -->
+    <script src="/static/assets/js/plugins/jquery.dataTables.min.js"></script>
+    <script src="/static/assets/js/plugins/dataTables.bootstrap4.min.js"></script>
+    <script src="/static/assets/js/plugins/buttons.colVis.min.js"></script>
+    <script src="/static/assets/js/plugins/buttons.print.min.js"></script>
+    <script src="/static/assets/js/plugins/pdfmake.min.js"></script>
+    <script src="/static/assets/js/plugins/jszip.min.js"></script>
+    <script src="/static/assets/js/plugins/dataTables.buttons.min.js"></script>
+    <script src="/static/assets/js/plugins/buttons.html5.min.js"></script>
+    <script src="/static/assets/js/plugins/buttons.bootstrap4.min.js"></script>
+    <script src="/static/assets/js/pages/data-export-custom.js"></script>
+
+    <script>
+        function btn_descargar_archivos(){
+            cantidad_documentos_js = {{cantidad_documentos}};
+            Swal.fire({
+                title: 'Atencion',
+                text: `¿La query tiene ${cantidad_documentos_js} documentos, esta seguro de descargar este listado?. El tiempo que tarde este proceso puede variar dependiendo de la cantidad de documentos.` ,
+                type: "input",  
+                closeOnConfirm: false,
+                showCancelButton: true  ,
+                animation: "slide-from-top",
+                icon: 'question'
+            }).then(resultado => {
+                if (resultado.value) {
+
+// Muestra el indicador de carga
+document.getElementById('loading-overlay').style.display = 'flex';
+
+// Obtén el listado de documentos del contexto de Django
+var documentLinks = {{ documentos|safe }};
+// Realiza una solicitud HTTP POST utilizando JavaScript
+fetch('/download_documents', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken'),
+    },
+    body: JSON.stringify({ link_documentos: documentLinks }),
+})
+.then(response => {
+    // Verifica si la respuesta está ok antes de intentar leerla
+    if (!response.ok) {
+        throw new Error('La solicitud no fue exitosa: ' + response.status);
+    }
+
+    // Obtén la longitud total del contenido
+    const totalBytes = parseInt(response.headers.get('content-length'), 10);
+    let loadedBytes = 0;
+
+    // Cambios aquí: Utiliza arrayBuffer para obtener los datos binarios
+    return response.arrayBuffer().then(buffer => {
+        // Convierte el buffer a un objeto Uint8Array
+        const dataArray = new Uint8Array(buffer);
+
+        // Realiza las acciones de descarga
+        const blob = new Blob([dataArray]);
+        const blobUrl = window.URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = 'documents.zip';
+
+        // Cambios aquí: Agrega un oyente de eventos progress para actualizar la barra de carga
+        function updateProgress(chunk) {
+            loadedBytes += chunk.byteLength;
+            const percentage = (loadedBytes / totalBytes) * 100;
+            // Cambios aquí: Actualiza el estilo de la barra de carga
+            document.getElementById('progress-bar').style.width = percentage + '%';
+        }
+
+        // Realiza las acciones de descarga
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(blobUrl);
+
+        // Oculta el indicador de carga después de que la operación se haya completado
+        document.getElementById('loading-overlay').style.display = 'none';
+
+        return dataArray;
+    });
+})
+.catch(error => {
+    console.error('Error al realizar la solicitud:', error);
+
+    // Oculta el indicador de carga en caso de error
+    document.getElementById('loading-overlay').style.display = 'none';
+});
+
+
+
+
+
+
+                }
+            })
+        }
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            
+            if (parts.length === 2) {
+                return parts.pop().split(';').shift();
+            }
+            
+            return null;
+        }
+
+    </script>
+{% endblock javascripts %}

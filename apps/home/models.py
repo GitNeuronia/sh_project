@@ -773,6 +773,12 @@ class TAREA_GENERAL(models.Model):
     def __str__(self):
         return f"Tarea General {self.TG_CCODIGO} - {self.TG_CNOMBRE} ({self.TG_ETAPA.ET_CNOMBRE})"
 
+    def get_progreso(self):
+        return self.TG_NPROGRESO
+    
+    def get_horas(self):
+        return self.TG_NDURACION_REAL
+
     class Meta:
         db_table = 'TAREA_GENERAL'
         verbose_name = 'Tarea General'
@@ -801,6 +807,12 @@ class TAREA_INGENIERIA(models.Model):
     TI_PROYECTO_CLIENTE = models.ForeignKey(PROYECTO_CLIENTE, on_delete=models.CASCADE, null=True, blank=True, related_name='tareas_ingenieria_proyecto', verbose_name='Proyecto de Cliente')
     def __str__(self):
         return f"Tarea de Ingeniería {self.TI_CCODIGO} - {self.TI_CNOMBRE} ({self.TI_ETAPA.ET_CNOMBRE})"
+
+    def get_progreso(self):
+        return self.TI_NPROGRESO
+    
+    def get_horas(self):
+        return self.TI_NDURACION_REAL
 
     class Meta:
         db_table = 'TAREA_INGENIERIA'
@@ -831,6 +843,12 @@ class TAREA_FINANCIERA(models.Model):
     TF_PROYECTO_CLIENTE = models.ForeignKey(PROYECTO_CLIENTE, on_delete=models.CASCADE, null=True, blank=True, related_name='tareas_financieras_proyecto', verbose_name='Proyecto de Cliente')
     def __str__(self):
         return f"Tarea Financiera {self.TF_CCODIGO} - {self.TF_CNOMBRE} ({self.TF_ETAPA.ET_CNOMBRE})"
+
+    def get_progreso(self):
+        return self.TF_NPROGRESO
+    
+    def get_horas(self):
+        return self.TF_NDURACION_REAL
 
     class Meta:
         db_table = 'TAREA_FINANCIERA'
@@ -917,6 +935,9 @@ class ASIGNACION_EMPLEADO_TAREA_INGENIERIA(models.Model):
         ('CANCELADO', 'Cancelado')
     ], default='ASIGNADO', verbose_name='Estado')
     AE_CUSUARIO_CREADOR = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='asignaciones_ingenieria_creadas', verbose_name='Usuario creador')
+    AE_COSTO_REAL = models.DecimalField(max_digits=20, decimal_places=2, verbose_name='Costo Real', default=0)
+    AE_HORAS_REALES = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Horas Reales', default=0)
+    AE_COSTO_TOTAL = models.DecimalField(max_digits=20, decimal_places=2, verbose_name='Costo Total', default=0)
 
     def __str__(self):
         return f"Asignación: {self.AE_EMPLEADO} - Tarea: {self.AE_TAREA}"
@@ -938,6 +959,9 @@ class ASIGNACION_EMPLEADO_TAREA_FINANCIERA(models.Model):
         ('CANCELADO', 'Cancelado')
     ], default='ASIGNADO', verbose_name='Estado')
     AE_CUSUARIO_CREADOR = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='asignaciones_financiera_creadas', verbose_name='Usuario creador')
+    AE_COSTO_REAL = models.DecimalField(max_digits=20, decimal_places=2, verbose_name='Costo Real', default=0)
+    AE_HORAS_REALES = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Horas Reales', default=0)
+    AE_COSTO_TOTAL = models.DecimalField(max_digits=20, decimal_places=2, verbose_name='Costo Total', default=0)
 
     def __str__(self):
         return f"Asignación: {self.AE_EMPLEADO} - Tarea: {self.AE_TAREA}"
@@ -959,7 +983,10 @@ class ASIGNACION_EMPLEADO_TAREA_GENERAL(models.Model):
         ('CANCELADO', 'Cancelado')
     ], default='ASIGNADO', verbose_name='Estado')
     AE_CUSUARIO_CREADOR = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='asignaciones_general_creadas', verbose_name='Usuario creador')
-
+    AE_COSTO_REAL = models.DecimalField(max_digits=20, decimal_places=2, verbose_name='Costo Real', default=0)
+    AE_HORAS_REALES = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Horas Reales', default=0)
+    AE_COSTO_TOTAL = models.DecimalField(max_digits=20, decimal_places=2, verbose_name='Costo Total', default=0)
+    
     def __str__(self):
         return f"Asignación: {self.AE_EMPLEADO} - Tarea: {self.AE_TAREA}"
 
@@ -980,6 +1007,9 @@ class ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA(models.Model):
         ('CANCELADO', 'Cancelado')
     ], default='ASIGNADO', verbose_name='Estado')
     AEC_CUSUARIO_CREADOR = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='asignaciones_contratista_ingenieria_creadas', verbose_name='Usuario creador')
+    AEC_COSTO_REAL = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Costo Real', default=0)
+    AEC_HORAS_REALES = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Horas Reales', default=0)
+    AEC_COSTO_TOTAL = models.DecimalField(max_digits=20, decimal_places=2, verbose_name='Costo Total', default=0)
 
     def __str__(self):
         return f"Asignación: {self.AEC_EMPLEADO} - Tarea: {self.AEC_TAREA}"
@@ -1001,6 +1031,9 @@ class ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_FINANCIERA(models.Model):
         ('CANCELADO', 'Cancelado')
     ], default='ASIGNADO', verbose_name='Estado')
     AEC_CUSUARIO_CREADOR = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='asignaciones_contratista_financiera_creadas', verbose_name='Usuario creador')
+    AEC_COSTO_REAL = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Costo Real', default=0)
+    AEC_HORAS_REALES = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Horas Reales', default=0)    
+    AEC_COSTO_TOTAL = models.DecimalField(max_digits=20, decimal_places=2, verbose_name='Costo Total', default=0)
 
     def __str__(self):
         return f"Asignación: {self.AEC_EMPLEADO} - Tarea: {self.AEC_TAREA}"
@@ -1022,6 +1055,9 @@ class ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL(models.Model):
         ('CANCELADO', 'Cancelado')
     ], default='ASIGNADO', verbose_name='Estado')
     AEC_CUSUARIO_CREADOR = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='asignaciones_contratista_general_creadas', verbose_name='Usuario creador')
+    AEC_COSTO_REAL = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Costo Real', default=0)
+    AEC_HORAS_REALES = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Horas Reales', default=0)
+    AEC_COSTO_TOTAL = models.DecimalField(max_digits=20, decimal_places=2, verbose_name='Costo Total', default=0)
 
     def __str__(self):
         return f"Asignación: {self.AEC_EMPLEADO} - Tarea: {self.AEC_TAREA}"
@@ -1036,9 +1072,11 @@ class ASIGNACION_RECURSO_TAREA_GENERAL(models.Model):
     ART_PRODUCTO = models.ForeignKey(PRODUCTO, on_delete=models.CASCADE, related_name='asignaciones_tarea_general', verbose_name='Producto')
     ART_CANTIDAD = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Cantidad')
     ART_COSTO_UNITARIO = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Costo Unitario')
-    ART_COSTO_TOTAL = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='Costo Total')
+    ART_COSTO_TOTAL = models.DecimalField(max_digits=20, decimal_places=2, verbose_name='Costo Total', default=0)
     ART_FFECHA_ASIGNACION = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de Asignación')
     ART_CUSUARIO_CREADOR = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='asignaciones_recurso_general_creadas', verbose_name='Usuario Creador')
+    ART_COSTO_REAL = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Costo Real', default=0)
+    ART_HORAS_REALES = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Horas Reales', default=0)
 
     def save(self, *args, **kwargs):
         self.ART_COSTO_TOTAL = self.ART_CANTIDAD * self.ART_COSTO_UNITARIO
@@ -1057,9 +1095,11 @@ class ASIGNACION_RECURSO_TAREA_INGENIERIA(models.Model):
     ART_PRODUCTO = models.ForeignKey(PRODUCTO, on_delete=models.CASCADE, related_name='asignaciones_tarea_ingenieria', verbose_name='Producto')
     ART_CANTIDAD = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Cantidad')
     ART_COSTO_UNITARIO = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Costo Unitario')
-    ART_COSTO_TOTAL = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='Costo Total')
+    ART_COSTO_TOTAL = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='Costo Total', default=0)
     ART_FFECHA_ASIGNACION = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de Asignación')
     ART_CUSUARIO_CREADOR = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='asignaciones_recurso_ingenieria_creadas', verbose_name='Usuario Creador')
+    ART_COSTO_REAL = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Costo Real', default=0)
+    ART_HORAS_REALES = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Horas Reales', default=0)
 
     def save(self, *args, **kwargs):
         self.ART_COSTO_TOTAL = self.ART_CANTIDAD * self.ART_COSTO_UNITARIO
@@ -1078,9 +1118,11 @@ class ASIGNACION_RECURSO_TAREA_FINANCIERA(models.Model):
     ART_PRODUCTO = models.ForeignKey(PRODUCTO, on_delete=models.CASCADE, related_name='asignaciones_tarea_financiera', verbose_name='Producto')
     ART_CANTIDAD = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Cantidad')
     ART_COSTO_UNITARIO = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Costo Unitario')
-    ART_COSTO_TOTAL = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='Costo Total')
+    ART_COSTO_TOTAL = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='Costo Total', default=0)
     ART_FFECHA_ASIGNACION = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de Asignación')
     ART_CUSUARIO_CREADOR = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='asignaciones_recurso_financiera_creadas', verbose_name='Usuario Creador')
+    ART_COSTO_REAL = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Costo Real', default=0)
+    ART_HORAS_REALES = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Horas Reales', default=0)
 
     def save(self, *args, **kwargs):
         self.ART_COSTO_TOTAL = self.ART_CANTIDAD * self.ART_COSTO_UNITARIO
@@ -1227,4 +1269,15 @@ class TAREA_INGENIERIA_DEPENDENCIA(models.Model):
         verbose_name = 'Dependencia de Tarea de Ingeniería'
         verbose_name_plural = 'Dependencias de Tareas de Ingeniería'
 
+class QUERY(models.Model):
+    USER_CREATOR_ID    = models.ForeignKey(User, verbose_name='id usuario creador', on_delete=models.PROTECT, related_name='query_user_creator', null=True, blank=True)
+    USER_UPD_ID    = models.ForeignKey(User, verbose_name='id usuario actualizador', on_delete=models.PROTECT, related_name='query_user_upd', null=True, blank=True)    
+    QR_CNOMBRE = models.CharField("Nombre",max_length=64)
+    QR_CDESCRIPCION = models.CharField("Descripción",max_length=1024)
+    QR_FFECHACREACION = models.DateTimeField(("Fecha Creacion"), auto_now_add=True)
+    QR_NHABILITADO = models.BooleanField(default=True)
+    QR_CLABEL_FIELDS = models.CharField("Etiquetas",max_length=1024,blank=True,null=True)
+    QR_CQUERY = models.TextField("Contenido")
 
+    class Meta:
+        db_table = "QUERY"

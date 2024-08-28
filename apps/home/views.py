@@ -5,14 +5,16 @@ Copyright (c) 2019 - present AppSeed.us
 
 from decimal import Decimal
 import json
+import re
 from django import template
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
+from django.db import connection
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseRedirect, JsonResponse
 from django.template import loader
 from django.urls import reverse
 from django.db.models import Sum
 from apps.home.models import * 
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from .models import *
@@ -51,8 +53,47 @@ def pages(request):
         html_template = loader.get_template('home/page-500.html')
         return HttpResponse(html_template.render(context, request))
 
+def crear_log(usuario, accion, descripcion):
+    try:
+        SYSTEM_LOG.objects.create(
+            USER_CREATOR_ID=usuario,
+            LG_ACTION=accion,
+            LG_DESCRIPTION=descripcion,
+            LG_TIMESTAMP=datetime.datetime.now()
+        )
+    except Exception as e:
+        print(f"Error al crear el log: {str(e)}")
+
+def has_auth(user, permission_name):
+    try:
+        # Get the user's roles
+        user_roles = USUARIO_ROL.objects.filter(UR_CUSUARIO=user, UR_BACTIVO=True)
+        
+        # Check if the user has the ADMIN role
+        if user_roles.filter(UR_CROL__RO_CNOMBRE='ADMIN').exists():
+            return True
+        
+        # Check if any of the user's roles have the required permission
+        for user_role in user_roles:
+            permission_exists = PERMISO_ROL.objects.filter(
+                PR_CROL=user_role.UR_CROL,
+                PR_CPERMISO__PE_CNOMBRE=permission_name,
+                PR_BACTIVO=True,
+                PR_CPERMISO__PE_BACTIVO=True
+            ).exists()
+            
+            if permission_exists:
+                return True
+        
+        return False
+    except Exception as e:
+        print(f"Error checking authorization: {str(e)}")
+        return False
 
 def REGION_LISTALL(request):
+    if not has_auth(request.user, 'VER_UBICACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = REGION.objects.all()
         ctx = {
@@ -65,13 +106,18 @@ def REGION_LISTALL(request):
         return redirect('/')
 
 def REGION_ADDONE(request):
+    if not has_auth(request.user, 'ADD_UBICACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method =='POST':
             form = formREGION(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Región', f'Se creó la región: {form.instance.RG_CNOMBRE}')
                 messages.success(request, 'Región guardada correctamente')
                 return redirect('/reg_listall/')
+                
         form = formREGION()
         ctx = {
             'form': form
@@ -83,12 +129,16 @@ def REGION_ADDONE(request):
         return redirect('/')
 
 def REGION_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_UBICACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         region = REGION.objects.get(id=pk)
         if request.method == 'POST':
             form = formREGION(request.POST, instance=region)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Región', f'Se actualizó la región: {form.instance.RG_CNOMBRE}')
                 messages.success(request, 'Región actualizada correctamente')
                 return redirect('/reg_listall/')
         form = formREGION(instance=region)
@@ -102,6 +152,9 @@ def REGION_UPDATE(request, pk):
         return redirect('/')
 
 def PROVINCIA_LISTALL(request):
+    if not has_auth(request.user, 'VER_UBICACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = PROVINCIA.objects.all()
         ctx = {
@@ -114,11 +167,15 @@ def PROVINCIA_LISTALL(request):
         return redirect('/')
 
 def PROVINCIA_ADDONE(request):
+    if not has_auth(request.user, 'ADD_UBICACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method =='POST':
             form = formPROVINCIA(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Provincia', f'Se creó la provincia: {form.instance.PV_CNOMBRE}')
                 messages.success(request, 'Provincia guardada correctamente')
                 return redirect('/prov_listall/')
         form = formPROVINCIA()
@@ -132,12 +189,16 @@ def PROVINCIA_ADDONE(request):
         return redirect('/')
 
 def PROVINCIA_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_UBICACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         provincia = PROVINCIA.objects.get(id=pk)
         if request.method == 'POST':
             form = formPROVINCIA(request.POST, instance=provincia)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Provincia', f'Se actualizó la provincia: {form.instance.PV_CNOMBRE}')
                 messages.success(request, 'Provincia actualizada correctamente')
                 return redirect('/prov_listall/')
         form = formPROVINCIA(instance=provincia)
@@ -151,6 +212,9 @@ def PROVINCIA_UPDATE(request, pk):
         return redirect('/')
 
 def COMUNA_LISTALL(request):
+    if not has_auth(request.user, 'VER_UBICACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = COMUNA.objects.all()
         ctx = {
@@ -163,11 +227,15 @@ def COMUNA_LISTALL(request):
         return redirect('/')
 
 def COMUNA_ADDONE(request):
+    if not has_auth(request.user, 'ADD_UBICACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method =='POST':
             form = formCOMUNA(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Comuna', f'Se creó la comuna: {form.instance.COM_CNOMBRE}')
                 messages.success(request, 'Comuna guardada correctamente')
                 return redirect('/com_listall/')
         form = formCOMUNA()
@@ -181,12 +249,16 @@ def COMUNA_ADDONE(request):
         return redirect('/')
 
 def COMUNA_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_UBICACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         comuna = COMUNA.objects.get(id=pk)
         if request.method == 'POST':
             form = formCOMUNA(request.POST, instance=comuna)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Comuna', f'Se actualizó la comuna: {form.instance.COM_CNOMBRE}')
                 messages.success(request, 'Comuna actualizada correctamente')
                 return redirect('/com_listall/')
         form = formCOMUNA(instance=comuna)
@@ -200,6 +272,9 @@ def COMUNA_UPDATE(request, pk):
         return redirect('/')
 
 def PARAMETRO_LISTALL(request):
+    if not has_auth(request.user, 'VER_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = PARAMETRO.objects.all()
         ctx = {
@@ -212,11 +287,15 @@ def PARAMETRO_LISTALL(request):
         return redirect('/')
 
 def PARAMETRO_ADDONE(request):
+    if not has_auth(request.user, 'ADD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method =='POST':
             form = formPARAMETRO(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Parámetro', f'Se creó el parámetro: {form.instance.PM_CDESCRIPCION}')
                 messages.success(request, 'Parámetro guardado correctamente')
                 return redirect('/param_listall/')
         form = formPARAMETRO()
@@ -230,12 +309,16 @@ def PARAMETRO_ADDONE(request):
         return redirect('/')
 
 def PARAMETRO_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         parametro = PARAMETRO.objects.get(id=pk)
         if request.method == 'POST':
             form = formPARAMETRO(request.POST, instance=parametro)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Parámetro', f'Se actualizó el parámetro: {form.instance.PM_CDESCRIPCION}')
                 messages.success(request, 'Parámetro actualizado correctamente')
                 return redirect('/param_listall/')
         form = formPARAMETRO(instance=parametro)
@@ -249,6 +332,9 @@ def PARAMETRO_UPDATE(request, pk):
         return redirect('/')
 
 def ROL_LISTALL(request):
+    if not has_auth(request.user, 'VER_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = ROL.objects.all()
         ctx = {
@@ -261,11 +347,15 @@ def ROL_LISTALL(request):
         return redirect('/')
 
 def ROL_ADDONE(request):
+    if not has_auth(request.user, 'ADD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method =='POST':
             form = formROL(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Rol', f'Se creó el rol: {form.instance.RO_CNOMBRE}')
                 messages.success(request, 'Rol guardado correctamente')
                 return redirect('/rol_listall/')
         form = formROL()
@@ -279,12 +369,16 @@ def ROL_ADDONE(request):
         return redirect('/')
 
 def ROL_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         rol = ROL.objects.get(id=pk)
         if request.method == 'POST':
             form = formROL(request.POST, instance=rol)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Rol', f'Se actualizó el rol: {form.instance.RO_CNOMBRE}')
                 messages.success(request, 'Rol actualizado correctamente')
                 return redirect('/rol_listall/')
         form = formROL(instance=rol)
@@ -298,6 +392,9 @@ def ROL_UPDATE(request, pk):
         return redirect('/')
 
 def CATEGORIA_PROYECTO_LISTALL(request):
+    if not has_auth(request.user, 'VER_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = CATEGORIA_PROYECTO.objects.all()
         ctx = {
@@ -310,11 +407,15 @@ def CATEGORIA_PROYECTO_LISTALL(request):
         return redirect('/')
 
 def CATEGORIA_PROYECTO_ADDONE(request):
+    if not has_auth(request.user, 'ADD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method =='POST':
             form = formCATEGORIA_PROYECTO(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Categoría de Proyecto', f'Se creó la categoría de proyecto: {form.instance.CA_CNOMBRE}')
                 messages.success(request, 'Categoría de proyecto guardada correctamente')
                 return redirect('/catproy_listall/')
         form = formCATEGORIA_PROYECTO()
@@ -328,12 +429,16 @@ def CATEGORIA_PROYECTO_ADDONE(request):
         return redirect('/')
 
 def CATEGORIA_PROYECTO_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         categoria_proyecto = CATEGORIA_PROYECTO.objects.get(id=pk)
         if request.method == 'POST':
             form = formCATEGORIA_PROYECTO(request.POST, instance=categoria_proyecto)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Categoría de Proyecto', f'Se actualizó la categoría de proyecto: {form.instance.CA_CNOMBRE}')
                 messages.success(request, 'Categoría de proyecto actualizada correctamente')
                 return redirect('/catproy_listall/')
         form = formCATEGORIA_PROYECTO(instance=categoria_proyecto)
@@ -347,6 +452,9 @@ def CATEGORIA_PROYECTO_UPDATE(request, pk):
         return redirect('/')
 
 def CATEGORIA_CLIENTE_LISTALL(request):
+    if not has_auth(request.user, 'VER_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = CATEGORIA_CLIENTE.objects.all()
         ctx = {
@@ -359,11 +467,15 @@ def CATEGORIA_CLIENTE_LISTALL(request):
         return redirect('/')
 
 def CATEGORIA_CLIENTE_ADDONE(request):
+    if not has_auth(request.user, 'ADD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formCATEGORIA_CLIENTE(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Categoría de Cliente', f'Se creó la categoría de cliente: {form.instance.CA_CNOMBRE}')
                 messages.success(request, 'Categoría de cliente guardada correctamente')
                 return redirect('/catcli_listall/')
         form = formCATEGORIA_CLIENTE()
@@ -377,12 +489,16 @@ def CATEGORIA_CLIENTE_ADDONE(request):
         return redirect('/')
 
 def CATEGORIA_CLIENTE_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         categoria_cliente = CATEGORIA_CLIENTE.objects.get(id=pk)
         if request.method == 'POST':
             form = formCATEGORIA_CLIENTE(request.POST, instance=categoria_cliente)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Categoría de Cliente', f'Se actualizó la categoría de cliente: {form.instance.CA_CNOMBRE}')
                 messages.success(request, 'Categoría de cliente actualizada correctamente')
                 return redirect('/catcli_listall/')
         form = formCATEGORIA_CLIENTE(instance=categoria_cliente)
@@ -396,6 +512,9 @@ def CATEGORIA_CLIENTE_UPDATE(request, pk):
         return redirect('/')
 
 def TIPO_PROYECTO_LISTALL(request):
+    if not has_auth(request.user, 'VER_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = TIPO_PROYECTO.objects.all()
         ctx = {
@@ -408,11 +527,15 @@ def TIPO_PROYECTO_LISTALL(request):
         return redirect('/')
 
 def TIPO_PROYECTO_ADDONE(request):
+    if not has_auth(request.user, 'ADD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formTIPO_PROYECTO(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Tipo de Proyecto', f'Se creó el tipo de proyecto: {form.instance.TP_CNOMBRE}')
                 messages.success(request, 'Tipo de proyecto guardado correctamente')
                 return redirect('/tipoproy_listall/')
         form = formTIPO_PROYECTO()
@@ -426,12 +549,16 @@ def TIPO_PROYECTO_ADDONE(request):
         return redirect('/')
 
 def TIPO_PROYECTO_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tipo_proyecto = TIPO_PROYECTO.objects.get(id=pk)
         if request.method == 'POST':
             form = formTIPO_PROYECTO(request.POST, instance=tipo_proyecto)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Tipo de Proyecto', f'Se actualizó el tipo de proyecto: {form.instance.TP_CNOMBRE}')
                 messages.success(request, 'Tipo de proyecto actualizado correctamente')
                 return redirect('/tipoproy_listall/')
         form = formTIPO_PROYECTO(instance=tipo_proyecto)
@@ -445,6 +572,9 @@ def TIPO_PROYECTO_UPDATE(request, pk):
         return redirect('/')
 
 def PERMISO_LISTALL(request):
+    if not has_auth(request.user, 'VER_AUTORIZACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = PERMISO.objects.all()
         ctx = {
@@ -457,11 +587,15 @@ def PERMISO_LISTALL(request):
         return redirect('/')
 
 def PERMISO_ADDONE(request):
+    if not has_auth(request.user, 'ADD_AUTORIZACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formPERMISO(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Permiso', f'Se creó el permiso: {form.instance.PE_CNOMBRE}')
                 messages.success(request, 'Permiso guardado correctamente')
                 return redirect('/permiso_listall/')
         form = formPERMISO()
@@ -475,12 +609,16 @@ def PERMISO_ADDONE(request):
         return redirect('/')
 
 def PERMISO_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_AUTORIZACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         permiso = PERMISO.objects.get(id=pk)
         if request.method == 'POST':
             form = formPERMISO(request.POST, instance=permiso)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Permiso', f'Se actualizó el permiso: {form.instance.PE_CNOMBRE}')
                 messages.success(request, 'Permiso actualizado correctamente')
                 return redirect('/permiso_listall/')
         form = formPERMISO(instance=permiso)
@@ -494,6 +632,9 @@ def PERMISO_UPDATE(request, pk):
         return redirect('/')
 
 def PERMISO_ROL_LISTALL(request):
+    if not has_auth(request.user, 'VER_AUTORIZACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = PERMISO_ROL.objects.all()
         ctx = {
@@ -506,11 +647,15 @@ def PERMISO_ROL_LISTALL(request):
         return redirect('/')
 
 def PERMISO_ROL_ADDONE(request):
+    if not has_auth(request.user, 'ADD_AUTORIZACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formPERMISO_ROL(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Permiso de Rol', f'Se creó el permiso de rol: {form.instance.PR_CPERMISO} para el rol: {form.instance.PR_CROL}')
                 messages.success(request, 'Permiso de rol guardado correctamente')
                 return redirect('/permisorol_listall/')
         form = formPERMISO_ROL()
@@ -524,12 +669,16 @@ def PERMISO_ROL_ADDONE(request):
         return redirect('/')
 
 def PERMISO_ROL_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_AUTORIZACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         permiso_rol = PERMISO_ROL.objects.get(id=pk)
         if request.method == 'POST':
             form = formPERMISO_ROL(request.POST, instance=permiso_rol)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Permiso de Rol', f'Se actualizó el permiso de rol: {form.instance.PR_CPERMISO} para el rol: {form.instance.PR_CROL}')
                 messages.success(request, 'Permiso de rol actualizado correctamente')
                 return redirect('/permisorol_listall/')
         form = formPERMISO_ROL(instance=permiso_rol)
@@ -543,6 +692,9 @@ def PERMISO_ROL_UPDATE(request, pk):
         return redirect('/')
 
 def USUARIO_ROL_LISTALL(request):
+    if not has_auth(request.user, 'VER_AUTORIZACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = USUARIO_ROL.objects.all()
         ctx = {
@@ -555,11 +707,15 @@ def USUARIO_ROL_LISTALL(request):
         return redirect('/')
 
 def USUARIO_ROL_ADDONE(request):
+    if not has_auth(request.user, 'ADD_AUTORIZACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formUSUARIO_ROL(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Usuario de Rol', f'Se creó el usuario de rol: {form.instance.UR_CUSUARIO} para el rol: {form.instance.UR_CROL}')
                 messages.success(request, 'Usuario rol guardado correctamente')
                 return redirect('/usuariorol_listall/')
         form = formUSUARIO_ROL()
@@ -573,12 +729,16 @@ def USUARIO_ROL_ADDONE(request):
         return redirect('/')
 
 def USUARIO_ROL_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_AUTORIZACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         usuario_rol = USUARIO_ROL.objects.get(id=pk)
         if request.method == 'POST':
             form = formUSUARIO_ROL(request.POST, instance=usuario_rol)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Usuario de Rol', f'Se actualizó el usuario de rol: {form.instance.UR_CUSUARIO} para el rol: {form.instance.UR_CROL}')
                 messages.success(request, 'Usuario rol actualizado correctamente')
                 return redirect('/usuariorol_listall/')
         form = formUSUARIO_ROL(instance=usuario_rol)
@@ -592,6 +752,9 @@ def USUARIO_ROL_UPDATE(request, pk):
         return redirect('/')
 
 def CLIENTE_LISTALL(request):
+    if not has_auth(request.user, 'VER_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = CLIENTE.objects.all()
         ctx = {
@@ -604,11 +767,15 @@ def CLIENTE_LISTALL(request):
         return redirect('/')
 
 def CLIENTE_ADDONE(request):
+    if not has_auth(request.user, 'ADD_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formCLIENTE(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Cliente', f'Se creó el cliente: {form.instance.CL_CNOMBRE}')
                 messages.success(request, 'Cliente guardado correctamente')
                 return redirect('/cliente_listall/')
         form = formCLIENTE()
@@ -622,12 +789,16 @@ def CLIENTE_ADDONE(request):
         return redirect('/')
 
 def CLIENTE_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         cliente = CLIENTE.objects.get(id=pk)
         if request.method == 'POST':
             form = formCLIENTE(request.POST, instance=cliente)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Cliente', f'Se actualizó el cliente: {form.instance.CL_CNOMBRE}')
                 messages.success(request, 'Cliente actualizado correctamente')
                 return redirect('/cliente_listall/')
         form = formCLIENTE(instance=cliente)
@@ -641,6 +812,9 @@ def CLIENTE_UPDATE(request, pk):
         return redirect('/')
 
 def CONTACTO_CLIENTE_LISTALL(request):
+    if not has_auth(request.user, 'VER_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = CONTACTO_CLIENTE.objects.all()
         ctx = {
@@ -653,11 +827,15 @@ def CONTACTO_CLIENTE_LISTALL(request):
         return redirect('/')
 
 def CONTACTO_CLIENTE_ADDONE(request):
+    if not has_auth(request.user, 'ADD_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formCONTACTO_CLIENTE(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Contacto de Cliente', f'Se creó el contacto de cliente: {form.instance.CC_CNOMBRE} para el cliente: {form.instance.CC_CLIENTE}')
                 messages.success(request, 'Contacto de cliente guardado correctamente')
                 return redirect('/contactocli_listall/')
         form = formCONTACTO_CLIENTE()
@@ -671,12 +849,16 @@ def CONTACTO_CLIENTE_ADDONE(request):
         return redirect('/')
 
 def CONTACTO_CLIENTE_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         contacto_cliente = CONTACTO_CLIENTE.objects.get(id=pk)
         if request.method == 'POST':
             form = formCONTACTO_CLIENTE(request.POST, instance=contacto_cliente)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Contacto de Cliente', f'Se actualizó el contacto de cliente: {form.instance.CC_CNOMBRE} para el cliente: {form.instance.CC_CLIENTE}')
                 messages.success(request, 'Contacto de cliente actualizado correctamente')
                 return redirect('/contactocli_listall/')
         form = formCONTACTO_CLIENTE(instance=contacto_cliente)
@@ -690,6 +872,9 @@ def CONTACTO_CLIENTE_UPDATE(request, pk):
         return redirect('/')
 
 def DIRECCION_CLIENTE_LISTALL(request):
+    if not has_auth(request.user, 'VER_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = DIRECCION_CLIENTE.objects.all()
         ctx = {
@@ -702,11 +887,15 @@ def DIRECCION_CLIENTE_LISTALL(request):
         return redirect('/')
 
 def DIRECCION_CLIENTE_ADDONE(request):
+    if not has_auth(request.user, 'ADD_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formDIRECCION_CLIENTE(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Dirección de Cliente', f'Se creó la dirección de cliente: {form.instance.DR_CDIRECCION} para el cliente: {form.instance.DR_CLIENTE}')
                 messages.success(request, 'Dirección de cliente guardada correctamente')
                 return redirect('/direccioncli_listall/')
         form = formDIRECCION_CLIENTE()
@@ -720,12 +909,16 @@ def DIRECCION_CLIENTE_ADDONE(request):
         return redirect('/')
 
 def DIRECCION_CLIENTE_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         direccion_cliente = DIRECCION_CLIENTE.objects.get(id=pk)
         if request.method == 'POST':
             form = formDIRECCION_CLIENTE(request.POST, instance=direccion_cliente)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Dirección de Cliente', f'Se actualizó la dirección de cliente: {form.instance.DR_CDIRECCION} para el cliente: {form.instance.DR_CLIENTE}')
                 messages.success(request, 'Dirección de cliente actualizada correctamente')
                 return redirect('/direccioncli_listall/')
         form = formDIRECCION_CLIENTE(instance=direccion_cliente)
@@ -739,6 +932,9 @@ def DIRECCION_CLIENTE_UPDATE(request, pk):
         return redirect('/')
 
 def PRODUCTO_LISTALL(request):
+    if not has_auth(request.user, 'VER_PRODUCTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = PRODUCTO.objects.all()
         ctx = {
@@ -751,11 +947,15 @@ def PRODUCTO_LISTALL(request):
         return redirect('/')
 
 def PRODUCTO_ADDONE(request):
+    if not has_auth(request.user, 'ADD_PRODUCTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formPRODUCTO(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Producto', f'Se creó el producto: {form.instance.PR_CNOMBRE}')
                 messages.success(request, 'Producto guardado correctamente')
                 return redirect('/producto_listall/')
         form = formPRODUCTO()
@@ -769,12 +969,16 @@ def PRODUCTO_ADDONE(request):
         return redirect('/')
 
 def PRODUCTO_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_PRODUCTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         producto = PRODUCTO.objects.get(id=pk)
         if request.method == 'POST':
             form = formPRODUCTO(request.POST, instance=producto)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Producto', f'Se actualizó el producto: {form.instance.PR_CNOMBRE}')
                 messages.success(request, 'Producto actualizado correctamente')
                 return redirect('/producto_listall/')
         form = formPRODUCTO(instance=producto)
@@ -788,6 +992,9 @@ def PRODUCTO_UPDATE(request, pk):
         return redirect('/')
 
 def EMPLEADO_LISTALL(request):
+    if not has_auth(request.user, 'VER_PERSONAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = EMPLEADO.objects.all()
         ctx = {
@@ -800,11 +1007,15 @@ def EMPLEADO_LISTALL(request):
         return redirect('/')
 
 def EMPLEADO_ADDONE(request):
+    if not has_auth(request.user, 'ADD_PERSONAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formEMPLEADO(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Empleado', f'Se creó el empleado: {form.instance.EM_CNOMBRE}')
                 messages.success(request, 'Empleado guardado correctamente')
                 return redirect('/empleado_listall/')
         form = formEMPLEADO()
@@ -818,12 +1029,16 @@ def EMPLEADO_ADDONE(request):
         return redirect('/')
 
 def EMPLEADO_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_PERSONAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         empleado = EMPLEADO.objects.get(id=pk)
         if request.method == 'POST':
             form = formEMPLEADO(request.POST, instance=empleado)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Empleado', f'Se actualizó el empleado: {form.instance.EM_CNOMBRE}')
                 messages.success(request, 'Empleado actualizado correctamente')
                 return redirect('/empleado_listall/')
         form = formEMPLEADO(instance=empleado)
@@ -837,6 +1052,9 @@ def EMPLEADO_UPDATE(request, pk):
         return redirect('/')
 
 def CONTRATISTA_LISTALL(request):
+    if not has_auth(request.user, 'VER_PERSONAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = CONTRATISTA.objects.all()
         ctx = {
@@ -849,11 +1067,15 @@ def CONTRATISTA_LISTALL(request):
         return redirect('/')
 
 def CONTRATISTA_ADDONE(request):
+    if not has_auth(request.user, 'ADD_PERSONAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formCONTRATISTA(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Contratista', f'Se creó el contratista: {form.instance.CO_CNOMBRE}')
                 messages.success(request, 'Contratista guardado correctamente')
                 return redirect('/contratista_listall/')
         form = formCONTRATISTA()
@@ -867,12 +1089,16 @@ def CONTRATISTA_ADDONE(request):
         return redirect('/')
 
 def CONTRATISTA_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_PERSONAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         contratista = CONTRATISTA.objects.get(id=pk)
         if request.method == 'POST':
             form = formCONTRATISTA(request.POST, instance=contratista)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Contratista', f'Se actualizó el contratista: {form.instance.CO_CNOMBRE}')
                 messages.success(request, 'Contratista actualizado correctamente')
                 return redirect('/contratista_listall/')
         form = formCONTRATISTA(instance=contratista)
@@ -886,6 +1112,9 @@ def CONTRATISTA_UPDATE(request, pk):
         return redirect('/')
 
 def EMPLEADO_EXTERNO_LISTALL(request):
+    if not has_auth(request.user, 'VER_PERSONAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = EMPLEADO_CONTRATISTA.objects.all()
         ctx = {
@@ -898,11 +1127,15 @@ def EMPLEADO_EXTERNO_LISTALL(request):
         return redirect('/')
 
 def EMPLEADO_EXTERNO_ADDONE(request):
+    if not has_auth(request.user, 'ADD_PERSONAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formEMPLEADO_CONTRATISTA(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Empleado Externo', f'Se creó el empleado externo: {form.instance.EC_CNOMBRE}')
                 messages.success(request, 'Empleado externo guardado correctamente')
                 return redirect('/empleado_externo_listall/')
         form = formEMPLEADO_CONTRATISTA()
@@ -916,6 +1149,9 @@ def EMPLEADO_EXTERNO_ADDONE(request):
         return redirect('/')
 
 def EMPLEADO_EXTERNO_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_PERSONAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         empleado_externo = EMPLEADO_CONTRATISTA.objects.get(id=pk)
         if request.method == 'POST':
@@ -924,6 +1160,7 @@ def EMPLEADO_EXTERNO_UPDATE(request, pk):
                 empleado = form.save(commit=False)
                 empleado.EC_CUSUARIO_MODIFICADOR = request.user
                 empleado.save()
+                crear_log(request.user, 'Actualizar Empleado Externo', f'Se actualizó el empleado externo: {form.instance.EC_CNOMBRE}')
                 messages.success(request, 'Empleado externo actualizado correctamente')
                 return redirect('/empleado_externo_listall/')
         else:
@@ -945,6 +1182,9 @@ def EMPLEADO_EXTERNO_UPDATE(request, pk):
         return redirect('/')
 
 def ETAPA_LISTALL(request):
+    if not has_auth(request.user, 'VER_PROYECTOS_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = ETAPA.objects.all()
         ctx = {
@@ -957,11 +1197,15 @@ def ETAPA_LISTALL(request):
         return redirect('/')
 
 def ETAPA_ADDONE(request):
+    if not has_auth(request.user, 'ADD_PROYECTOS_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formETAPA(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Crear Etapa', f'Se creó la etapa: {form.instance.ET_CNOMBRE}')
                 messages.success(request, 'Etapa guardada correctamente')
                 return redirect('/etapa_listall/')
         form = formETAPA()
@@ -975,12 +1219,16 @@ def ETAPA_ADDONE(request):
         return redirect('/')
 
 def ETAPA_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_PROYECTOS_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         etapa = ETAPA.objects.get(id=pk)
         if request.method == 'POST':
             form = formETAPA(request.POST, instance=etapa)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, 'Actualizar Etapa', f'Se actualizó la etapa: {form.instance.ET_CNOMBRE}')
                 messages.success(request, 'Etapa actualizada correctamente')
                 return redirect('/etapa_listall/')
         form = formETAPA(instance=etapa)
@@ -994,6 +1242,9 @@ def ETAPA_UPDATE(request, pk):
         return redirect('/')
 
 def PROYECTO_CLIENTE_LISTALL(request):
+    if not has_auth(request.user, 'VER_PROYECTOS_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = PROYECTO_CLIENTE.objects.all()
         ctx = {
@@ -1006,6 +1257,9 @@ def PROYECTO_CLIENTE_LISTALL(request):
         return redirect('/')
 
 def PROYECTO_CLIENTE_ADDONE(request):
+    if not has_auth(request.user, 'ADD_PROYECTOS_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formPROYECTO_CLIENTE(request.POST)
@@ -1013,6 +1267,7 @@ def PROYECTO_CLIENTE_ADDONE(request):
                 proyecto = form.save(commit=False)
                 proyecto.PC_CUSUARIO_CREADOR = request.user
                 proyecto.save()
+                crear_log(request.user, 'Crear Proyecto de Cliente', f'Se creó el proyecto de cliente: {form.instance.PC_CNOMBRE}')
                 messages.success(request, 'Proyecto de cliente guardado correctamente')
                 return redirect('/proycli_listall/')
         form = formPROYECTO_CLIENTE()
@@ -1026,6 +1281,9 @@ def PROYECTO_CLIENTE_ADDONE(request):
         return redirect('/')
 
 def PROYECTO_CLIENTE_UPDATE(request, pk, page):
+    if not has_auth(request.user, 'UPD_PROYECTOS_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         proyecto = PROYECTO_CLIENTE.objects.get(id=pk)
         if request.method == 'POST':
@@ -1034,6 +1292,7 @@ def PROYECTO_CLIENTE_UPDATE(request, pk, page):
                 proyecto = form.save(commit=False)
                 proyecto.PC_CUSUARIO_MODIFICADOR = request.user
                 proyecto.save()
+                crear_log(request.user, 'Actualizar Proyecto de Cliente', f'Se actualizó el proyecto de cliente: {form.instance.PC_CNOMBRE}')
                 messages.success(request, 'Proyecto de cliente actualizado correctamente')
                 if page == 1:
                     return redirect('/proycli_listone/'+str(proyecto.id)+'/')
@@ -1055,6 +1314,9 @@ def PROYECTO_CLIENTE_UPDATE(request, pk, page):
         return redirect('/')
 
 def PROYECTO_CLIENTE_LISTONE(request, pk):
+    if not has_auth(request.user, 'VER_PROYECTOS_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         proyecto = PROYECTO_CLIENTE.objects.get(id=pk)
         tareas_general = TAREA_GENERAL.objects.filter(TG_PROYECTO_CLIENTE=proyecto)
@@ -1063,14 +1325,125 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
         
         dependencias_general = TAREA_GENERAL_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_general)
         dependencias_ingenieria = TAREA_INGENIERIA_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_ingenieria)
-        dependencias_financiera = TAREA_FINANCIERA_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_financiera)
+        dependencias_financiera = TAREA_FINANCIERA_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_financiera)        
         
+        asignacion_empleado_general = ASIGNACION_EMPLEADO_TAREA_GENERAL.objects.filter(AE_TAREA__in=tareas_general)
+        asignacion_empleado_ingenieria = ASIGNACION_EMPLEADO_TAREA_INGENIERIA.objects.filter(AE_TAREA__in=tareas_ingenieria)
+        asignacion_empleado_financiera = ASIGNACION_EMPLEADO_TAREA_FINANCIERA.objects.filter(AE_TAREA__in=tareas_financiera)
+        
+        asignacion_recurso_general = ASIGNACION_RECURSO_TAREA_GENERAL.objects.filter(ART_TAREA__in=tareas_general)
+        asignacion_recurso_ingenieria = ASIGNACION_RECURSO_TAREA_INGENIERIA.objects.filter(ART_TAREA__in=tareas_ingenieria)
+        asignacion_recurso_financiera = ASIGNACION_RECURSO_TAREA_FINANCIERA.objects.filter(ART_TAREA__in=tareas_financiera)
+        
+        asignacion_contratista_general = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL.objects.filter(AEC_TAREA__in=tareas_general)
+        asignacion_contratista_ingenieria = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA.objects.filter(AEC_TAREA__in=tareas_ingenieria)
+        asignacion_contratista_financiera = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_FINANCIERA.objects.filter(AEC_TAREA__in=tareas_financiera)
+        
+        costo_real_proyecto = 0
+        horas_reales_proyecto = 0
+
+        # Función auxiliar para comprobar asignaciones en cero
+        def tiene_asignacion_cero(tarea, asignaciones_empleado, asignaciones_recurso, asignaciones_contratista):
+            return (
+                asignaciones_empleado.filter(AE_TAREA=tarea, AE_HORAS_REALES=0).exists() or
+                asignaciones_empleado.filter(AE_TAREA=tarea, AE_COSTO_TOTAL=0).exists() or
+                asignaciones_recurso.filter(ART_TAREA=tarea, ART_HORAS_REALES=0).exists() or
+                asignaciones_recurso.filter(ART_TAREA=tarea, ART_COSTO_TOTAL=0).exists() or
+                asignaciones_contratista.filter(AEC_TAREA=tarea, AEC_HORAS_REALES=0).exists() or
+                asignaciones_contratista.filter(AEC_TAREA=tarea, AEC_COSTO_TOTAL=0).exists()
+            )
+
         for tarea in tareas_general:
             tarea.TG_NPROGRESO = int(round(float(tarea.TG_NPROGRESO)))
+            tarea.tiene_asignacion_cero = tiene_asignacion_cero(
+                tarea, asignacion_empleado_general, asignacion_recurso_general, asignacion_contratista_general
+            )
+            if tarea.TG_NPROGRESO == 100 and tarea.TG_NDURACION_REAL is not None and tarea.TG_NDURACION_REAL > 0:                
+                    horas_reales_proyecto += tarea.TG_NDURACION_REAL    
+
+                    if not asignacion_empleado_general.filter(AE_TAREA=tarea).exists():
+                        costo_real_proyecto +=  tarea.TG_NPRESUPUESTO
+                    else:
+                        for asignacion in asignacion_empleado_general:
+                            if asignacion.AE_TAREA == tarea:                            
+                                costo_real_proyecto +=  asignacion.AE_COSTO_TOTAL
+                    if not asignacion_recurso_general.filter(ART_TAREA=tarea).exists():
+                        costo_real_proyecto +=  tarea.TG_NPRESUPUESTO
+                    else:
+                        for asignacion in asignacion_recurso_general:
+                            if asignacion.ART_TAREA == tarea:                            
+                                costo_real_proyecto +=  asignacion.ART_COSTO_TOTAL
+                    if not asignacion_contratista_general.filter(AEC_TAREA=tarea).exists():
+                        costo_real_proyecto +=  tarea.TG_NPRESUPUESTO
+                    else:
+                        for asignacion in asignacion_contratista_general:
+                            if asignacion.AEC_TAREA == tarea:                            
+                                costo_real_proyecto +=  asignacion.AEC_COSTO_TOTAL
         for tarea in tareas_ingenieria:
             tarea.TI_NPROGRESO = int(round(float(tarea.TI_NPROGRESO)))
+            tarea.tiene_asignacion_cero = tiene_asignacion_cero(
+                tarea, asignacion_empleado_ingenieria, asignacion_recurso_ingenieria, asignacion_contratista_ingenieria
+            )
+            if tarea.TI_NPROGRESO == 100 and tarea.TI_NDURACION_REAL is not None and tarea.TI_NDURACION_REAL > 0:
+                    
+                    horas_reales_proyecto += tarea.TI_NDURACION_REAL
+                    
+                    if not asignacion_empleado_ingenieria.filter(AE_TAREA=tarea).exists():
+                        costo_real_proyecto +=  tarea.TI_NPRESUPUESTO
+                    else:
+                        for asignacion in asignacion_empleado_ingenieria:
+                            if asignacion.AE_TAREA == tarea:                            
+                                costo_real_proyecto +=  asignacion.AE_COSTO_TOTAL
+                    if not asignacion_recurso_ingenieria.filter(ART_TAREA=tarea).exists():
+                        costo_real_proyecto +=  tarea.TI_NPRESUPUESTO
+                    else:
+                        for asignacion in asignacion_recurso_ingenieria:
+                            if asignacion.ART_TAREA == tarea:                            
+                                costo_real_proyecto +=  asignacion.ART_COSTO_TOTAL
+                    if not asignacion_contratista_ingenieria.filter(AEC_TAREA=tarea).exists():
+                        costo_real_proyecto +=  tarea.TI_NPRESUPUESTO
+                    else:
+                        for asignacion in asignacion_contratista_ingenieria:
+                            if asignacion.AEC_TAREA == tarea:                            
+                                costo_real_proyecto +=  asignacion.AEC_COSTO_TOTAL
         for tarea in tareas_financiera:
             tarea.TF_NPROGRESO = int(round(float(tarea.TF_NPROGRESO)))
+            tarea.tiene_asignacion_cero = tiene_asignacion_cero(
+                tarea, asignacion_empleado_financiera, asignacion_recurso_financiera, asignacion_contratista_financiera
+            )
+            if tarea.TF_NPROGRESO == 100 and tarea.TF_NDURACION_REAL is not None and tarea.TF_NDURACION_REAL > 0:
+                    
+                    horas_reales_proyecto += tarea.TF_NDURACION_REAL
+                    # Si la tarea no tiene asignaciones, se suma este valor
+                    if not asignacion_empleado_financiera.filter(AE_TAREA=tarea).exists():                            
+                        costo_real_proyecto +=  tarea.TF_NMONTO                    
+                    else:
+                        for asignacion in asignacion_empleado_financiera:
+                            if asignacion.AE_TAREA == tarea:                            
+                                costo_real_proyecto +=  asignacion.AE_COSTO_TOTAL
+                    if not asignacion_recurso_financiera.filter(ART_TAREA=tarea).exists():
+                        costo_real_proyecto +=  tarea.TF_NMONTO
+                    else:
+                        for asignacion in asignacion_recurso_financiera:
+                            if asignacion.ART_TAREA == tarea:                            
+                                costo_real_proyecto +=  asignacion.ART_COSTO_TOTAL
+                    if not asignacion_contratista_financiera.filter(AEC_TAREA=tarea).exists():
+                        costo_real_proyecto +=  tarea.TF_NMONTO
+                    else:
+                        for asignacion in asignacion_contratista_financiera:
+                            if asignacion.AEC_TAREA == tarea:                            
+                                costo_real_proyecto +=  asignacion.AEC_COSTO_TOTAL
+        if horas_reales_proyecto != proyecto.PC_NHORAS_REALES:
+            print('horas_reales_proyecto', horas_reales_proyecto)
+            print('proyecto.PC_NHORAS_REALES', proyecto.PC_NHORAS_REALES)
+            proyecto.PC_NHORAS_REALES = horas_reales_proyecto
+            proyecto.save()
+        if costo_real_proyecto != proyecto.PC_NCOSTO_REAL:
+            print('costo_real_proyecto', costo_real_proyecto)
+            print('proyecto.PC_NCOSTO_REAL', proyecto.PC_NCOSTO_REAL)
+            proyecto.PC_NCOSTO_REAL = costo_real_proyecto
+            proyecto.save()
+        max_costo = max(proyecto.PC_NCOSTO_REAL, proyecto.PC_NCOSTO_ESTIMADO)
         ctx = {
             'proyecto': proyecto,
             'tareas_general': tareas_general,
@@ -1078,7 +1451,10 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
             'tareas_financiera': tareas_financiera,
             'dependencias_general': dependencias_general,
             'dependencias_ingenieria': dependencias_ingenieria,
-            'dependencias_financiera': dependencias_financiera
+            'dependencias_financiera': dependencias_financiera,
+            'costo_real_proyecto': costo_real_proyecto,
+            'horas_reales_proyecto': horas_reales_proyecto,
+            'max_costo': max_costo
         }
         return render(request, 'home/PROYECTO_CLIENTE/proycli_listone.html', ctx)
     except Exception as e:
@@ -1092,6 +1468,9 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
 # ----------TAREA GENERAL--------------
 
 def TAREA_GENERAL_LISTALL(request):
+    if not has_auth(request.user, 'VER_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tareas_generales = TAREA_GENERAL.objects.all()
         ctx = {
@@ -1104,6 +1483,9 @@ def TAREA_GENERAL_LISTALL(request):
         return redirect('/')
 
 def TAREA_GENERAL_ADDONE(request, page):
+    if not has_auth(request.user, 'ADD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         form = formTAREA_GENERAL()
         form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_GENERAL()
@@ -1116,7 +1498,7 @@ def TAREA_GENERAL_ADDONE(request, page):
                 tarea = form.save(commit=False)
                 tarea.TG_CUSUARIO_CREADOR = request.user                                                
                 tarea.save()
-
+                crear_log(request.user, 'Crear Tarea General', f'Se creó la tarea general: {tarea.TG_CNOMBRE}')
                 # Manejar asignaciones múltiples
                 empleados_ids = request.POST.getlist('empleados')
                 contratistas_ids = request.POST.getlist('contratistas')                
@@ -1133,6 +1515,7 @@ def TAREA_GENERAL_ADDONE(request, page):
                         AE_FFECHA_ASIGNACION=tarea.TG_FFECHA_INICIO,  
                         AE_FFECHA_FINALIZACION=tarea.TG_FFECHA_FIN_ESTIMADA                      
                     )
+                    crear_log(request.user, 'Crear Asignación de Empleado a Tarea General', f'Se creó la asignación de empleado a tarea general: {tarea.TG_CNOMBRE} para el empleado: {id_emp.EM_CNOMBRE}')
                     asignacion.save()
 
                 # Asignar contratistas
@@ -1146,6 +1529,7 @@ def TAREA_GENERAL_ADDONE(request, page):
                         AEC_FFECHA_FINALIZACION=tarea.TG_FFECHA_FIN_ESTIMADA,
                         AEC_CUSUARIO_CREADOR=request.user
                     )
+                    crear_log(request.user, 'Crear Asignación de Contratista a Tarea General', f'Se creó la asignación de contratista a tarea general: {tarea.TG_CNOMBRE} para el contratista: {id_emp.EM_CNOMBRE}')
                     asignacion.save()
 
                 # Procesar recursos                
@@ -1162,6 +1546,7 @@ def TAREA_GENERAL_ADDONE(request, page):
                             ART_COSTO_UNITARIO=int(float(recurso['costo'])),
                             ART_COSTO_TOTAL = int(float(recurso['costo'])) * int(float(recurso['cantidad']))
                         )
+                        crear_log(request.user, 'Crear Asignación de Recurso a Tarea General', f'Se creó la asignación de recurso a tarea general: {tarea.TG_CNOMBRE} para el recurso: {id_rec.PR_CNOMBRE}')
                         asignacion.save()
 
                 messages.success(request, 'Tarea general guardada correctamente con las asignaciones seleccionadas')
@@ -1185,6 +1570,9 @@ def TAREA_GENERAL_ADDONE(request, page):
         return redirect('/')
 
 def TAREA_GENERAL_UPDATE(request, pk, page):
+    if not has_auth(request.user, 'UPD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tarea = TAREA_GENERAL.objects.get(id=pk)
         if request.method == 'POST':
@@ -1193,6 +1581,7 @@ def TAREA_GENERAL_UPDATE(request, pk, page):
                 tarea = form.save(commit=False)
                 tarea.TG_CUSUARIO_MODIFICADOR = request.user
                 tarea.save()
+                crear_log(request.user, 'Actualizar Tarea General', f'Se actualizó la tarea general: {tarea.TG_CNOMBRE}')
                 messages.success(request, 'Tarea general actualizada correctamente')
                 if page == 1:
                     return redirect('/proycli_listone/'+str(tarea.TG_PROYECTO_CLIENTE.id)+'/')
@@ -1218,6 +1607,9 @@ def TAREA_GENERAL_UPDATE(request, pk, page):
         return redirect('/')
 
 def TAREA_GENERAL_UPDATE_ASIGNACIONES(request, pk, page):
+    if not has_auth(request.user, 'UPD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tarea = TAREA_GENERAL.objects.get(id=pk)
         form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_GENERAL()
@@ -1251,6 +1643,7 @@ def TAREA_GENERAL_UPDATE_ASIGNACIONES(request, pk, page):
                     AE_FFECHA_ASIGNACION=tarea.TG_FFECHA_INICIO,  
                     AE_FFECHA_FINALIZACION=tarea.TG_FFECHA_FIN_ESTIMADA                      
                 )
+                crear_log(request.user, 'Actualizar Asignación de Empleado a Tarea General', f'Se actualizó la asignación de empleado a tarea general: {tarea.TG_CNOMBRE} para el empleado: {id_emp.EM_CNOMBRE}')
                 asignacion.save()
 
             # Asignar contratistas
@@ -1264,6 +1657,7 @@ def TAREA_GENERAL_UPDATE_ASIGNACIONES(request, pk, page):
                     AEC_FFECHA_FINALIZACION=tarea.TG_FFECHA_FIN_ESTIMADA,
                     AEC_CUSUARIO_CREADOR=request.user
                 )
+                crear_log(request.user, 'Actualizar Asignación de Contratista a Tarea General', f'Se actualizó la asignación de contratista a tarea general: {tarea.TG_CNOMBRE} para el contratista: {id_emp.EC_CNOMBRE}')
                 asignacion.save()
 
             # Procesar recursos                
@@ -1280,6 +1674,7 @@ def TAREA_GENERAL_UPDATE_ASIGNACIONES(request, pk, page):
                         ART_COSTO_UNITARIO=int(float(recurso['costo'])),
                         ART_COSTO_TOTAL = int(float(recurso['costo'])) * int(float(recurso['cantidad']))
                     )
+                    crear_log(request.user, 'Actualizar Asignación de Recurso a Tarea General', f'Se actualizó la asignación de recurso a tarea general: {tarea.TG_CNOMBRE} para el recurso: {id_rec.PR_CNOMBRE}')
                     asignacion.save()
 
             messages.success(request, 'Asignaciones de la tarea general actualizadas correctamente')
@@ -1317,6 +1712,9 @@ def TAREA_GENERAL_UPDATE_ASIGNACIONES(request, pk, page):
         return redirect('/')
 
 def TAREA_GENERAL_LISTONE(request, pk, page):
+    if not has_auth(request.user, 'VER_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tarea = TAREA_GENERAL.objects.get(id=pk)
         empleados_asignados = ASIGNACION_EMPLEADO_TAREA_GENERAL.objects.filter(AE_TAREA=tarea)
@@ -1337,6 +1735,9 @@ def TAREA_GENERAL_LISTONE(request, pk, page):
         return redirect('/')
 
 def TAREA_GENERAL_DEPENDENCIA_ADDONE(request, pk):
+    if not has_auth(request.user, 'ADD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tarea = TAREA_GENERAL.objects.get(id=pk)
         proyecto_actual = tarea.TG_PROYECTO_CLIENTE
@@ -1347,6 +1748,7 @@ def TAREA_GENERAL_DEPENDENCIA_ADDONE(request, pk):
                 dependencia = form.save(commit=False)
                 dependencia.TD_TAREA_PREDECESORA = tarea
                 dependencia.save()
+                crear_log(request.user, 'Crear Dependencia de Tarea General', f'Se creó la dependencia de tarea general: {tarea.TG_CNOMBRE} para la tarea: {dependencia.TD_TAREA_SUCESORA.TG_CNOMBRE}')
                 messages.success(request, 'Dependencia agregada correctamente')
                 return redirect('proycli_listone', pk=proyecto_actual.id)
         else:
@@ -1366,10 +1768,13 @@ def TAREA_GENERAL_DEPENDENCIA_ADDONE(request, pk):
         print(e)
         messages.error(request, f'Error: {str(e)}')
         return redirect('/')
-    
+
 # ----------TAREA INGENIERIA--------------
 
 def TAREA_INGENIERIA_LISTALL(request):
+    if not has_auth(request.user, 'VER_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tareas_ingenieria = TAREA_INGENIERIA.objects.all()
         ctx = {
@@ -1382,6 +1787,9 @@ def TAREA_INGENIERIA_LISTALL(request):
         return redirect('/')
 
 def TAREA_INGENIERIA_ADDONE(request, page):
+    if not has_auth(request.user, 'ADD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         form = formTAREA_INGENIERIA()
         form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_INGENIERIA()
@@ -1392,7 +1800,8 @@ def TAREA_INGENIERIA_ADDONE(request, page):
             form = formTAREA_INGENIERIA(request.POST)
             if form.is_valid():
                 tarea = form.save(commit=False)
-                tarea.TI_CUSUARIO_CREADOR = request.user                                                
+                tarea.TI_CUSUARIO_CREADOR = request.user
+                crear_log(request.user, 'Crear Tarea de Ingeniería', f'Se creó la tarea de ingeniería: {tarea.TI_CNOMBRE}')
                 tarea.save()
 
                 # Manejar asignaciones múltiples
@@ -1411,6 +1820,7 @@ def TAREA_INGENIERIA_ADDONE(request, page):
                         AE_FFECHA_ASIGNACION=tarea.TI_FFECHA_INICIO,  
                         AE_FFECHA_FINALIZACION=tarea.TI_FFECHA_FIN_ESTIMADA                      
                     )
+                    crear_log(request.user, 'Crear Asignación de Empleado a Tarea de Ingeniería', f'Se creó la asignación de empleado a tarea de ingeniería: {tarea.TI_CNOMBRE} para el empleado: {id_emp.EM_CNOMBRE}')
                     asignacion.save()
 
                 # Asignar contratistas
@@ -1424,6 +1834,7 @@ def TAREA_INGENIERIA_ADDONE(request, page):
                         AEC_FFECHA_FINALIZACION=tarea.TI_FFECHA_FIN_ESTIMADA,
                         AEC_CUSUARIO_CREADOR=request.user
                     )
+                    crear_log(request.user, 'Crear Asignación de Contratista a Tarea de Ingeniería', f'Se creó la asignación de contratista a tarea de ingeniería: {tarea.TI_CNOMBRE} para el contratista: {id_emp.EM_CNOMBRE}')
                     asignacion.save()
 
                 # Procesar recursos                
@@ -1440,6 +1851,7 @@ def TAREA_INGENIERIA_ADDONE(request, page):
                             ART_COSTO_UNITARIO=int(recurso['costo']),
                             ART_COSTO_TOTAL = int(recurso['costo']) * int(recurso['cantidad'])
                         )
+                        crear_log(request.user, 'Crear Asignación de Recurso a Tarea de Ingeniería', f'Se creó la asignación de recurso a tarea de ingeniería: {tarea.TI_CNOMBRE} para el recurso: {id_rec.PR_CNOMBRE}')
                         asignacion.save()
 
                 messages.success(request, 'Tarea de ingeniería guardada correctamente con las asignaciones seleccionadas')
@@ -1464,6 +1876,9 @@ def TAREA_INGENIERIA_ADDONE(request, page):
         return redirect('/')
 
 def TAREA_INGENIERIA_UPDATE(request, pk, page):
+    if not has_auth(request.user, 'UPD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tarea = TAREA_INGENIERIA.objects.get(id=pk)
         if request.method == 'POST':
@@ -1472,6 +1887,7 @@ def TAREA_INGENIERIA_UPDATE(request, pk, page):
                 tarea = form.save(commit=False)
                 tarea.TI_CUSUARIO_MODIFICADOR = request.user
                 tarea.save()
+                crear_log(request.user, 'Actualizar Tarea de Ingeniería', f'Se actualizó la tarea de ingeniería: {tarea.TI_CNOMBRE}')
                 messages.success(request, 'Tarea de ingeniería actualizada correctamente')
                 if page == 1:
                     return redirect('/proycli_listone/'+str(tarea.TI_PROYECTO_CLIENTE.id)+'/')
@@ -1495,6 +1911,9 @@ def TAREA_INGENIERIA_UPDATE(request, pk, page):
         return redirect('/')
 
 def TAREA_INGENIERIA_UPDATE_ASIGNACIONES(request, pk, page):
+    if not has_auth(request.user, 'UPD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tarea = TAREA_INGENIERIA.objects.get(id=pk)
         form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_INGENIERIA()
@@ -1528,6 +1947,7 @@ def TAREA_INGENIERIA_UPDATE_ASIGNACIONES(request, pk, page):
                     AE_FFECHA_ASIGNACION=tarea.TI_FFECHA_INICIO,  
                     AE_FFECHA_FINALIZACION=tarea.TI_FFECHA_FIN_ESTIMADA                      
                 )
+                crear_log(request.user, 'Actualizar Asignación de Empleado a Tarea de Ingeniería', f'Se actualizó la asignación de empleado a tarea de ingeniería: {tarea.TI_CNOMBRE} para el empleado: {id_emp.EM_CNOMBRE}')
                 asignacion.save()
 
             # Asignar contratistas
@@ -1541,6 +1961,7 @@ def TAREA_INGENIERIA_UPDATE_ASIGNACIONES(request, pk, page):
                     AEC_FFECHA_FINALIZACION=tarea.TI_FFECHA_FIN_ESTIMADA,
                     AEC_CUSUARIO_CREADOR=request.user
                 )
+                crear_log(request.user, 'Actualizar Asignación de Contratista a Tarea de Ingeniería', f'Se actualizó la asignación de contratista a tarea de ingeniería: {tarea.TI_CNOMBRE} para el contratista: {id_emp.EC_CNOMBRE}')
                 asignacion.save()
 
             # Procesar recursos                
@@ -1557,6 +1978,7 @@ def TAREA_INGENIERIA_UPDATE_ASIGNACIONES(request, pk, page):
                         ART_COSTO_UNITARIO=int(float(recurso['costo'])),
                         ART_COSTO_TOTAL = int(float(recurso['costo'])) * int(float(recurso['cantidad']))
                     )
+                    crear_log(request.user, 'Actualizar Asignación de Recurso a Tarea de Ingeniería', f'Se actualizó la asignación de recurso a tarea de ingeniería: {tarea.TI_CNOMBRE} para el recurso: {id_rec.PR_CNOMBRE}')
                     asignacion.save()
 
             messages.success(request, 'Asignaciones de la tarea de ingeniería actualizadas correctamente')
@@ -1594,6 +2016,9 @@ def TAREA_INGENIERIA_UPDATE_ASIGNACIONES(request, pk, page):
         return redirect('/')
 
 def TAREA_INGENIERIA_LISTONE(request, pk, page):
+    if not has_auth(request.user, 'VER_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tarea = TAREA_INGENIERIA.objects.get(id=pk)
         empleados_asignados = ASIGNACION_EMPLEADO_TAREA_INGENIERIA.objects.filter(AE_TAREA=tarea)
@@ -1614,6 +2039,9 @@ def TAREA_INGENIERIA_LISTONE(request, pk, page):
         return redirect('/')
 
 def TAREA_INGENIERIA_DEPENDENCIA_ADDONE(request, pk):
+    if not has_auth(request.user, 'ADD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tarea = TAREA_INGENIERIA.objects.get(id=pk)
         proyecto_actual = tarea.TI_PROYECTO_CLIENTE
@@ -1624,6 +2052,7 @@ def TAREA_INGENIERIA_DEPENDENCIA_ADDONE(request, pk):
                 dependencia = form.save(commit=False)
                 dependencia.TD_TAREA_PREDECESORA = tarea
                 dependencia.save()
+                crear_log(request.user, 'Crear Dependencia de Tarea de Ingeniería', f'Se creó la dependencia de tarea de ingeniería: {tarea.TI_CNOMBRE} para la tarea: {dependencia.TD_TAREA_SUCESORA.TI_CNOMBRE}')
                 messages.success(request, 'Dependencia agregada correctamente')
                 return redirect('proycli_listone', pk=proyecto_actual.id)
         else:
@@ -1647,6 +2076,9 @@ def TAREA_INGENIERIA_DEPENDENCIA_ADDONE(request, pk):
 # ----------TAREA FINANCIERA--------------
 
 def TAREA_FINANCIERA_LISTALL(request):
+    if not has_auth(request.user, 'VER_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tareas_financiera = TAREA_FINANCIERA.objects.all()
         ctx = {
@@ -1659,6 +2091,9 @@ def TAREA_FINANCIERA_LISTALL(request):
         return redirect('/')
 
 def TAREA_FINANCIERA_ADDONE(request, page):
+    if not has_auth(request.user, 'ADD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         form = formTAREA_FINANCIERA()
         form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_FINANCIERA()
@@ -1680,7 +2115,8 @@ def TAREA_FINANCIERA_ADDONE(request, page):
                     tarea.TF_FFECHA_INICIO = fecha_fin_estimada
                 
                 tarea.save()
-
+                crear_log(request.user, 'Crear Tarea Financiera', f'Se creó la tarea financiera: {tarea.TF_CNOMBRE}')
+                
                 # Manejar asignaciones múltiples
                 empleados_ids = request.POST.getlist('empleados')
                 contratistas_ids = request.POST.getlist('contratistas')                
@@ -1697,6 +2133,7 @@ def TAREA_FINANCIERA_ADDONE(request, page):
                         AE_FFECHA_ASIGNACION=fecha_inicio,  
                         AE_FFECHA_FINALIZACION=fecha_fin_estimada                      
                     )
+                    crear_log(request.user, 'Crear Asignación de Empleado a Tarea Financiera', f'Se creó la asignación de empleado a tarea financiera: {tarea.TF_CNOMBRE} para el empleado: {id_emp.EM_CNOMBRE}')
                     asignacion.save()
 
                 # Asignar contratistas
@@ -1710,6 +2147,7 @@ def TAREA_FINANCIERA_ADDONE(request, page):
                         AEC_FFECHA_FINALIZACION=fecha_fin_estimada,
                         AEC_CUSUARIO_CREADOR=request.user
                     )
+                    crear_log(request.user, 'Crear Asignación de Contratista a Tarea Financiera', f'Se creó la asignación de contratista a tarea financiera: {tarea.TF_CNOMBRE} para el contratista: {id_emp.EM_CNOMBRE}')
                     asignacion.save()
 
                 # Procesar recursos                
@@ -1726,6 +2164,7 @@ def TAREA_FINANCIERA_ADDONE(request, page):
                             ART_COSTO_UNITARIO=int(recurso['costo']),
                             ART_COSTO_TOTAL = int(recurso['costo']) * int(recurso['cantidad'])
                         )
+                        crear_log(request.user, 'Crear Asignación de Recurso a Tarea Financiera', f'Se creó la asignación de recurso a tarea financiera: {tarea.TF_CNOMBRE} para el recurso: {id_rec.PR_CNOMBRE}')
                         asignacion.save()
                 
                 messages.success(request, 'Tarea financiera guardada correctamente con las asignaciones seleccionadas')
@@ -1750,6 +2189,9 @@ def TAREA_FINANCIERA_ADDONE(request, page):
         return redirect('/')
 
 def TAREA_FINANCIERA_UPDATE(request, pk, page):
+    if not has_auth(request.user, 'UPD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tarea = TAREA_FINANCIERA.objects.get(id=pk)
         if request.method == 'POST':
@@ -1768,7 +2210,7 @@ def TAREA_FINANCIERA_UPDATE(request, pk, page):
                     tarea.TF_FFECHA_INICIO = fecha_fin_estimada
                 
                 tarea.save()
-
+                crear_log(request.user, 'Actualizar Tarea Financiera', f'Se actualizó la tarea financiera: {tarea.TF_CNOMBRE}')
                 messages.success(request, 'Tarea financiera actualizada correctamente')
                 if page == 1:
                     return redirect('/proycli_listone/'+str(tarea.TF_PROYECTO_CLIENTE.id)+'/')
@@ -1797,6 +2239,9 @@ def TAREA_FINANCIERA_UPDATE(request, pk, page):
         return redirect('/')
 
 def TAREA_FINANCIERA_UPDATE_ASIGNACIONES(request, pk, page):
+    if not has_auth(request.user, 'UPD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tarea = TAREA_FINANCIERA.objects.get(id=pk)
         form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_FINANCIERA()
@@ -1830,6 +2275,7 @@ def TAREA_FINANCIERA_UPDATE_ASIGNACIONES(request, pk, page):
                     AE_FFECHA_ASIGNACION=tarea.TF_FFECHA_INICIO,  
                     AE_FFECHA_FINALIZACION=tarea.TF_FFECHA_FIN_ESTIMADA                      
                 )
+                crear_log(request.user, 'Actualizar Asignación de Empleado a Tarea Financiera', f'Se actualizó la asignación de empleado a tarea financiera: {tarea.TF_CNOMBRE} para el empleado: {id_emp.EM_CNOMBRE}')
                 asignacion.save()
 
             # Asignar contratistas
@@ -1843,6 +2289,7 @@ def TAREA_FINANCIERA_UPDATE_ASIGNACIONES(request, pk, page):
                     AEC_FFECHA_FINALIZACION=tarea.TF_FFECHA_FIN_ESTIMADA,
                     AEC_CUSUARIO_CREADOR=request.user
                 )
+                crear_log(request.user, 'Actualizar Asignación de Contratista a Tarea Financiera', f'Se actualizó la asignación de contratista a tarea financiera: {tarea.TF_CNOMBRE} para el contratista: {id_emp.EC_CNOMBRE}')
                 asignacion.save()
 
             # Procesar recursos                
@@ -1860,7 +2307,7 @@ def TAREA_FINANCIERA_UPDATE_ASIGNACIONES(request, pk, page):
                         ART_COSTO_TOTAL = int(float(recurso['costo'])) * int(float(recurso['cantidad']))
                     )
                     asignacion.save()
-
+                    crear_log(request.user, 'Actualizar Asignación de Recurso a Tarea Financiera', f'Se actualizó la asignación de recurso a tarea financiera: {tarea.TF_CNOMBRE} para el recurso: {id_rec.PR_CNOMBRE}')
             messages.success(request, 'Asignaciones de la tarea financiera actualizadas correctamente')
             if page == 1:
                 return redirect('/proycli_listone/'+str(tarea.TF_PROYECTO_CLIENTE.id)+'/')
@@ -1896,6 +2343,9 @@ def TAREA_FINANCIERA_UPDATE_ASIGNACIONES(request, pk, page):
         return redirect('/')
 
 def TAREA_FINANCIERA_LISTONE(request, pk, page):
+    if not has_auth(request.user, 'VER_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tarea = TAREA_FINANCIERA.objects.get(id=pk)
         empleados_asignados = ASIGNACION_EMPLEADO_TAREA_FINANCIERA.objects.filter(AE_TAREA=tarea)
@@ -1916,6 +2366,9 @@ def TAREA_FINANCIERA_LISTONE(request, pk, page):
         return redirect('/')
 
 def TAREA_FINANCIERA_DEPENDENCIA_ADDONE(request, pk):
+    if not has_auth(request.user, 'ADD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         tarea = TAREA_FINANCIERA.objects.get(id=pk)
         proyecto_actual = tarea.TF_PROYECTO_CLIENTE
@@ -1926,6 +2379,7 @@ def TAREA_FINANCIERA_DEPENDENCIA_ADDONE(request, pk):
                 dependencia = form.save(commit=False)
                 dependencia.TD_TAREA_PREDECESORA = tarea
                 dependencia.save()
+                crear_log(request.user, 'Crear Dependencia de Tarea Financiera', f'Se creó la dependencia de tarea financiera: {tarea.TF_CNOMBRE} para la tarea: {dependencia.TD_TAREA_SUCESORA.TF_CNOMBRE}')                                                                               
                 messages.success(request, 'Dependencia agregada correctamente')
                 return redirect('proycli_listone', pk=proyecto_actual.id)
         else:
@@ -1946,11 +2400,121 @@ def TAREA_FINANCIERA_DEPENDENCIA_ADDONE(request, pk):
         messages.error(request, f'Error: {str(e)}')
         return redirect('/')
 
+# ----------TAREA UPDATE DATA--------------
+def tarea_update_data(request, tipo_tarea, pk):
+    if not has_auth(request.user, 'UPD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    if tipo_tarea == 'general':
+        Tarea = TAREA_GENERAL
+        AsignacionEmpleado = ASIGNACION_EMPLEADO_TAREA_GENERAL
+        AsignacionContratista = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL
+        AsignacionRecurso = ASIGNACION_RECURSO_TAREA_GENERAL
+    elif tipo_tarea == 'ingenieria':
+        Tarea = TAREA_INGENIERIA
+        AsignacionEmpleado = ASIGNACION_EMPLEADO_TAREA_INGENIERIA
+        AsignacionContratista = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA
+        AsignacionRecurso = ASIGNACION_RECURSO_TAREA_INGENIERIA
+    elif tipo_tarea == 'financiera':
+        Tarea = TAREA_FINANCIERA
+        AsignacionEmpleado = ASIGNACION_EMPLEADO_TAREA_FINANCIERA
+        AsignacionContratista = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_FINANCIERA
+        AsignacionRecurso = ASIGNACION_RECURSO_TAREA_FINANCIERA
+    else:
+        return HttpResponseBadRequest("Tipo de tarea no válido")
+
+    tarea = get_object_or_404(Tarea, id=pk)
+    empleados_asignados = AsignacionEmpleado.objects.filter(AE_TAREA=tarea)
+    contratistas_asignados = AsignacionContratista.objects.filter(AEC_TAREA=tarea)
+    recursos_asignados = AsignacionRecurso.objects.filter(ART_TAREA=tarea)
+
+    if request.method == 'POST':
+        try:
+            # Actualizar datos de la tarea
+            if tipo_tarea == 'general':
+                proyecto_actual = tarea.TG_PROYECTO_CLIENTE
+                if request.POST.get('porcentajeAvance'):
+                    tarea.TG_NPROGRESO = float(request.POST.get('porcentajeAvance'))
+                if request.POST.get('horasTarea'):
+                    tarea.TG_NDURACION_REAL = float(request.POST.get('horasTarea'))
+            elif tipo_tarea == 'ingenieria':
+                proyecto_actual = tarea.TI_PROYECTO_CLIENTE
+                if request.POST.get('porcentajeAvance'):
+                    tarea.TI_NPROGRESO = float(request.POST.get('porcentajeAvance'))
+                if request.POST.get('horasTarea'):
+                    tarea.TI_NDURACION_REAL = float(request.POST.get('horasTarea'))
+            elif tipo_tarea == 'financiera':
+                proyecto_actual = tarea.TF_PROYECTO_CLIENTE
+                if request.POST.get('porcentajeAvance'):
+                    tarea.TF_NPROGRESO = float(request.POST.get('porcentajeAvance'))
+                if request.POST.get('horasTarea'):
+                    tarea.TF_NDURACION_REAL = float(request.POST.get('horasTarea'))
+            tarea.save()
+            crear_log(request.user, f'Actualizar Tarea {tipo_tarea}', f'Se actualizó la tarea: {tarea.TG_CNOMBRE if tipo_tarea == "general" else tarea.TI_CNOMBRE if tipo_tarea == "ingenieria" else tarea.TF_CNOMBRE}')
+            # Actualizar asignaciones
+            for empleado in empleados_asignados:
+                if request.POST.get(f'costo_empleado_{empleado.id}'):
+                    empleado.AE_COSTO_REAL = float(request.POST.get(f'costo_empleado_{empleado.id}'))
+                if request.POST.get(f'horas_empleado_{empleado.id}'):
+                    empleado.AE_HORAS_REALES = float(request.POST.get(f'horas_empleado_{empleado.id}')  )
+                if request.POST.get(f'total_empleado_{empleado.id}'):
+                    empleado.AE_COSTO_TOTAL = float(request.POST.get(f'total_empleado_{empleado.id}'))
+                crear_log(request.user, f'Actualizar Asignación de Empleado a Tarea {tipo_tarea}', f'Se actualizó la asignación de empleado a tarea: {tarea.TG_CNOMBRE if tipo_tarea == "general" else tarea.TI_CNOMBRE if tipo_tarea == "ingenieria" else tarea.TF_CNOMBRE} para el empleado: {empleado.AE_EMPLEADO}')
+                empleado.save()
+
+            for contratista in contratistas_asignados:
+                if request.POST.get(f'costo_contratista_{contratista.id}'):
+                    contratista.AEC_COSTO_REAL = float(request.POST.get(f'costo_contratista_{contratista.id}'))
+                if request.POST.get(f'horas_contratista_{contratista.id}'):
+                    contratista.AEC_HORAS_REALES = float(request.POST.get(f'horas_contratista_{contratista.id}'))
+                if request.POST.get(f'total_contratista_{contratista.id}'):
+                    contratista.AEC_COSTO_TOTAL = float(request.POST.get(f'total_contratista_{contratista.id}'))
+                crear_log(request.user, f'Actualizar Asignación de Contratista a Tarea {tipo_tarea}', f'Se actualizó la asignación de contratista a tarea: {tarea.TG_CNOMBRE if tipo_tarea == "general" else tarea.TI_CNOMBRE if tipo_tarea == "ingenieria" else tarea.TF_CNOMBRE} para el contratista: {contratista.AEC_EMPLEADO}')
+                contratista.save()
+
+            for recurso in recursos_asignados:
+                if request.POST.get(f'cantidad_recurso_{recurso.id}'):
+                    recurso.ART_CANTIDAD = float(request.POST.get(f'cantidad_recurso_{recurso.id}'))
+                if request.POST.get(f'costo_recurso_{recurso.id}'):
+                    recurso.ART_COSTO_UNITARIO = float(request.POST.get(f'costo_recurso_{recurso.id}'))
+                if request.POST.get(f'horas_recurso_{recurso.id}'):
+                    recurso.ART_HORAS_REALES = float(request.POST.get(f'horas_recurso_{recurso.id}'))
+                if request.POST.get(f'total_recurso_{recurso.id}'):   
+                    total_recurso = request.POST.get(f'total_recurso_{recurso.id}')
+                    total_recurso = total_recurso.replace(',', '.')
+                    recurso.ART_COSTO_REAL = float(total_recurso)
+                crear_log(request.user, f'Actualizar Asignación de Recurso a Tarea {tipo_tarea}', f'Se actualizó la asignación de recurso a tarea: {tarea.TG_CNOMBRE if tipo_tarea == "general" else tarea.TI_CNOMBRE if tipo_tarea == "ingenieria" else tarea.TF_CNOMBRE} para el recurso: {recurso.ART_PRODUCTO}')
+                recurso.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Datos de la tarea actualizados correctamente.',
+                'redirect_url': reverse('proycli_listone', kwargs={'pk': proyecto_actual.id})
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al actualizar los datos: {str(e)}'
+            }, status=400)
+
+    ctx = {
+        'tarea': tarea,
+        'empleados_asignados': empleados_asignados,
+        'contratistas_asignados': contratistas_asignados,
+        'recursos_asignados': recursos_asignados,
+        'tipo_tarea': tipo_tarea
+    }
+    return render(request, 'home/TAREA/tarea_update_data.html', ctx)
+# ----------TAREA UPDATE DATA--------------
+
 #--------------------------------------
 #----------------TAREAS----------------
 #--------------------------------------
 
 def ACTA_REUNION_LISTALL(request):
+    if not has_auth(request.user, 'VER_PROYECTOS_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = ACTA_REUNION.objects.all()
         ctx = {
@@ -1963,11 +2527,15 @@ def ACTA_REUNION_LISTALL(request):
         return redirect('/')
 
 def ACTA_REUNION_ADDONE(request):
+    if not has_auth(request.user, 'ADD_PROYECTOS_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formACTA_REUNION(request.POST)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, f'Crear Acta de Reunión', f'Se creó el acta de reunión: {form.instance.AR_CTITULO}')
                 messages.success(request, 'Acta de reunión guardada correctamente')
                 return redirect('/actareunion_listall/')
         form = formACTA_REUNION()
@@ -1981,12 +2549,16 @@ def ACTA_REUNION_ADDONE(request):
         return redirect('/')
 
 def ACTA_REUNION_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_PROYECTOS_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         acta_reunion = ACTA_REUNION.objects.get(id=pk)
         if request.method == 'POST':
             form = formACTA_REUNION(request.POST, instance=acta_reunion)
             if form.is_valid():
                 form.save()
+                crear_log(request.user, f'Actualizar Acta de Reunión', f'Se actualizó el acta de reunión: {acta_reunion.AR_CTITULO}')
                 messages.success(request, 'Acta de reunión actualizada correctamente')
                 return redirect('/actareunion_listall/')
         form = formACTA_REUNION(instance=acta_reunion)
@@ -2000,6 +2572,9 @@ def ACTA_REUNION_UPDATE(request, pk):
         return redirect('/')
 
 def COTIZACION_LISTALL(request):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = COTIZACION.objects.all()
         ctx = {
@@ -2012,6 +2587,9 @@ def COTIZACION_LISTALL(request):
         return redirect('/')
 
 def COTIZACION_ADDONE(request):
+    if not has_auth(request.user, 'ADD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formCOTIZACION(request.POST)
@@ -2019,6 +2597,7 @@ def COTIZACION_ADDONE(request):
                 cotizacion = form.save(commit=False)
                 cotizacion.CO_CUSUARIO_CREADOR = request.user
                 cotizacion.save()
+                crear_log(request.user, f'Crear Cotización', f'Se creó la cotización: {cotizacion.CO_CNUMERO}')
                 messages.success(request, 'Cotización guardada correctamente')
                 return redirect('/cotizacion_listall/')
         form = formCOTIZACION()
@@ -2032,6 +2611,9 @@ def COTIZACION_ADDONE(request):
         return redirect('/')
 
 def COTIZACION_ADD_LINE(request):
+    if not has_auth(request.user, 'ADD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
 
@@ -2075,11 +2657,13 @@ def COTIZACION_ADD_LINE(request):
                 CD_NTOTAL=total,
                 CD_CUSUARIO_CREADOR=request.user
             )
+            crear_log(request.user, f'Crear Línea de Cotización', f'Se creó la línea de cotización: {detalle.CD_PRODUCTO}')
             detalle.save()
 
             # Recalculate COTIZACION.CO_NTOTAL
             total_cotizacion = COTIZACION_DETALLE.objects.filter(CD_COTIZACION=cotizacion).aggregate(Sum('CD_NTOTAL'))['CD_NTOTAL__sum'] or 0
             cotizacion.CO_NTOTAL = total_cotizacion
+            crear_log(request.user, f'Actualizar Cotización', f'Se actualizó la cotización: {cotizacion.CO_CNUMERO}')
             cotizacion.save()
 
             messages.success(request, 'Línea de cotización agregada correctamente')
@@ -2092,6 +2676,9 @@ def COTIZACION_ADD_LINE(request):
         return JsonResponse({'error': str(errMsg)}, status=400)
 
 def COTIZACION_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         cotizacion = COTIZACION.objects.get(id=pk)
         if request.method == 'POST':
@@ -2100,19 +2687,23 @@ def COTIZACION_UPDATE(request, pk):
                 cotizacion = form.save(commit=False)
                 cotizacion.CO_CUSUARIO_MODIFICADOR = request.user
                 cotizacion.save()
+                crear_log(request.user, f'Actualizar Cotización', f'Se actualizó la cotización: {cotizacion.CO_CNUMERO}')
                 messages.success(request, 'Cotización actualizada correctamente')
                 return redirect('/cotizacion_listall/')
         form = formCOTIZACION(instance=cotizacion)
         ctx = {
             'form': form
         }
-        return render(request, 'home/COTIZACION/cotizacion_addone.html', ctx)
+        return render(request, 'home/COTIZACION/cotizacion_update.html', ctx)
     except Exception as e:
         print(e)
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
 def COTIZACION_LISTONE(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         cotizacion = COTIZACION.objects.get(id=pk)
         product_list = list(PRODUCTO.objects.filter(PR_BACTIVO=True).values_list('id', 'PR_CNOMBRE'))
@@ -2128,6 +2719,9 @@ def COTIZACION_LISTONE(request, pk):
         return redirect('/cotizacion_listall/')
     
 def COTIZACION_GET_DATA(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         cotizacion = COTIZACION.objects.get(id=pk)
         data = {
@@ -2153,9 +2747,10 @@ def COTIZACION_GET_DATA(request, pk):
         print("ERROR:", e)
         return JsonResponse({'error': str(e)}, status=500)
 
-
-
 def COTIZACION_LISTONE_FORMAT(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         cotizacion = COTIZACION.objects.get(id=pk)
         product_list = list(PRODUCTO.objects.filter(PR_BACTIVO=True).values_list('id', 'PR_CNOMBRE'))
@@ -2171,6 +2766,9 @@ def COTIZACION_LISTONE_FORMAT(request, pk):
         return redirect('/cotizacion_listall/')
 
 def COTIZACION_GET_LINE(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         print("id linea:", pk)
         detalle = COTIZACION_DETALLE.objects.get(id=pk)
@@ -2190,15 +2788,20 @@ def COTIZACION_GET_LINE(request, pk):
         return JsonResponse({'error': str(e)}, status=500)
 
 def COTIZACION_DELETE_LINE(request, pk):
+    if not has_auth(request.user, 'UPD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         detalle = COTIZACION_DETALLE.objects.get(id=pk)
         cotizacion_id = detalle.CD_COTIZACION.id
         detalle.delete()
+        crear_log(request.user, f'Eliminar Línea de Cotización', f'Se eliminó la línea de cotización: {detalle.CD_PRODUCTO}')
         # Recalculate COTIZACION.CO_NTOTAL
         cotizacion = detalle.CD_COTIZACION
         total_cotizacion = COTIZACION_DETALLE.objects.filter(CD_COTIZACION=cotizacion).aggregate(Sum('CD_NTOTAL'))['CD_NTOTAL__sum'] or 0
         cotizacion.CO_NTOTAL = total_cotizacion
         cotizacion.save()
+        crear_log(request.user, f'Actualizar Cotización', f'Se actualizó la cotización: {cotizacion.CO_CNUMERO}')
         return JsonResponse({'success': 'Línea de cotización eliminada correctamente', 'cotizacion_id': cotizacion_id})
     except COTIZACION_DETALLE.DoesNotExist:
         return JsonResponse({'error': 'Línea de cotización no encontrada'}, status=404)
@@ -2214,6 +2817,9 @@ def CHECK_CO_NUMERO(request):
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 def ORDEN_VENTA_LISTALL(request):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         object_list = ORDEN_VENTA.objects.all()
         ctx = {
@@ -2226,6 +2832,9 @@ def ORDEN_VENTA_LISTALL(request):
         return redirect('/')
 
 def ORDEN_VENTA_ADDONE(request):
+    if not has_auth(request.user, 'ADD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
             form = formORDEN_VENTA(request.POST)
@@ -2251,6 +2860,7 @@ def ORDEN_VENTA_ADDONE(request):
                                 OVD_NTOTAL=cotizacion_detalle.CD_NTOTAL,
                                 OVD_CUSUARIO_CREADOR=request.user
                             )
+                            crear_log(request.user, f'Crear Línea de Orden de Venta', f'Se creó la línea de orden de venta: {cotizacion_detalle.CD_COTIZACION}')
                     except Exception as e:
                         print(f"Error al copiar detalles de cotización: {str(e)}")
 
@@ -2270,6 +2880,9 @@ def ORDEN_VENTA_ADDONE(request):
         return redirect('/')
     
 def ORDEN_VENTA_ADD_LINE(request):
+    if not has_auth(request.user, 'ADD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         if request.method == 'POST':
 
@@ -2299,6 +2912,7 @@ def ORDEN_VENTA_ADD_LINE(request):
             existing_detail = ORDEN_VENTA_DETALLE.objects.filter(OVD_ORDEN_VENTA=orden_venta, OVD_PRODUCTO=producto).first()
             if existing_detail:
                 existing_detail.delete()
+                crear_log(request.user, f'Eliminar Línea de Orden de Venta', f'Se eliminó la línea de orden de venta: {orden_venta}')
 
             # Recalculate total
             total = subtotal - descuento
@@ -2314,11 +2928,13 @@ def ORDEN_VENTA_ADD_LINE(request):
                 OVD_CUSUARIO_CREADOR=request.user
             )
             detalle.save()
+            crear_log(request.user, f'Crear Línea de Orden de Venta', f'Se creó la línea de orden de venta: {orden_venta}')
 
             # Recalculate ORDEN_VENTA.OV_NTOTAL
             total_orden_venta = ORDEN_VENTA_DETALLE.objects.filter(OVD_ORDEN_VENTA=orden_venta).aggregate(Sum('OVD_NTOTAL'))['OVD_NTOTAL__sum'] or 0
             orden_venta.OV_NTOTAL = total_orden_venta
             orden_venta.save()
+            crear_log(request.user, f'Actualizar Orden de Venta', f'Se actualizó la orden de venta: {orden_venta.OV_CNUMERO}')
 
             messages.success(request, 'Línea de orden de venta agregada correctamente')
             return redirect(f'/orden_venta_listone/{orden_venta_id}')
@@ -2330,6 +2946,9 @@ def ORDEN_VENTA_ADD_LINE(request):
         return JsonResponse({'error': str(errMsg)}, status=400)
 
 def ORDEN_VENTA_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         orden_venta = ORDEN_VENTA.objects.get(id=pk)
         if request.method == 'POST':
@@ -2338,6 +2957,7 @@ def ORDEN_VENTA_UPDATE(request, pk):
                 orden_venta = form.save(commit=False)
                 orden_venta.OV_CUSUARIO_MODIFICADOR = request.user
                 orden_venta.save()
+                crear_log(request.user, f'Actualizar Orden de Venta', f'Se actualizó la orden de venta: {orden_venta.OV_CNUMERO}')
                 messages.success(request, 'Orden de venta actualizada correctamente')
                 return redirect('/orden_venta_listall/')
         form = formORDEN_VENTA(instance=orden_venta)
@@ -2351,6 +2971,9 @@ def ORDEN_VENTA_UPDATE(request, pk):
         return redirect('/')
 
 def ORDEN_VENTA_LISTONE(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         orden_venta = ORDEN_VENTA.objects.get(id=pk)
         product_list = list(PRODUCTO.objects.filter(PR_BACTIVO=True).values_list('id', 'PR_CNOMBRE'))
@@ -2366,6 +2989,9 @@ def ORDEN_VENTA_LISTONE(request, pk):
         return redirect('/orden_venta_listall/')
 
 def ORDEN_VENTA_LISTONE_FORMAT(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         orden_venta = ORDEN_VENTA.objects.get(id=pk)
         product_list = list(PRODUCTO.objects.filter(PR_BACTIVO=True).values_list('id', 'PR_CNOMBRE'))
@@ -2381,6 +3007,9 @@ def ORDEN_VENTA_LISTONE_FORMAT(request, pk):
         return redirect('/orden_venta_listall/')
 
 def ORDEN_VENTA_GET_LINE(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         print("id linea:", pk)
         detalle = ORDEN_VENTA_DETALLE.objects.get(id=pk)
@@ -2400,15 +3029,20 @@ def ORDEN_VENTA_GET_LINE(request, pk):
         return JsonResponse({'error': str(e)}, status=500)
 
 def ORDEN_VENTA_DELETE_LINE(request, pk):
+    if not has_auth(request.user, 'UPD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
     try:
         detalle = ORDEN_VENTA_DETALLE.objects.get(id=pk)
         orden_venta_id = detalle.OVD_ORDEN_VENTA.id
         detalle.delete()
+        crear_log(request.user, f'Eliminar Línea de Orden de Venta', f'Se eliminó la línea de orden de venta: {detalle.OVD_ORDEN_VENTA}')
         # Recalculate ORDEN_VENTA.OV_NTOTAL
         orden_venta = detalle.OVD_ORDEN_VENTA
         total_orden_venta = ORDEN_VENTA_DETALLE.objects.filter(OVD_ORDEN_VENTA=orden_venta).aggregate(Sum('OVD_NTOTAL'))['OVD_NTOTAL__sum'] or 0
         orden_venta.OV_NTOTAL = total_orden_venta
         orden_venta.save()
+        crear_log(request.user, f'Actualizar Orden de Venta', f'Se actualizó la orden de venta: {orden_venta.OV_CNUMERO}')
         return JsonResponse({'success': 'Línea de orden de venta eliminada correctamente', 'orden_venta_id': orden_venta_id})
     except ORDEN_VENTA_DETALLE.DoesNotExist:
         return JsonResponse({'error': 'Línea de orden de venta no encontrada'}, status=404)
@@ -2445,6 +3079,7 @@ def ORDEN_VENTA_ADDONE(request):
                 orden_venta = form.save(commit=False)
                 orden_venta.OV_CUSUARIO_CREADOR = request.user
                 orden_venta.save()
+                crear_log(request.user, f'Crear Orden de Venta', f'Se creó la orden de venta: {orden_venta.OV_CNUMERO}')
                 print("orden_venta saved")
                 # If there's a related cotización, copy its details
                 if orden_venta.OV_COTIZACION:
@@ -2462,6 +3097,7 @@ def ORDEN_VENTA_ADDONE(request):
                                 OVD_NTOTAL=cotizacion_detalle.CD_NTOTAL,
                                 OVD_CUSUARIO_CREADOR=request.user
                             )
+                            crear_log(request.user, f'Crear Línea de Orden de Venta', f'Se creó la línea de orden de venta: {cotizacion_detalle.CD_PRODUCTO}')
                     except Exception as e:
                         print(f"Error al copiar detalles de cotización: {str(e)}")
 
@@ -2525,7 +3161,7 @@ def ORDEN_VENTA_ADD_LINE(request):
                 OVD_CUSUARIO_CREADOR=request.user
             )
             detalle.save()
-
+            crear_log(request.user, f'Crear Línea de Orden de Venta', f'Se creó la línea de orden de venta: {orden_venta}')
             # Recalculate ORDEN_VENTA.OV_NTOTAL
             total_orden_venta = ORDEN_VENTA_DETALLE.objects.filter(OVD_ORDEN_VENTA=orden_venta).aggregate(Sum('OVD_NTOTAL'))['OVD_NTOTAL__sum'] or 0
             orden_venta.OV_NTOTAL = total_orden_venta
@@ -2549,13 +3185,14 @@ def ORDEN_VENTA_UPDATE(request, pk):
                 orden_venta = form.save(commit=False)
                 orden_venta.OV_CUSUARIO_MODIFICADOR = request.user
                 orden_venta.save()
+                crear_log(request.user, f'Actualizar Orden de Venta', f'Se actualizó la orden de venta: {orden_venta.OV_CNUMERO}')
                 messages.success(request, 'Orden de venta actualizada correctamente')
                 return redirect('/orden_venta_listall/')
         form = formORDEN_VENTA(instance=orden_venta)
         ctx = {
             'form': form
         }
-        return render(request, 'home/ORDEN_VENTA/orden_venta_addone.html', ctx)
+        return render(request, 'home/ORDEN_VENTA/orden_venta_update.html', ctx)
     except Exception as e:
         print(e)
         messages.error(request, f'Error, {str(e)}')
@@ -2615,11 +3252,13 @@ def ORDEN_VENTA_DELETE_LINE(request, pk):
         detalle = ORDEN_VENTA_DETALLE.objects.get(id=pk)
         orden_venta_id = detalle.OVD_ORDEN_VENTA.id
         detalle.delete()
+        crear_log(request.user, f'Eliminar Línea de Orden de Venta', f'Se eliminó la línea de orden de venta: {detalle.OVD_PRODUCTO}')
         # Recalculate ORDEN_VENTA.OV_NTOTAL
         orden_venta = detalle.OVD_ORDEN_VENTA
         total_orden_venta = ORDEN_VENTA_DETALLE.objects.filter(OVD_ORDEN_VENTA=orden_venta).aggregate(Sum('OVD_NTOTAL'))['OVD_NTOTAL__sum'] or 0
         orden_venta.OV_NTOTAL = total_orden_venta
         orden_venta.save()
+        crear_log(request.user, f'Actualizar Orden de Venta', f'Se actualizó la orden de venta: {orden_venta.OV_CNUMERO}')
         return JsonResponse({'success': 'Línea de orden de venta eliminada correctamente', 'orden_venta_id': orden_venta_id})
     except ORDEN_VENTA_DETALLE.DoesNotExist:
         return JsonResponse({'error': 'Línea de orden de venta no encontrada'}, status=404)
@@ -2634,6 +3273,334 @@ def CHECK_OV_NUMERO(request):
         return JsonResponse({'exists': exists})
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
+#--------------------------------------
+#------------QUERY MANAGER-------------
+#--------------------------------------
+def QUERY_LISTALL(request):
+    if not has_auth(request.user, 'VER_QUERYS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        queries = QUERY.objects.filter(QR_NHABILITADO = True)
+        ctx = {
+            "object_list": queries
+        }
+        return render(request, 'home/QUERY_MANAGER/query_listall.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, 'Error: ' + str(e))
+        return redirect('/')
+    
+def QUERY_ADDONE(request):
+    if not has_auth(request.user, 'ADD_QUERYS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        if request.method == 'POST':
+            form = formQUERY(request.POST)
+            if form.is_valid():
+                form.cleaned_data["USER_CREATOR_ID"] = request.user
+                form.cleaned_data["USER_UPD_ID"] = request.user
+                form.save()
+                crear_log(request.user, f'Crear Query', f'Se creó la query: {form.cleaned_data["QR_CNOMBRE"]}')
+                messages.success(request, 'Query agregada correctamente')
+                return redirect('/query_listall/')
+        form = formQUERY()
+        ctx = {
+            "form": form
+        }
+        return render(request, 'home/QUERY_MANAGER/query_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, 'Error: ' + str(e))
+        return redirect('/query_listall/')
+
+def QUERY_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_QUERYS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        query = QUERY.objects.get(id = pk)
+        if request.method == 'POST':
+            form = formQUERY(request.POST, instance=query)
+            if form.is_valid():
+                form.cleaned_data["USER_UPD_ID"] = request.user
+                form.save()
+                crear_log(request.user, f'Actualizar Query', f'Se actualizó la query: {form.cleaned_data["QR_CNOMBRE"]}')
+                messages.success(request, 'Query actualizada correctamente')
+                return redirect('/query_listall/')
+        form = formQUERY(instance=query)
+        ctx = {
+            "form": form,
+            "object": query
+        }
+        return render(request, 'home/QUERY_MANAGER/query_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, 'Error: ' + str(e))
+        return redirect('/query_listall/')
+
+def QUERY_LISTONE(request):
+    if not has_auth(request.user, 'VER_QUERYS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        pass
+    except Exception as e:
+        print("ERROR:", e)
+        return JsonResponse({'valid': False, 'error': str(e)})
+    
+def QUERY_RUN(request, pk):
+    if not has_auth(request.user, 'VER_QUERYS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        query = QUERY.objects.get(id = pk)
+
+        lstParamctx=[]
+        documentos = []
+        lstParam=getQueryParam(query.QR_CQUERY)
+        cantidad_documentos = 0
+
+        if lstParam!=None:
+            print("Estos son los parametros de la consulta",lstParam)
+            for param in lstParam:
+                try:
+                    print("param",param)
+                    tipo=param.split(";")[0].replace('[','').replace("'","")[0]
+                    nombre=param.split(";")[0].replace('[','').replace("'","")
+                    etiqueta=param.split(";")[1].replace('[','').replace("'","")
+                    valor=param.split(";")[2].replace(']','').replace("'","")
+                    datalst=[]
+                    if tipo=='L':
+                        datalst,qCols,cMsgRet = run_query_sql(valor)
+                        lstParamctx.append([tipo,nombre,etiqueta,json.dumps(datalst)])    
+                    else:
+                        lstParamctx.append([tipo,nombre,etiqueta,valor])    
+                except Exception as e:
+                    print(e)
+
+            if documentos:
+                cantidad_documentos = len(documentos)
+            context = {
+                        'lstParamctx':lstParamctx,
+                        'id_query':pk,
+                        'documentos':documentos,
+                        'cantidad_documentos':cantidad_documentos
+                    }
+            return render(request,'home/QUERY_MANAGER/query_listone_param.html',context)
+
+
+        else:
+            documentos = []
+            listado,qCols,cMsgRet = run_query_sql(query.QR_CQUERY)
+            for linea in listado:
+                for dato in linea:
+                    try:
+                        if dato.__contains__('https://labbe-files.s3.amazonaws.com'):
+                            documentos.append(dato)
+                    except Exception as e:
+                        next
+            if documentos:
+                cantidad_documentos = len(documentos)
+            if listado!=False:
+                if query.QR_CLABEL_FIELDS != None and query.QR_CLABEL_FIELDS != '':
+                    lCols = query.QR_CLABEL_FIELDS.split(",")
+                    if lCols[0]=='*':
+                        lCols.clear()
+                else:
+                    lCols = []
+                if len(lCols)<qCols:
+                    nCols = range(qCols-len(lCols))
+                    for n in nCols:
+                        lCols.append(f"Columna {str(n+1)}")
+                
+                context = {
+                    'listado':listado,
+                    'qcols':range(qCols),
+                    'lcols':lCols,
+                    'id_query':pk,
+                    'documentos':documentos,
+                    'cantidad_documentos':cantidad_documentos
+                }
+                return render(request,'home/QUERY_MANAGER/query_listone_param.html',context)
+            else:
+                listado=[]
+                documentos = []
+                lstmsg=[]
+                lstmsg.append(cMsgRet+'\n Edite y vuelva a intentar')
+
+                listado.append(lstmsg)
+                qCols=1
+                lCols=[]
+                lCols.append('Descripción del error')
+                context = {
+                    'listado':listado,
+                    'qcols':range(qCols),
+                    'lcols':lCols,
+                    'id_query':pk,
+                    'documentos':documentos
+                }
+                return render(request,'home/QUERY_MANAGER/query_listone.html',context)
+    except Exception as e:
+        print(e)
+        messages.error(request, 'Error: ' + str(e))
+        return redirect('/query_listall/')
+
+def QUERY_DELETE(request, pk):
+    if not has_auth(request.user, 'UPD_QUERYS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        query = QUERY.objects.get(id = pk)
+        query.QR_NHABILITADO = False
+        query.USER_UPD_ID = request.user
+        query.save()
+        crear_log(request.user, f'Eliminar Query', f'Se eliminó la query: {query.QR_CNOMBRE}')
+        messages.success(request, 'Query eliminada correctamente')
+        return redirect('/query_listall/')
+    except Exception as e:
+        print(e)
+        messages.error(request, 'Error: ' + str(e))
+        return redirect('/query_listall/')
+    
+def run_query_param(request):
+    try:
+        id = request.POST.get('id')
+        query = QUERY.objects.get(id=id)
+        tableData = json.loads(request.POST.get('tableData'))
+
+        for data in tableData:        
+            if data[0]!=None and str(data[0]).strip()!="":
+                query.QR_CQUERY = query.QR_CQUERY.replace(f"[%{data[0]}]",data[1])
+        
+        print(query.QR_CQUERY)
+        listado,qCols,cMsgRet = run_query_sql(query.QR_CQUERY)
+
+        if listado!=False:
+            if query.QR_CLABEL_FIELDS != None and query.QR_CLABEL_FIELDS != '':
+                lCols = query.QR_CLABEL_FIELDS.split(",")
+                if lCols[0]=='*':
+                    lCols.clear()
+            else:
+                lCols = []
+            if len(lCols)<qCols:
+                nCols = range(qCols-len(lCols))
+                for n in nCols:
+                    lCols.append(f"Columna {str(n+1)}")
+            
+            context = {
+                'listado':listado,
+                'qcols':list(range(qCols)),
+                'lcols':lCols,
+                'id_query':id
+            }
+            #return render(request,'home/query_listone.html',context)
+            return JsonResponse(context,safe=False)
+        else:
+            listado=[]
+            lstmsg=[]
+            lstmsg.append(cMsgRet+'\n Edite y vuelva a intentar')
+
+            listado.append(lstmsg)
+            qCols=1
+            lCols=[]
+            lCols.append('Descripción del error')
+            context = {
+                'listado':listado,
+                'qcols':list(range(qCols)),
+                'lcols':lCols,
+                'id_query':id
+            }
+            return JsonResponse(context,safe=False)
+    except Exception as e:
+        print(e)
+        messages.error(request, 'Error: ' + str(e))
+        return redirect('/query_listall/')
+
+def getQueryParam(sql_query):
+
+    try:       
+        # Define a regular expression pattern to match the entire list inside comments
+        pattern = r'\{(.*?)\}'
+
+        # Use re.search to find the pattern in the SQL query
+        match = re.search(pattern, str(sql_query), re.DOTALL)
+
+        # Check if a match is found
+        print(match)
+        if match:
+            # Extract the matched list
+            comment_list = match.group(1)
+            
+            # Split the comment list into individual items
+            list_items = comment_list.split(':')
+
+            # Remove leading and trailing spaces from each item and display them
+            cleaned_items = [item.strip() for item in list_items]
+            
+            # Display the cleaned list items
+            lstParam=[]
+            for item in cleaned_items:
+                lstParam.append(item)
+            return lstParam
+        else:
+            print("No hay parametros para la consulta")
+            return None
+    except Exception as e:
+        print(e)
+        return None
+
+def run_query_sql(query):
+    try:
+        with connection.cursor() as cursor:
+
+            if query.lower().find('insert') != -1:
+                # NO SE PUEDE
+                print('CONTIENE insert!!!!')
+                return False, 0, 'La consulta contiene elementos reservados, no se ejecutará'
+            if query.lower().find('update') != -1:
+                # NO SE PUEDE
+                print('CONTIENE update!!!!')
+                return False, 0, 'La consulta contiene elementos reservados, no se ejecutará'
+            if query.lower().find('delete') != -1:
+                # NO SE PUEDE
+                print('CONTIENE delete!!!!')
+                return False, 0, 'La consulta contiene elementos reservados, no se ejecutará'
+            if query.lower().find('cursor') != -1:
+                # NO SE PUEDE
+                print('CONTIENE CURSOR!!!!')
+                return False, 0, 'La consulta contiene elementos reservados, no se ejecutará'
+            if query.lower().find('execute') != -1:
+                # NO SE PUEDE
+                print('CONTIENE EXECUTE!!!!')
+                return False, 0, 'La consulta contiene elementos reservados, no se ejecutará'
+            if query.find('drop') != -1:
+                # NO SE PUEDE
+                print('CONTIENE DROP!!!!')
+                return False, 0, 'La consulta contiene elementos reservados, no se ejecutará'
+            if query.lower().find('create') != -1:
+                # NO SE PUEDE
+                print('CONTIENE CREATE!!!!')
+                return False, 0, 'La consulta contiene elementos reservados, no se ejecutará'
+            if query.lower().find('alter') != -1:
+                # NO SE PUEDE
+                print('CONTIENE ALTER!!!!')
+                return False, 0, 'La consulta contiene elementos reservados, no se ejecutará'
+
+            cquery = f'''{query} 
+                        '''
+            cursor.execute(cquery)
+            resultado = cursor.fetchall()
+            if resultado == None:
+                resultado = False, 0, ''
+            qCol = len(resultado[0])
+            return resultado, qCol, ''
+    except Exception as e:
+        return False, 0, str(e)
+#--------------------------------------
+#------------QUERY MANAGER-------------
+#--------------------------------------
 
 
 # def BOLETA_GARANTIA_LISTALL(request):

@@ -1,0 +1,247 @@
+{% load custom_filters %}
+<div class="modal-content">
+    <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title text-white"><i class="fas fa-edit mr-2"></i>Editar Datos de la Tarea</h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">
+            <span aria-hidden="true" class="text-white">&times;</span>
+        </button>
+    </div>
+    <div class="modal-body">
+        <form id="formEditarTarea" method="POST">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="porcentajeAvance"><i class="fas fa-percentage mr-2"></i>Porcentaje de Avance:</label>
+                <div class="input-group">
+                    <input type="number" class="form-control" id="porcentajeAvance" name="porcentajeAvance" 
+                        value="{{ tarea.get_progreso|default:'0.0' }}"
+                        min="0" max="100" step="0.01">
+                    <div class="input-group-append">
+                        <span class="input-group-text">%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="horasTarea"><i class="far fa-clock mr-2"></i>Horas de la Tarea:</label>
+                <input type="number" class="form-control" id="horasTarea" name="horasTarea" 
+                    value="{{ tarea.get_horas|default:'0.0' }}"
+                    min="0" step="0.01">
+            </div>
+            
+            <h6 class="mt-4 mb-3 text-primary"><i class="fas fa-users mr-2"></i>Asignaciones:</h6>
+            <h6 class="mt-4 mb-3 text-primary"><i class="fas fa-user-tie mr-2"></i>Empleados:</h6>
+            {% if empleados_asignados %}
+                {% for empleado in empleados_asignados %}
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <strong>{{ empleado.AE_EMPLEADO.EM_CNOMBRE }} {{empleado.AE_EMPLEADO.EM_CAPELLIDO}} - {{empleado.AE_EMPLEADO.EM_CRUT}}</strong>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-2">
+                                <label><small class="text-muted">Costo real por hora</small></label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text"><i class="fas fa-dollar-sign"></i></span>
+                                    </div>
+                                    <input type="number" class="form-control" name="costo_empleado_{{ empleado.id }}" 
+                                        value="{{ empleado.AE_COSTO_REAL|default:'0.0' }}" 
+                                        placeholder="Costo" min="0" step="0.01">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <label><small class="text-muted">Horas reales trabajadas</small></label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text"><i class="far fa-clock"></i></span>
+                                    </div>
+                                    <input type="number" class="form-control" name="horas_empleado_{{ empleado.id }}" 
+                                        value="{{ empleado.AE_HORAS_REALES|default:'0.0' }}" 
+                                        placeholder="Horas" min="0" step="0.01" oninput="validarHoras()">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-right">
+                            <strong>Total:</strong> $<span id="total_empleado_{{ empleado.id }}">0.00</span>
+                            <input type="hidden" name="total_empleado_{{ empleado.id }}" value="0.00">
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-muted">No existen asignaciones de empleados para esta tarea.</p>
+            {% endif %}
+            <hr>
+            <h6 class="mt-4 mb-3 text-primary"><i class="fas fa-user-tie mr-2"></i>Contratistas:</h6>
+            {% if contratistas_asignados %}
+                {% for contratista in contratistas_asignados %}
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <strong>{{ contratista.AEC_EMPLEADO.EC_CNOMBRE }} {{contratista.AEC_EMPLEADO.EC_CAPELLIDO}} - {{contratista.AEC_EMPLEADO.EC_CRUT}} </strong>
+                        <small class="text-muted ml-2">({{ contratista.AEC_EMPLEADO.EC_CONTRATISTA.CO_CNOMBRE }})</small>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-2">
+                                <label><small class="text-muted">Costo real por hora</small></label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text"><i class="fas fa-dollar-sign"></i></span>
+                                    </div>
+                                    <input type="number" class="form-control" name="costo_contratista_{{ contratista.id }}" 
+                                        value="{{ contratista.AEC_COSTO_REAL|default:'0.0' }}" 
+                                        placeholder="Costo" min="0" step="0.01">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <label><small class="text-muted">Horas reales trabajadas</small></label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text"><i class="far fa-clock"></i></span>
+                                    </div>
+                                    <input type="number" class="form-control" name="horas_contratista_{{ contratista.id }}" 
+                                        value="{{ contratista.AEC_HORAS_REALES|default:'0.0' }}" 
+                                        placeholder="Horas" min="0" step="0.01" oninput="validarHoras()">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-right">
+                            <strong>Total:</strong> $<span id="total_contratista_{{ contratista.id }}">0.00</span>
+                            <input type="hidden" name="total_contratista_{{ contratista.id }}" value="0.00">
+                        </div>
+                        
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-muted">No existen asignaciones de contratistas para esta tarea.</p>
+            {% endif %}
+            <hr>
+            <h6 class="mt-4 mb-3 text-primary"><i class="fas fa-user-tie mr-2"></i>Recursos:</h6>
+            {% if recursos_asignados %}
+                {% for recurso in recursos_asignados %}
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <strong>{{ recurso.ART_PRODUCTO }} </strong>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 mb-2">
+                                <label><small class="text-muted">Cantidad utilizada</small></label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text"><i class="fas fa-cubes"></i></span>
+                                    </div>
+                                    <input type="number" step="1" class="form-control" name="cantidad_recurso_{{ recurso.id }}" 
+                                        value="{{ recurso.ART_CANTIDAD|default:'0.0'|floatformat:'0' }}" 
+                                        placeholder="Cantidad (número entero)" min="0">
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label><small class="text-muted">Costo unitario</small></label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text"><i class="fas fa-dollar-sign"></i></span>
+                                    </div>
+                                    <input type="number" class="form-control" name="costo_recurso_{{ recurso.id }}" 
+                                        value="{{ recurso.ART_COSTO_UNITARIO|default:'0.0' }}" 
+                                        placeholder="Costo" min="0" step="0.01">
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label><small class="text-muted">Horas de uso</small></label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text"><i class="far fa-clock"></i></span>
+                                    </div>
+                                    <input type="number" class="form-control" name="horas_recurso_{{ recurso.id }}" 
+                                        value="{{ recurso.ART_HORAS_REALES|default:'0.0' }}" 
+                                        placeholder="Horas" min="0" step="0.01" oninput="validarHoras()">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-right">
+                            <strong>Total:</strong> $<span id="total_recurso_{{ recurso.id }}">0.00</span>
+                            <input type="hidden" name="total_recurso_{{ recurso.id }}" value="0.00">
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-muted">No existen asignaciones de recursos para esta tarea.</p>
+            {% endif %}
+            <input type="hidden" name="tipo_tarea" value="{{ tipo_tarea }}">
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal"><i class="fas fa-times mr-2"></i>Cerrar</button>
+        <button type="submit" form="formEditarTarea" class="btn btn-primary"><i class="fas fa-save mr-2"></i>Guardar Cambios</button>
+    </div>
+</div>
+
+<script>
+    function calcularTotalEmpleado(id) {
+        var costo = parseFloat($(`input[name="costo_empleado_${id}"]`).val()) || 0;
+        var horas = parseFloat($(`input[name="horas_empleado_${id}"]`).val()) || 0;
+        var total = costo * horas;
+        $(`#total_empleado_${id}`).text(total.toFixed(2));
+        $(`input[name="total_empleado_${id}"]`).val(total.toFixed(2));
+        console.log(`Total empleado ${id}: ${total.toFixed(2)}`);
+    }
+
+    function calcularTotalContratista(id) {
+        var costo = parseFloat($(`input[name="costo_contratista_${id}"]`).val()) || 0;
+        var horas = parseFloat($(`input[name="horas_contratista_${id}"]`).val()) || 0;
+        var total = costo * horas;
+        $(`#total_contratista_${id}`).text(total.toFixed(2));
+        $(`input[name="total_contratista_${id}"]`).val(total.toFixed(2));
+        console.log(`Total contratista ${id}: ${total.toFixed(2)}`);
+    }
+
+    function calcularTotalRecurso(id) {
+        var cantidad = parseFloat($(`input[name="cantidad_recurso_${id}"]`).val()) || 0;
+        var costo = parseFloat($(`input[name="costo_recurso_${id}"]`).val()) || 0;
+        var horas = parseFloat($(`input[name="horas_recurso_${id}"]`).val()) || 0;
+        var total = cantidad * costo * horas;
+        $(`#total_recurso_${id}`).text(total.toFixed(2));
+        $(`input[name="total_recurso_${id}"]`).val(total.toFixed(2));
+        console.log(`Total recurso ${id}: ${total.toFixed(2)}`);
+    }
+
+    $(document).ready(function() {
+        console.log('Documento listo, iniciando cálculos');
+        
+        // Empleados
+        $('.costo-empleado, .horas-empleado').on('input', function() {
+            var id = $(this).data('empleado-id');
+            calcularTotalEmpleado(id);
+            console.log(`Total empleado ${id}: ${total.toFixed(2)}`);
+        });
+
+        // Contratistas
+        $('.costo-contratista, .horas-contratista').on('input', function() {
+            var id = $(this).data('contratista-id');
+            calcularTotalContratista(id);
+            console.log(`Total contratista ${id}: ${total.toFixed(2)}`);
+        });
+
+        // Recursos
+        $('.cantidad-recurso, .costo-recurso, .horas-recurso').on('input', function() {
+            var id = $(this).data('recurso-id');
+            calcularTotalRecurso(id);
+            console.log(`Total recurso ${id}: ${total.toFixed(2)}`);
+        });
+
+        // Calcular totales iniciales
+        {% for empleado in empleados_asignados %}
+            calcularTotalEmpleado({{ empleado.id }});
+        {% endfor %}
+        {% for contratista in contratistas_asignados %}
+            calcularTotalContratista({{ contratista.id }});
+        {% endfor %}
+        {% for recurso in recursos_asignados %}
+            calcularTotalRecurso({{ recurso.id }});
+        {% endfor %}
+        
+        console.log('Cálculos iniciales completados');
+    });
+</script>
