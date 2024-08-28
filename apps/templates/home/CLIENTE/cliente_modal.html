@@ -1,0 +1,112 @@
+<div class="modal-content">
+    <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title text-white"><i class="fas fa-building mr-2"></i>Información del Cliente</h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">
+            <span aria-hidden="true" class="text-white">&times;</span>
+        </button>
+    </div>
+    <div class="modal-body">
+        <ul class="nav nav-tabs" id="clienteTab" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="general-tab" data-toggle="tab" href="#general" role="tab" aria-controls="general" aria-selected="true">
+                    <i class="fas fa-info-circle mr-2"></i>Datos Generales
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="contacto-tab" data-toggle="tab" href="#contacto" role="tab" aria-controls="contacto" aria-selected="false">
+                    <i class="fas fa-address-book mr-2"></i>Contacto
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="adicional-tab" data-toggle="tab" href="#adicional" role="tab" aria-controls="adicional" aria-selected="false">
+                    <i class="fas fa-cog mr-2"></i>Información Adicional
+                </a>
+            </li>
+        </ul>
+        <div class="tab-content mt-3" id="clienteTabContent">
+            <div class="tab-pane fade show active" id="general" role="tabpanel" aria-labelledby="general-tab">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted"><i class="fas fa-signature mr-2"></i>Nombre de la empresa</h6>
+                        <p class="font-weight-bold">{{ cliente.CL_CNOMBRE }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted"><i class="fas fa-id-card mr-2"></i>RUT</h6>
+                        <p class="font-weight-bold">{{ cliente.CL_CRUT }}</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <h6 class="text-muted"><i class="fas fa-map-marker-alt mr-2"></i>Dirección</h6>
+                        <p>{{ cliente.CL_CDIRECCION }}</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <h6 class="text-muted"><i class="fas fa-globe-americas mr-2"></i>Región</h6>
+                        <p>{{ cliente.CL_CREGION }}</p>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <h6 class="text-muted"><i class="fas fa-map mr-2"></i>Provincia</h6>
+                        <p>{{ cliente.CL_CPROVINCIA }}</p>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <h6 class="text-muted"><i class="fas fa-city mr-2"></i>Comuna</h6>
+                        <p>{{ cliente.CL_CCOMUNA }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="contacto" role="tabpanel" aria-labelledby="contacto-tab">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted"><i class="fas fa-phone mr-2"></i>Teléfono</h6>
+                        <p>{{ cliente.CL_CTELEFONO }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted"><i class="fas fa-envelope mr-2"></i>Correo electrónico</h6>
+                        <p>{{ cliente.CL_CEMAIL }}</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted"><i class="fas fa-user mr-2"></i>Persona de contacto</h6>
+                        <p>{{ cliente.CL_CPERSONA_CONTACTO }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted"><i class="fas fa-globe mr-2"></i>Sitio web</h6>
+                        <p><a href="{{ cliente.CL_CSITIO_WEB }}" target="_blank">{{ cliente.CL_CSITIO_WEB }}</a></p>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="adicional" role="tabpanel" aria-labelledby="adicional-tab">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted"><i class="fas fa-industry mr-2"></i>Rubro</h6>
+                        <p>{{ cliente.CL_CRUBRO }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted"><i class="fas fa-check-circle mr-2"></i>Estado</h6>
+                        <p><span class="badge {% if cliente.CL_BACTIVO %}badge-success{% else %}badge-danger{% endif %}">
+                            {% if cliente.CL_BACTIVO %}Activo{% else %}Inactivo{% endif %}
+                        </span></p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted"><i class="fas fa-user-tie mr-2"></i>Tipo de cliente</h6>
+                        <p><span class="badge {% if cliente.CL_BPROSPECTO %}badge-warning{% else %}badge-info{% endif %}">
+                            {% if cliente.CL_BPROSPECTO %}Prospecto{% else %}Cliente{% endif %}
+                        </span></p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted"><i class="fas fa-tag mr-2"></i>Categoría del cliente</h6>
+                        <p>{{ cliente.CL_CCATEGORIA }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal"><i class="fas fa-times mr-2"></i>Cerrar</button>
+    </div>
+</div>

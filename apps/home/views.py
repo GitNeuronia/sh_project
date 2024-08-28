@@ -511,6 +511,26 @@ def CATEGORIA_CLIENTE_UPDATE(request, pk):
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
+def CLIENTE_MODAL(request, pk):
+    if not has_auth(request.user, 'VER_PROYECTOS_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        cliente = get_object_or_404(CLIENTE, id=pk)
+        proyectos = PROYECTO_CLIENTE.objects.filter(PC_CNOMBRE=cliente)
+        contactos = CONTACTO_CLIENTE.objects.filter(CC_CLIENTE=cliente)
+        
+        ctx = {
+            'cliente': cliente,
+            'proyectos': proyectos,
+            'contactos': contactos
+        }
+        return render(request, 'home/CLIENTE/cliente_modal.html', ctx)
+    except Exception as e:
+        print(f"Error en CLIENTE_MODAL: {str(e)}")
+        messages.error(request, f'Error al cargar la información del cliente: {str(e)}')
+        return JsonResponse({'error': str(e)}, status=400)
+
 def TIPO_PROYECTO_LISTALL(request):
     if not has_auth(request.user, 'VER_CONFIGURACIONES'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
@@ -1241,6 +1261,10 @@ def ETAPA_UPDATE(request, pk):
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
+#--------------------------------------
+#---------------PROYECOS---------------
+#--------------------------------------
+
 def PROYECTO_CLIENTE_LISTALL(request):
     if not has_auth(request.user, 'VER_PROYECTOS_CLIENTES'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
@@ -1461,6 +1485,69 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
         print(e)
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
+
+# ----------PROYECTO MODAL DOCUMENTOS--------------
+
+def PROYECTO_CLIENTE_DOCUMENTOS_MODAL(request, pk):
+    if not has_auth(request.user, 'VER_PROYECTOS_CLIENTES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        proyecto = get_object_or_404(PROYECTO_CLIENTE, id=pk)
+        documentos = PROYECTO_ADJUNTO.objects.filter(PA_PROYECTO=proyecto)
+        
+        form = formPROYECTO_ADJUNTO()
+        form.fields['PA_CARCHIVO'].widget.attrs.update({
+            'class': 'd-none',
+            'id': 'file-upload'
+        })
+        # Inicializar el campo PA_PROYECTO con el proyecto actual
+        # if proyecto:
+        #     form.fields['PA_PROYECTO'].initial = proyecto
+        #     form.fields['PA_PROYECTO'].widget = forms.HiddenInput()
+        # # form.fields['PA_PROYECTO'].initial = proyecto
+        # form.fields['PA_PROYECTO'].widget = forms.HiddenInput()
+        
+        ctx = {
+            'proyecto': proyecto,
+            'documentos': documentos,
+            'form': form
+        }
+        return render(request, 'home/PROYECTO_CLIENTE/PROYECTO_ADJUNTO/proycli_adjunto_listall.html', ctx)
+    except Exception as e:
+        print(f"Error en PROYECTO_CLIENTE_DOCUMENTOS_MODAL: {str(e)}")
+        messages.error(request, f'Error al cargar la documentación del proyecto: {str(e)}')
+        return JsonResponse({'error': str(e)}, status=400)
+
+def PROYECTO_CLIENTE_DOCUMENTOS_MODAL_ADDONE(request, pk):
+    if not has_auth(request.user, 'ADD_PROYECTOS_CLIENTES'):
+        return JsonResponse({'error': 'No tienes permiso para realizar esta acción'}, status=403)
+    
+    try:
+        proyecto = get_object_or_404(PROYECTO_CLIENTE, id=pk)
+        form = formPROYECTO_ADJUNTO(request.POST, request.FILES)
+        
+        if form.is_valid():
+            nuevo_documento = form.save(commit=False)
+            nuevo_documento.PA_PROYECTO = proyecto
+            nuevo_documento.PA_CUSUARIO_CREADOR = request.user
+            nuevo_documento.save()
+            
+            crear_log(request.user, 'Agregar Documento a Proyecto', f'Se agregó el documento {nuevo_documento.PA_CNOMBRE} al proyecto {proyecto.PC_CNOMBRE}')
+            
+            return JsonResponse({'success': True, 'message': 'Documento agregado correctamente'})
+        else:
+            return JsonResponse({'success': False, 'error': 'Formulario inválido', 'errors': form.errors}, status=400)
+    
+    except Exception as e:
+        print(f"Error en PROYECTO_CLIENTE_DOCUMENTOS_MODAL_ADDONE: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+# ----------PROYECTO MODAL DOCUMENTOS--------------
+
+#--------------------------------------
+#---------------PROYECOS---------------
+#--------------------------------------
+
 #--------------------------------------
 #----------------TAREAS----------------
 #--------------------------------------

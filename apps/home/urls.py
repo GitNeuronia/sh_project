@@ -71,7 +71,8 @@ urlpatterns = [
     path('cliente_listall/', login_required(views.CLIENTE_LISTALL), name='cliente_listall'),
     path('cliente_addone/', login_required(views.CLIENTE_ADDONE), name='cliente_addone'),
     path('cliente_update/<int:pk>/', login_required(views.CLIENTE_UPDATE), name='cliente_update'),
-
+    path('cliente_modal/<int:pk>/', login_required(views.CLIENTE_MODAL), name='cliente_modal'),
+    
     # URLs para la gestión de contactos de clientes
     path('contactocli_listall/', login_required(views.CONTACTO_CLIENTE_LISTALL), name='contactocli_listall'),
     path('contactocli_addone/', login_required(views.CONTACTO_CLIENTE_ADDONE), name='contactocli_addone'),
@@ -108,7 +109,9 @@ urlpatterns = [
     path('proycli_update/<int:pk>/', login_required(views.PROYECTO_CLIENTE_UPDATE), name='proycli_update'),
     path('proycli_update/<int:pk>/<int:page>/', login_required(views.PROYECTO_CLIENTE_UPDATE), name='proycli_update'),
     path('proycli_listone/<int:pk>/', login_required(views.PROYECTO_CLIENTE_LISTONE), name='proycli_listone'),    
-
+    path('proycli_documentos_modal/<int:pk>/', login_required(views.PROYECTO_CLIENTE_DOCUMENTOS_MODAL), name='proycli_documentos_modal'),    
+    path('proycli_documentos_modal_addone/<int:pk>/', login_required(views.PROYECTO_CLIENTE_DOCUMENTOS_MODAL_ADDONE), name='proycli_documentos_modal_addone'),    
+    
     # URLs para la gestión de tareas generales
     path('tarea_general_listall/', login_required(views.TAREA_GENERAL_LISTALL), name='tarea_general_listall'),
     path('tarea_general_addone/<int:page>/', login_required(views.TAREA_GENERAL_ADDONE), name='tarea_general_addone'),
