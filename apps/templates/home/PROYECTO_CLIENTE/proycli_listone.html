@@ -88,11 +88,20 @@
                 <!-- Detalles del proyecto -->
                 <div class="col-md-12">
                     <div class="card shadow-lg rounded-lg overflow-hidden">
-                        <div class="card-header bg-primary d-flex justify-content-between align-items-center">
-                            <h4 class="mb-0 text-white"><i class="fas fa-project-diagram mr-2"></i>{{ proyecto.PC_CNOMBRE }}</h4>
-                            <a href="{% url 'proycli_update' proyecto.id 1 %}" class="btn btn-light btn-sm rounded-pill shadow-sm hover-lift">
-                                <i class="fas fa-edit mr-2"></i>Editar Proyecto
-                            </a>
+                        <div class="card-header bg-primary">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <h4 class="mb-0 text-white"><i class="fas fa-project-diagram mr-2"></i>{{ proyecto.PC_CNOMBRE }}</h4>
+                                </div>
+                                <div class="col-md-6 text-right">
+                                    <a href="{% url 'proycli_update' proyecto.id 1 %}" class="btn btn-light btn-sm rounded-pill shadow-sm hover-lift mr-2">
+                                        <i class="fas fa-edit mr-2"></i>Editar Proyecto
+                                    </a>
+                                    <button type="button" class="btn btn-light btn-sm rounded-pill shadow-sm hover-lift" data-toggle="modal" data-target="#documentosModal" data-url="{% url 'proycli_documentos_modal' proyecto.id %}">
+                                        <i class="fas fa-file-alt mr-2 text-primary"></i>Ver Documentación
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                         <hr>
                         <div class="card-body">
@@ -101,7 +110,13 @@
                                     <h5 class="mb-3 text-primary"><i class="fas fa-info-circle mr-2"></i>Información General</h5>
                                     <ul class="list-unstyled">
                                         <li class="mb-2"><i class="fas fa-hashtag mr-2 text-muted"></i><strong>Código:</strong> {{ proyecto.PC_CCODIGO }}</li>
-                                        <li class="mb-2"><i class="fas fa-user mr-2 text-muted"></i><strong>Cliente:</strong> {{ proyecto.PC_CLIENTE.CL_CNOMBRE }}</li>
+                                        <!-- Botón para mostrar la información del cliente -->
+                                        <li class="mb-2">
+                                            <i class="fas fa-user mr-2 text-muted"></i><strong>Cliente:</strong>
+                                            <button type="button" class="btn btn-link p-0" data-toggle="modal" data-target="#clienteModal" data-url="{% url 'cliente_modal' proyecto.PC_CLIENTE.id %}">
+                                                {{ proyecto.PC_CLIENTE.CL_CNOMBRE }}
+                                            </button>
+                                        </li>
                                         <li class="mb-2">
                                             <i class="fas fa-folder mr-2 text-muted"></i><strong>Categoría:</strong> 
                                             <span class="badge badge-pill badge-info">{{ proyecto.PC_CCATEGORIA.CA_CNOMBRE|default:"No especificada" }}</span>
@@ -441,6 +456,24 @@
     <!-- [ Main Content ] end -->
     <!-- Modal -->
     <div class="modal fade" id="updateDataModal" tabindex="-1" role="dialog" aria-labelledby="updateDataModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">                
+                <div class="modal-body">
+                    <!-- El contenido del modal se cargará aquí -->
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="clienteModal" tabindex="-1" role="dialog" aria-labelledby="clienteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">                
+                <div class="modal-body">
+                    <!-- El contenido del modal se cargará aquí -->
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="documentosModal" tabindex="-1" role="dialog" aria-labelledby="documentosModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">                
                 <div class="modal-body">
@@ -936,6 +969,65 @@
                 });
             });
         });
+    </script>
+    <!-- Información de cliente -->
+    <script>
+        $(document).ready(function() {
+            $('button[data-target="#clienteModal"]').on('click', function(event) {
+                event.preventDefault();
+                var url = $(this).data('url');
+                $('#clienteModal').find('.modal-body').empty();
+                $('#clienteModal').find('.modal-body').load(url, function() {
+                    $('#clienteModal').modal('show');
+                });
+            });
+            $('#clienteModal').on('hidden.bs.modal', function () {
+                $(this).find('.modal-body').empty();
+            });
+        });        
+    </script>
+
+    <script>
+        // Initialize logger
+        var logger = {
+            log: function(message) {
+                console.log('Logger: ' + message);
+            }
+        };
+
+        $(document).ready(function() {
+            logger.log('Document ready');
+            
+            // Change the selector to target the specific button
+            $('button[data-toggle="modal"][data-target="#documentosModal"]').on('click', function(event) {
+                event.preventDefault();
+                var url = $(this).data('url');
+                logger.log('Modal button clicked. URL: ' + url);
+                
+                // Add error handling for AJAX request
+                $.ajax({
+                    url: url,
+                    method: 'GET',
+                    success: function(response) {
+                        $('#documentosModal').find('.modal-content').html(response);
+                        logger.log('Modal content loaded');
+                        $('#documentosModal').modal('show');
+                    },
+                    error: function(xhr, status, error) {
+                        logger.log('Error loading modal content: ' + error);
+                        alert('Error loading modal content. Please try again.');
+                    }
+                });
+            });
+
+            $('#documentosModal').on('hidden.bs.modal', function () {
+                logger.log('Modal hidden');
+                $(this).find('.modal-content').empty();
+            });
+
+            // Add additional logging
+            logger.log('Event handlers set up');
+        });        
     </script>
     
 {% endblock javascripts %}

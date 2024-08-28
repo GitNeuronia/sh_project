@@ -1456,9 +1456,8 @@ class formACTA_REUNION(forms.ModelForm):
 class formPROYECTO_ADJUNTO(forms.ModelForm):
     class Meta:
         model = PROYECTO_ADJUNTO
-        fields = ['PA_PROYECTO', 'PA_CNOMBRE', 'PA_CDESCRIPCION', 'PA_CARCHIVO', 'PA_CTIPO']
-        widgets = {
-            'PA_PROYECTO': forms.Select(attrs={'class': 'form-control'}),
+        fields = ['PA_CNOMBRE', 'PA_CDESCRIPCION', 'PA_CARCHIVO', 'PA_CTIPO']
+        widgets = {            
             'PA_CNOMBRE': forms.TextInput(attrs={'class': 'form-control'}),
             'PA_CDESCRIPCION': forms.Textarea(attrs={'class': 'form-control'}),
             'PA_CARCHIVO': forms.FileInput(attrs={'class': 'form-control'}),
@@ -1467,8 +1466,7 @@ class formPROYECTO_ADJUNTO(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(formPROYECTO_ADJUNTO, self).__init__(*args, **kwargs)
-        for field in ['PA_FFECHA_SUBIDA', 'PA_FFECHA_MODIFICACION', 'PA_CUSUARIO_CREADOR', 'PA_CUSUARIO_MODIFICADOR']:
-            self.fields[field].widget = forms.HiddenInput()
+        self.fields['PA_CDESCRIPCION'].required = False
 
 # Form for BOLETA_GARANTIA model
 class formBOLETA_GARANTIA(forms.ModelForm):

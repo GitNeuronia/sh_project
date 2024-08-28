@@ -1,0 +1,225 @@
+<!-- Modal para documentos del proyecto -->
+<div class="modal-content">
+    <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title text-white" id="documentosModalLabel"><i class="fas fa-file-alt mr-2"></i>Documentos del Proyecto</h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    <div class="modal-body">
+        <ul class="nav nav-tabs" id="documentosTab" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="lista-tab" data-toggle="tab" href="#lista" role="tab" aria-controls="lista" aria-selected="true">
+                    <i class="fas fa-list mr-2"></i>Lista de Documentos
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="agregar-tab" data-toggle="tab" href="#agregar" role="tab" aria-controls="agregar" aria-selected="false">
+                    <i class="fas fa-plus mr-2"></i>Agregar Documento
+                </a>
+            </li>
+        </ul>
+        <div class="tab-content mt-3" id="documentosTabContent">
+            <div class="tab-pane fade show active" id="lista" role="tabpanel" aria-labelledby="lista-tab">
+                {% if documentos %}
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Tipo</th>
+                            <th>Fecha de subida</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for documento in documentos %}
+                        <tr>
+                            <td>{{ documento.PA_CNOMBRE }}</td>
+                            <td>{{ documento.PA_CTIPO }}</td>
+                            <td>{{ documento.PA_FFECHA_SUBIDA|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-info" onclick="editarDocumento({{ documento.id }})"><i class="fas fa-edit"></i></button>
+                                <a href="{{ documento.PA_CARCHIVO.url }}" class="btn btn-sm btn-success" target="_blank"><i class="fas fa-download"></i></a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="alert alert-info" role="alert">
+                    <i class="fas fa-info-circle mr-2"></i>No hay documentos disponibles para este proyecto.
+                </div>
+                {% endif %}
+            </div>
+            <div class="tab-pane fade" id="agregar" role="tabpanel" aria-labelledby="agregar-tab">
+                <form id="formAgregarDocumento" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {{ form.PA_PROYECTO }}
+                    <div class="form-group">
+                        <label for="{{ form.PA_CNOMBRE.id_for_label }}">{{ form.PA_CNOMBRE.label }}</label>
+                        {{ form.PA_CNOMBRE }}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ form.PA_CDESCRIPCION.id_for_label }}">{{ form.PA_CDESCRIPCION.label }}</label>
+                        {{ form.PA_CDESCRIPCION }}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ form.PA_CTIPO.id_for_label }}">{{ form.PA_CTIPO.label }}</label>
+                        {{ form.PA_CTIPO }}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ form.PA_CARCHIVO.id_for_label }}" class="btn btn-outline-primary btn-lg btn-block">
+                            <i class="fas fa-cloud-upload-alt mr-2"></i>{{ form.PA_CARCHIVO.label }}
+                        </label>
+                        {{ form.PA_CARCHIVO }}
+                        <div id="file-name" class="mt-2 text-muted"></div>
+                    </div>
+                    <script>
+                        document.getElementById('{{ form.PA_CARCHIVO.id_for_label }}').addEventListener('change', function() {
+                            document.getElementById('file-name').textContent = this.files[0].name;
+                        });
+                    </script>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-2"></i>Guardar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para editar documento -->
+<div class="modal fade" id="editarDocumentoModal" tabindex="-1" role="dialog" aria-labelledby="editarDocumentoModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="editarDocumentoModalLabel"><i class="fas fa-edit mr-2"></i>Editar Documento</h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="formEditarDocumento" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" id="editDocumentoId" name="documento_id">
+                    {{ form.PA_PROYECTO }}
+                    <div class="form-group">
+                        <label for="{{ form.PA_CNOMBRE.id_for_label }}">{{ form.PA_CNOMBRE.label }}</label>
+                        {{ form.PA_CNOMBRE }}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ form.PA_CDESCRIPCION.id_for_label }}">{{ form.PA_CDESCRIPCION.label }}</label>
+                        {{ form.PA_CDESCRIPCION }}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ form.PA_CTIPO.id_for_label }}">{{ form.PA_CTIPO.label }}</label>
+                        {{ form.PA_CTIPO }}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ form.PA_CARCHIVO.id_for_label }}">{{ form.PA_CARCHIVO.label }} (opcional)</label>
+                        {{ form.PA_CARCHIVO }}
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-2"></i>Guardar cambios</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function editarDocumento(documentoId) {
+        console.log('Editando documento con ID:', documentoId);
+        // Aquí deberías cargar los datos del documento y llenar el formulario
+        $('#editDocumentoId').val(documentoId);
+        $('#editarDocumentoModal').modal('show');
+    }
+
+    $(document).ready(function() {
+        $('#formAgregarDocumento').on('submit', function(e) {
+            e.preventDefault();
+            console.log('Formulario enviado');
+            var formData = new FormData(this);
+            var proyectoId = {{ proyecto.id }};
+            var url = '/proycli_documentos_modal_addone/' + proyectoId + '/';
+            console.log('URL de envío:', url);
+            
+            // Imprimir los datos del formulario
+            for (var pair of formData.entries()) {
+                console.log(pair[0]+ ', ' + pair[1]); 
+            }
+        
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                beforeSend: function(xhr, settings) {
+                    console.log('Antes de enviar la solicitud');
+                    // Incluir el token CSRF en la solicitud
+                    var csrftoken = $('[name=csrfmiddlewaretoken]').val();
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                },
+                success: function(response) {
+                    console.log('Respuesta recibida:', response);
+                    $('#documentosModal').modal('hide');
+                    if(response.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Éxito',
+                            text: 'Documento agregado correctamente',
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                location.reload();
+                            }
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Error al agregar el documento: ' + response.error,
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error en la solicitud AJAX:', status, error);
+                    console.log('Respuesta del servidor:', xhr.responseText);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Error al agregar el documento: ' + error,
+                    });
+                }
+            });
+        });
+
+        $('#formEditarDocumento').on('submit', function(e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+            var documentoId = $('#editDocumentoId').val();
+            var proyectoId = {{ proyecto.id }}; // Asumiendo que el ID del proyecto está disponible en el contexto
+            $.ajax({
+                url: '/proycli_documentos_modal_update/' + proyectoId + '/' + documentoId + '/',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if(response.success) {
+                        alert('Documento actualizado correctamente');
+                        location.reload();
+                    } else {
+                        alert('Error al actualizar el documento: ' + response.error);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    alert('Error al actualizar el documento: ' + error);
+                }
+            });
+        });
+    });
+</script>
+<script>
+    document.getElementById('file-upload').addEventListener('change', function() {
+        var fileName = this.files[0].name;
+        document.getElementById('file-name').textContent = 'Archivo seleccionado: ' + fileName;
+    });
+</script>
