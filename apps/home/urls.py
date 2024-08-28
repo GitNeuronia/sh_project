@@ -153,9 +153,9 @@ urlpatterns = [
     path('actareunion_update/<int:pk>/', login_required(views.ACTA_REUNION_UPDATE), name='actareunion_update'),
 
     # URLs para la gestión de boletas de garantía (comentadas)
-    # path('boletagarantia_listall/', login_required(views.BOLETA_GARANTIA_LISTALL), name='boletagarantia_listall'),
-    # path('boletagarantia_addone/', login_required(views.BOLETA_GARANTIA_ADDONE), name='boletagarantia_addone'),
-    # path('boletagarantia_update/<int:pk>/', login_required(views.BOLETA_GARANTIA_UPDATE), name='boletagarantia_update'),
+    path('boletagarantia_listall/', login_required(views.BOLETA_GARANTIA_LISTALL), name='boletagarantia_listall'),
+    path('boletagarantia_addone/', login_required(views.BOLETA_GARANTIA_ADDONE), name='boletagarantia_addone'),
+    path('boletagarantia_update/<int:pk>/', login_required(views.BOLETA_GARANTIA_UPDATE), name='boletagarantia_update'),
 
     path('cotizacion_listall/', login_required(views.COTIZACION_LISTALL), name='cotizacion_listall'),
     path('cotizacion_addone/', login_required(views.COTIZACION_ADDONE), name='cotizacion_addone'),
@@ -168,16 +168,27 @@ urlpatterns = [
     path('cotizacion_addline/', login_required(views.COTIZACION_ADD_LINE), name='cotizacion_addline'),
     path('check_co_numero/', login_required(views.CHECK_CO_NUMERO), name='check_co_numero'),
 
-
     path('orden_venta_listall/', login_required(views.ORDEN_VENTA_LISTALL), name='orden_venta_listall'),
     path('orden_venta_addone/', login_required(views.ORDEN_VENTA_ADDONE), name='orden_venta_addone'),
     path('orden_venta_update/<int:pk>/', login_required(views.ORDEN_VENTA_UPDATE), name='orden_venta_update'),
     path('orden_venta_listone/<int:pk>', login_required(views.ORDEN_VENTA_LISTONE), name='orden_venta_listone'),
+    path('orden_venta_getdata/<int:pk>', login_required(views.ORDEN_VENTA_GET_DATA), name='orden_venta_getdata'),
     path('orden_venta_listone_format/<int:pk>', login_required(views.ORDEN_VENTA_LISTONE_FORMAT), name='orden_venta_listone_format'),
     path('orden_venta_getline/<int:pk>', login_required(views.ORDEN_VENTA_GET_LINE), name='orden_venta_getline'),
     path('orden_venta_deleteline/<int:pk>', login_required(views.ORDEN_VENTA_DELETE_LINE), name='orden_venta_deleteline'),
     path('orden_venta_addline/', login_required(views.ORDEN_VENTA_ADD_LINE), name='orden_venta_addline'),
     path('check_ov_numero/', login_required(views.CHECK_OV_NUMERO), name='check_ov_numero'),
+
+    path('factura_listall/', login_required(views.FACTURA_LISTALL), name='factura_listall'),
+    path('factura_addone/', login_required(views.FACTURA_ADDONE), name='factura_addone'),
+    path('factura_update/<int:pk>/', login_required(views.FACTURA_UPDATE), name='factura_update'),
+    path('factura_listone/<int:pk>', login_required(views.FACTURA_LISTONE), name='factura_listone'),
+    path('factura_listone_format/<int:pk>', login_required(views.FACTURA_LISTONE_FORMAT), name='factura_listone_format'),
+    path('factura_getline/<int:pk>', login_required(views.FACTURA_GET_LINE), name='factura_getline'),
+    path('factura_deleteline/<int:pk>', login_required(views.FACTURA_DELETE_LINE), name='factura_deleteline'),
+    path('factura_addline/', login_required(views.FACTURA_ADD_LINE), name='factura_addline'),
+    path('check_fa_numero/', login_required(views.CHECK_FA_NUMERO), name='check_fa_numero'),
+
 
     path('query_listall/', login_required(views.QUERY_LISTALL), name='query_listall'),
     path('query_listone/<int:pk>', login_required(views.QUERY_LISTONE), name='query_listone'),

@@ -1487,8 +1487,15 @@ class formBOLETA_GARANTIA(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(formBOLETA_GARANTIA, self).__init__(*args, **kwargs)
-        for field in ['BG_FFECHA_CREACION', 'BG_FFECHA_MODIFICACION', 'BG_CUSUARIO_CREADOR', 'BG_CUSUARIO_MODIFICADOR']:
-            self.fields[field].widget = forms.HiddenInput()
+        hidden_fields = [
+            'BG_FFECHA_CREACION',
+            'BG_FFECHA_MODIFICACION', 
+            'BG_CUSUARIO_CREADOR',
+            'BG_CUSUARIO_MODIFICADOR'
+        ]
+        for field in hidden_fields:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
 
 # Form for TAREA_GENERAL_DEPENDENCIA model
 class formTAREA_GENERAL_DEPENDENCIA(forms.ModelForm):
@@ -1538,3 +1545,4 @@ class formQUERY(forms.ModelForm):
             'QR_CQUERY': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Ingrese consulta'}),
             'QR_NHABILITADO': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'switch-s-2'}),
         }
+
