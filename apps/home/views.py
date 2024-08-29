@@ -6,11 +6,18 @@ Copyright (c) 2019 - present AppSeed.us
 from decimal import Decimal
 import json
 import re
+import os
+import mimetypes
 from django import template
 from django.contrib.auth.decorators import login_required
 from django.db import connection
-from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseRedirect, JsonResponse
+from django.http import FileResponse, HttpResponse, HttpResponseBadRequest, HttpResponseRedirect, JsonResponse, HttpResponseNotFound
+from django.utils.encoding import smart_str
 from django.template import loader
+from django.template.loader import render_to_string
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.middleware.csrf import get_token
 from django.urls import reverse
 from django.db.models import Sum
 from apps.home.models import * 
@@ -2593,6 +2600,172 @@ def tarea_update_data(request, tipo_tarea, pk):
     }
     return render(request, 'home/TAREA/tarea_update_data.html', ctx)
 # ----------TAREA UPDATE DATA--------------
+
+# ----------TAREA DOCUMENTOS--------------
+def get_adjunto_model(tipo_tarea):
+    if tipo_tarea == 'TAREA_GENERAL':
+        return ADJUNTO_TAREA_GENERAL
+    elif tipo_tarea == 'TAREA_INGENIERIA':
+        return ADJUNTO_TAREA_INGENIERIA
+    elif tipo_tarea == 'TAREA_FINANCIERA':
+        return ADJUNTO_TAREA_FINANCIERA
+    raise ValueError(f"Tipo de tarea no válido: {tipo_tarea}")
+
+def get_adjunto_model_and_prefix(tipo_tarea):
+    if tipo_tarea == 'TAREA_GENERAL':
+        return ADJUNTO_TAREA_GENERAL, 'AT'
+    elif tipo_tarea == 'TAREA_INGENIERIA':
+        return ADJUNTO_TAREA_INGENIERIA, 'ATI'
+    elif tipo_tarea == 'TAREA_FINANCIERA':
+        return ADJUNTO_TAREA_FINANCIERA, 'ATF'
+    else:
+        raise ValueError(f"Tipo de tarea no válido: {tipo_tarea}")
+
+def tarea_adjuntos_lista(request, tarea_id, tipo_tarea):
+    try:
+        if tipo_tarea == 'TAREA_GENERAL':
+            adjuntos = ADJUNTO_TAREA_GENERAL.objects.filter(AT_TAREA_id=tarea_id)
+            prefix = 'AT'
+        elif tipo_tarea == 'TAREA_INGENIERIA':
+            adjuntos = ADJUNTO_TAREA_INGENIERIA.objects.filter(ATI_TAREA_id=tarea_id)
+            prefix = 'ATI'
+        elif tipo_tarea == 'TAREA_FINANCIERA':
+            adjuntos = ADJUNTO_TAREA_FINANCIERA.objects.filter(ATF_TAREA_id=tarea_id)
+            prefix = 'ATF'
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': f'Tipo de tarea no válido: {tipo_tarea}'
+            }, status=400)
+        
+        adjuntos_data = []
+        for adjunto in adjuntos:
+            adjuntos_data.append({
+                'nombre': getattr(adjunto, f'{prefix}_CNOMBRE'),
+                'descripcion': getattr(adjunto, f'{prefix}_CDESCRIPCION'),
+                'fecha_creacion': getattr(adjunto, f'{prefix}_FFECHA_CREACION').strftime('%d/%m/%Y'),
+                'id': adjunto.id
+            })
+        
+        return JsonResponse({'success': True, 'adjuntos': adjuntos_data})
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al obtener los adjuntos: {str(e)}'
+        }, status=400)
+
+def tarea_adjunto_agregar(request, tarea_id, tipo_tarea):
+    try:
+        AdjuntoModel, prefix = get_adjunto_model_and_prefix(tipo_tarea)
+        form = AdjuntoTareaForm(request.POST, request.FILES, tipo_tarea=tipo_tarea)
+        if form.is_valid():
+            adjunto = AdjuntoModel(**{
+                f'{prefix}_TAREA_id': tarea_id,
+                f'{prefix}_CARCHIVO': form.cleaned_data['CARCHIVO'],
+                f'{prefix}_CNOMBRE': form.cleaned_data['CNOMBRE'],
+                f'{prefix}_CDESCRIPCION': form.cleaned_data['CDESCRIPCION'],
+                f'{prefix}_CUSUARIO_CREADOR': request.user,
+            })
+            adjunto.save()
+            return JsonResponse({'success': True, 'message': 'Adjunto agregado correctamente'})
+        else:
+            return JsonResponse({'success': False, 'message': 'Formulario inválido', 'errors': form.errors})
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al agregar el adjunto: {str(e)}'
+        }, status=400)
+        
+@ensure_csrf_cookie        
+@require_http_methods(["GET", "POST"])
+def tarea_adjunto_editar(request, pk, tipo_tarea):
+    try:
+        AdjuntoModel, prefix = get_adjunto_model_and_prefix(tipo_tarea)
+        adjunto = get_object_or_404(AdjuntoModel, pk=pk)
+        
+        if request.method == 'GET':
+            initial_data = {
+                'CNOMBRE': getattr(adjunto, f'{prefix}_CNOMBRE'),
+                'CDESCRIPCION': getattr(adjunto, f'{prefix}_CDESCRIPCION'),
+            }
+            form = AdjuntoTareaForm(initial=initial_data, tipo_tarea=tipo_tarea, is_edit=True)
+            csrf_token = get_token(request)
+            form_html = render_to_string('home/TAREA/adjunto_form_partial.html', {
+                'form': form, 
+                'adjunto': adjunto, 
+                'tipo_tarea': tipo_tarea,
+                'csrf_token': csrf_token
+            }, request=request)
+            return HttpResponse(form_html)
+        
+        elif request.method == 'POST':
+            form = AdjuntoTareaForm(request.POST, request.FILES, tipo_tarea=tipo_tarea, is_edit=True)
+            if form.is_valid():
+                setattr(adjunto, f'{prefix}_CNOMBRE', form.cleaned_data['CNOMBRE'])
+                setattr(adjunto, f'{prefix}_CDESCRIPCION', form.cleaned_data['CDESCRIPCION'])
+                if form.cleaned_data['CARCHIVO']:
+                    setattr(adjunto, f'{prefix}_CARCHIVO', form.cleaned_data['CARCHIVO'])
+                setattr(adjunto, f'{prefix}_CUSUARIO_MODIFICADOR', request.user)
+                adjunto.save()
+                return JsonResponse({'success': True, 'message': 'Adjunto editado correctamente'})
+            else:
+                return JsonResponse({'success': False, 'message': 'Formulario inválido', 'errors': form.errors})
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al editar el adjunto: {str(e)}'
+        }, status=400)
+def tarea_adjunto_eliminar(request, pk, tipo_tarea):
+    try:
+        AdjuntoModel = get_adjunto_model(tipo_tarea)
+        adjunto = get_object_or_404(AdjuntoModel, pk=pk)
+        adjunto.delete()
+        return JsonResponse({'success': True, 'message': 'Adjunto eliminado correctamente'})
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al eliminar el adjunto: {str(e)}'
+        }, status=400)
+
+def tarea_adjunto_descargar(request, pk, tipo_tarea):
+    try:
+        AdjuntoModel, prefix = get_adjunto_model_and_prefix(tipo_tarea)
+        adjunto = get_object_or_404(AdjuntoModel, pk=pk)
+        
+        file_field = getattr(adjunto, f'{prefix}_CARCHIVO')
+        if not file_field:
+            return HttpResponseNotFound('El archivo no existe')
+
+        file_path = file_field.path
+        if not os.path.exists(file_path):
+            return HttpResponseNotFound('El archivo no existe en el sistema de archivos')
+
+        # Obtener el nombre original del archivo
+        original_filename = os.path.basename(file_field.name)
+        
+        # Determinar el tipo MIME
+        content_type, encoding = mimetypes.guess_type(file_path)
+        content_type = content_type or 'application/octet-stream'
+        
+        # Abrir el archivo en modo binario
+        file = open(file_path, 'rb')
+        response = FileResponse(file, content_type=content_type)
+        
+        # Configurar los encabezados de la respuesta
+        response['Content-Disposition'] = f'attachment; filename="{original_filename}"'
+        
+        # Añadir el tamaño del archivo al encabezado
+        response['Content-Length'] = os.path.getsize(file_path)
+        
+        return response
+
+    except Exception as e:
+        # Registrar el error para debugging
+        import logging
+        logging.error(f"Error al descargar adjunto: {str(e)}")
+        
+        return HttpResponseNotFound('Error al descargar el archivo')
+# ----------TAREA DOCUMENTOS--------------
 
 #--------------------------------------
 #----------------TAREAS----------------

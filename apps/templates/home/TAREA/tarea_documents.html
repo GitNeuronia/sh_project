@@ -1,0 +1,64 @@
+<div class="modal fade" id="adjuntosModal" tabindex="-1" role="dialog" aria-labelledby="adjuntosModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="adjuntosModalLabel" style="color: white;"><i class="fas fa-file-alt mr-2"></i>Adjuntos de la Tarea</h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <ul class="nav nav-tabs" id="adjuntosTab" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="lista-tab" data-toggle="tab" href="#lista" role="tab" aria-controls="lista" aria-selected="true">
+                            <i class="fas fa-list mr-2"></i>Lista de Adjuntos
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="agregar-tab" data-toggle="tab" href="#agregar" role="tab" aria-controls="agregar" aria-selected="false">
+                            <i class="fas fa-plus mr-2"></i>Agregar Adjunto
+                        </a>
+                    </li>
+                    <li class="nav-item" style="display: none;">
+                        <a class="nav-link" id="editar-tab" data-toggle="tab" href="#editar" role="tab" aria-controls="editar" aria-selected="false">
+                            <i class="fas fa-edit mr-2"></i>Editar Adjunto
+                        </a>
+                    </li>
+                </ul>
+                <div class="tab-content mt-3" id="adjuntosTabContent">
+                    <div class="tab-pane fade show active" id="lista" role="tabpanel" aria-labelledby="lista-tab">
+                        <!-- El contenido de la lista se cargará aquí mediante AJAX -->
+                    </div>
+                    <div class="tab-pane fade" id="agregar" role="tabpanel" aria-labelledby="agregar-tab">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>Agregar Adjunto</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="formAgregarAdjunto" method="POST" enctype="multipart/form-data">
+                                    {% csrf_token %}
+                                    <div class="form-group">
+                                        <label for="CNOMBRE">Nombre del archivo</label>
+                                        <input type="text" class="form-control" id="CNOMBRE" name="CNOMBRE" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="CDESCRIPCION">Descripción</label>
+                                        <textarea class="form-control" id="CDESCRIPCION" name="CDESCRIPCION" rows="3"></textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="CARCHIVO">Archivo</label>
+                                        <input type="file" class="form-control-file" id="CARCHIVO" name="CARCHIVO" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Agregar Adjunto</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="editar" role="tabpanel" aria-labelledby="editar-tab">
+                        <!-- El formulario de edición se cargará aquí dinámicamente -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -142,6 +142,12 @@ urlpatterns = [
     # URL para la gestión de actualización de datos de tareas
     path('tarea/<str:tipo_tarea>/<int:pk>/update_data/', login_required(views.tarea_update_data), name='tarea_update_data'),
 
+    path('tarea_adjuntos/<int:tarea_id>/<str:tipo_tarea>/', views.tarea_adjuntos_lista, name='tarea_adjuntos_lista'),
+    path('tarea_adjunto/agregar/<int:tarea_id>/<str:tipo_tarea>/', views.tarea_adjunto_agregar, name='tarea_adjunto_agregar'),
+    path('tarea_adjunto/editar/<int:pk>/<str:tipo_tarea>/', views.tarea_adjunto_editar, name='tarea_adjunto_editar'),
+    path('tarea_adjunto/eliminar/<int:pk>/<str:tipo_tarea>/', views.tarea_adjunto_eliminar, name='tarea_adjunto_eliminar'),
+    path('tarea_adjunto/descargar/<int:pk>/<str:tipo_tarea>/', views.tarea_adjunto_descargar, name='tarea_adjunto_descargar'),
+
     # URLs para la gestión de etapas
     path('etapa_listall/', login_required(views.ETAPA_LISTALL), name='etapa_listall'),
     path('etapa_addone/', login_required(views.ETAPA_ADDONE), name='etapa_addone'),

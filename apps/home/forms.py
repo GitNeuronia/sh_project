@@ -1207,6 +1207,53 @@ class formADJUNTO_TAREA_FINANCIERA(forms.ModelForm):
             if field in self.fields:
                 self.fields[field].widget = forms.HiddenInput()
 
+class AdjuntoTareaForm(forms.Form):
+    CARCHIVO = forms.FileField(widget=forms.FileInput(attrs={'class': 'form-control-file'}))
+    CNOMBRE = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control'}))
+    CDESCRIPCION = forms.CharField(widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}), required=False)
+
+    def __init__(self, *args, **kwargs):
+        self.tipo_tarea = kwargs.pop('tipo_tarea', None)
+        self.is_edit = kwargs.pop('is_edit', False)
+        super().__init__(*args, **kwargs)
+        
+        if self.tipo_tarea:
+            prefix = self.get_prefix()
+            self.fields['CARCHIVO'].label = f'{prefix}_CARCHIVO'
+            self.fields['CNOMBRE'].label = f'{prefix}_CNOMBRE'
+            self.fields['CDESCRIPCION'].label = f'{prefix}_CDESCRIPCION'
+        
+        if self.is_edit:
+            self.fields['CARCHIVO'].required = False
+
+    def get_prefix(self):
+        if self.tipo_tarea == 'TAREA_GENERAL':
+            return 'AT'
+        elif self.tipo_tarea == 'TAREA_INGENIERIA':
+            return 'ATI'
+        elif self.tipo_tarea == 'TAREA_FINANCIERA':
+            return 'ATF'
+        return ''
+
+    def save(self, commit=True):
+        if self.tipo_tarea == 'TAREA_GENERAL':
+            instance = ADJUNTO_TAREA_GENERAL()
+        elif self.tipo_tarea == 'TAREA_INGENIERIA':
+            instance = ADJUNTO_TAREA_INGENIERIA()
+        elif self.tipo_tarea == 'TAREA_FINANCIERA':
+            instance = ADJUNTO_TAREA_FINANCIERA()
+        else:
+            raise ValueError("Tipo de tarea no válido")
+
+        prefix = self.get_prefix()
+        setattr(instance, f'{prefix}_CARCHIVO', self.cleaned_data['CARCHIVO'])
+        setattr(instance, f'{prefix}_CNOMBRE', self.cleaned_data['CNOMBRE'])
+        setattr(instance, f'{prefix}_CDESCRIPCION', self.cleaned_data['CDESCRIPCION'])
+
+        if commit:
+            instance.save()
+        return instance
+
 # Form for ADJUNTO_ETAPA model
 class formADJUNTO_ETAPA(forms.ModelForm):
     class Meta:
