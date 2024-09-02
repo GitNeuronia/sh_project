@@ -10,8 +10,8 @@ from django.contrib.auth.views import login_required
 urlpatterns = [
 
     # La página de inicio
+    path('', views.proyecto_index, name='proyecto_index'),
     path('', views.index, name='home'),
-
     # URLs para la gestión de regiones
     path('reg_listall/', login_required(views.REGION_LISTALL), name='reg_listall'),
     path('reg_addone/', login_required(views.REGION_ADDONE), name='reg_addone'),
@@ -111,6 +111,9 @@ urlpatterns = [
     path('proycli_listone/<int:pk>/', login_required(views.PROYECTO_CLIENTE_LISTONE), name='proycli_listone'),    
     path('proycli_documentos_modal/<int:pk>/', login_required(views.PROYECTO_CLIENTE_DOCUMENTOS_MODAL), name='proycli_documentos_modal'),    
     path('proycli_documentos_modal_addone/<int:pk>/', login_required(views.PROYECTO_CLIENTE_DOCUMENTOS_MODAL_ADDONE), name='proycli_documentos_modal_addone'),    
+    path('proycli_documento_get/<int:documento_id>/', login_required(views.get_documento), name='get_documento'),
+    path('proyecto_cliente_documentos_modal_update/<int:pk>/', login_required(views.PROYECTO_CLIENTE_DOCUMENTOS_MODAL_UPDATE), name='proyecto_cliente_documentos_modal_update'),
+    path('proyecto_cliente_documentos_download/<int:documento_id>/', login_required(views.PROYECTO_CLIENTE_DOCUMENTOS_DOWNLOAD), name='proyecto_cliente_documentos_download'),
     
     # URLs para la gestión de tareas generales
     path('tarea_general_listall/', login_required(views.TAREA_GENERAL_LISTALL), name='tarea_general_listall'),
@@ -142,11 +145,12 @@ urlpatterns = [
     # URL para la gestión de actualización de datos de tareas
     path('tarea/<str:tipo_tarea>/<int:pk>/update_data/', login_required(views.tarea_update_data), name='tarea_update_data'),
 
-    path('tarea_adjuntos/<int:tarea_id>/<str:tipo_tarea>/', views.tarea_adjuntos_lista, name='tarea_adjuntos_lista'),
-    path('tarea_adjunto/agregar/<int:tarea_id>/<str:tipo_tarea>/', views.tarea_adjunto_agregar, name='tarea_adjunto_agregar'),
-    path('tarea_adjunto/editar/<int:pk>/<str:tipo_tarea>/', views.tarea_adjunto_editar, name='tarea_adjunto_editar'),
-    path('tarea_adjunto/eliminar/<int:pk>/<str:tipo_tarea>/', views.tarea_adjunto_eliminar, name='tarea_adjunto_eliminar'),
-    path('tarea_adjunto/descargar/<int:pk>/<str:tipo_tarea>/', views.tarea_adjunto_descargar, name='tarea_adjunto_descargar'),
+    # URLs para la gestión de adjuntos de las tareas
+    path('tarea_adjuntos/<int:tarea_id>/<str:tipo_tarea>/', login_required(views.tarea_adjuntos_lista), name='tarea_adjuntos_lista'),
+    path('tarea_adjunto/agregar/<int:tarea_id>/<str:tipo_tarea>/', login_required(views.tarea_adjunto_agregar), name='tarea_adjunto_agregar'),
+    path('tarea_adjunto/editar/<int:pk>/<str:tipo_tarea>/', login_required(views.tarea_adjunto_editar), name='tarea_adjunto_editar'),
+    path('tarea_adjunto/eliminar/<int:pk>/<str:tipo_tarea>/', login_required(views.tarea_adjunto_eliminar), name='tarea_adjunto_eliminar'),
+    path('tarea_adjunto/descargar/<int:pk>/<str:tipo_tarea>/', login_required(views.tarea_adjunto_descargar), name='tarea_adjunto_descargar'),
 
     # URLs para la gestión de etapas
     path('etapa_listall/', login_required(views.ETAPA_LISTALL), name='etapa_listall'),
