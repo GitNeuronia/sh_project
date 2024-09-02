@@ -6,13 +6,21 @@ Copyright (c) 2019 - present AppSeed.us
 from decimal import Decimal
 import json
 import re
+import os
+import mimetypes
 from django import template
 from django.contrib.auth.decorators import login_required
 from django.db import connection
-from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseRedirect, JsonResponse
+from django.http import FileResponse, HttpResponse, HttpResponseBadRequest, HttpResponseRedirect, JsonResponse, HttpResponseNotFound
+from django.utils.encoding import smart_str
 from django.template import loader
+from django.template.loader import render_to_string
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.middleware.csrf import get_token
 from django.urls import reverse
-from django.db.models import Sum
+from django.db.models import Sum, Avg, Count, Case, When, F, DecimalField, IntegerField, Q
+from django.db.models.functions import Coalesce
 from apps.home.models import * 
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
@@ -22,12 +30,50 @@ from .forms import *
 
 @login_required(login_url="/login/")
 def index(request):
+    
     context = {'segment': 'index'}
 
     html_template = loader.get_template('home/index.html')
     return HttpResponse(html_template.render(context, request))
 
+def proyecto_index(request):
+    fecha_actual = datetime.datetime.now()
+    proyectos = PROYECTO_CLIENTE.objects.all()
 
+    # Calcular estadísticas generales
+    estadisticas = proyectos.aggregate(
+        total_proyectos=Count('id'),
+        proyectos_activos=Count('id', filter=Q(PC_CESTADO='En progreso')),
+        total_presupuesto=Coalesce(Sum('PC_NPRESUPUESTO'), 0, output_field=DecimalField()),
+        total_costo_real=Coalesce(Sum('PC_NCOSTO_REAL'), 0, output_field=DecimalField()),
+        promedio_margen=Coalesce(Avg('PC_NMARGEN'), 0, output_field=DecimalField()),
+    )
+
+    # Preparar datos para el gráfico y la tabla de proyectos
+    proyectos_data = proyectos.annotate(
+        alerta_fecha=Case(
+            When(PC_FFECHA_FIN_REAL__isnull=True, PC_FFECHA_FIN_ESTIMADA__lt=fecha_actual, then=True),
+            default=False,
+            output_field=IntegerField()
+        ),
+        alerta_costo=Case(
+            When(PC_NCOSTO_REAL__gt=F('PC_NPRESUPUESTO'), then=True),
+            default=False,
+            output_field=IntegerField()
+        )
+    ).values('id', 'PC_CCODIGO', 'PC_CNOMBRE', 'PC_CESTADO', 'PC_NPRESUPUESTO', 'PC_NCOSTO_REAL', 
+             'PC_FFECHA_INICIO', 'PC_FFECHA_FIN_ESTIMADA', 'PC_FFECHA_FIN_REAL', 'alerta_fecha', 'alerta_costo')
+
+    context = {
+        'estadisticas': estadisticas,
+        'proyectos': proyectos_data,
+        'fecha_actual': fecha_actual,
+        'chart_labels': [p['PC_CCODIGO'] for p in proyectos_data],
+        'chart_presupuestos': [float(p['PC_NPRESUPUESTO']) for p in proyectos_data],
+        'chart_costos_reales': [float(p['PC_NCOSTO_REAL']) for p in proyectos_data],
+    }
+
+    return render(request, 'home/proyecto_index.html', context)
 @login_required(login_url="/login/")
 def pages(request):
     context = {}
@@ -1542,6 +1588,98 @@ def PROYECTO_CLIENTE_DOCUMENTOS_MODAL_ADDONE(request, pk):
     except Exception as e:
         print(f"Error en PROYECTO_CLIENTE_DOCUMENTOS_MODAL_ADDONE: {str(e)}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
+def PROYECTO_CLIENTE_DOCUMENTOS_MODAL_UPDATE(request, pk):
+    if not has_auth(request.user, 'EDIT_PROYECTOS_CLIENTES'):
+        return JsonResponse({'error': 'No tienes permiso para realizar esta acción'}, status=403)
+    
+    try:
+        documento = get_object_or_404(PROYECTO_ADJUNTO, id=pk)
+        
+        if request.method == 'POST':
+            form = formPROYECTO_ADJUNTO(request.POST, request.FILES, instance=documento)
+            
+            if form.is_valid():
+                documento_editado = form.save(commit=False)
+                documento_editado.PA_CUSUARIO_MODIFICADOR = request.user
+                documento_editado.save()
+                
+                crear_log(request.user, 'Actualizar Documento de Proyecto', f'Se editó el documento {documento_editado.PA_CNOMBRE} del proyecto {documento_editado.PA_PROYECTO.PC_CNOMBRE}')
+                
+                return JsonResponse({'success': True, 'message': 'Documento editado correctamente'})
+            else:
+                return JsonResponse({'success': False, 'error': 'Formulario inválido', 'errors': form.errors}, status=400)
+        
+        else:  # GET request
+            form = formPROYECTO_ADJUNTO(instance=documento)
+            return JsonResponse({
+                'success': True,
+                'documento': {
+                    'id': documento.id,
+                    'PA_CNOMBRE': documento.PA_CNOMBRE,
+                    'PA_CDESCRIPCION': documento.PA_CDESCRIPCION,
+                    'PA_CTIPO': documento.PA_CTIPO,
+                    'PA_CARCHIVO': documento.PA_CARCHIVO.url if documento.PA_CARCHIVO else None,
+                    'PA_CARCHIVO_nombre': documento.PA_CARCHIVO.name if documento.PA_CARCHIVO else None,
+                }
+            })
+    
+    except Exception as e:
+        print(f"Error en PROYECTO_CLIENTE_DOCUMENTOS_MODAL_UPDATE: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
+def get_documento(request, documento_id):
+    try:
+        documento = PROYECTO_ADJUNTO.objects.get(id=documento_id)
+        data = {
+            'success': True,
+            'documento': {
+                'PA_CNOMBRE': documento.PA_CNOMBRE,
+                'PA_CDESCRIPCION': documento.PA_CDESCRIPCION,
+                'PA_CTIPO': documento.PA_CTIPO,
+                'PA_CARCHIVO': documento.PA_CARCHIVO.name if documento.PA_CARCHIVO else None,
+            }
+        }
+        return JsonResponse(data)
+    except PROYECTO_ADJUNTO.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Documento no encontrado'}, status=404)
+
+def PROYECTO_CLIENTE_DOCUMENTOS_DOWNLOAD(request, documento_id):
+    if not has_auth(request.user, 'VER_PROYECTOS'):  # Asumimos que existe esta función de verificación de permisos
+        messages.error(request, 'No tienes permiso para descargar este archivo')
+        return redirect('/')
+    
+    try:
+        adjunto = get_object_or_404(PROYECTO_ADJUNTO, pk=documento_id)
+        
+        if not adjunto.PA_CARCHIVO:
+            return HttpResponseNotFound('El archivo no existe')
+
+        file_path = adjunto.PA_CARCHIVO.path
+        if not os.path.exists(file_path):
+            return HttpResponseNotFound('El archivo no existe en el sistema de archivos')
+
+        # Obtener el nombre original del archivo
+        original_filename = os.path.basename(adjunto.PA_CARCHIVO.name)
+        
+        # Determinar el tipo MIME
+        content_type, encoding = mimetypes.guess_type(file_path)
+        content_type = content_type or 'application/octet-stream'
+        
+        # Abrir el archivo en modo binario
+        file = open(file_path, 'rb')
+        response = FileResponse(file, content_type=content_type)
+        
+        # Configurar los encabezados de la respuesta
+        response['Content-Disposition'] = f'attachment; filename="{original_filename}"'
+        
+        # Añadir el tamaño del archivo al encabezado
+        response['Content-Length'] = os.path.getsize(file_path)
+        
+        return response
+    except Exception as e:
+        # Registrar el error para debugging        
+        return HttpResponseNotFound('Error al descargar el archivo')
 # ----------PROYECTO MODAL DOCUMENTOS--------------
 
 #--------------------------------------
@@ -2594,6 +2732,187 @@ def tarea_update_data(request, tipo_tarea, pk):
     return render(request, 'home/TAREA/tarea_update_data.html', ctx)
 # ----------TAREA UPDATE DATA--------------
 
+# ----------TAREA DOCUMENTOS--------------
+def get_adjunto_model(tipo_tarea):
+    if tipo_tarea == 'TAREA_GENERAL':
+        return ADJUNTO_TAREA_GENERAL
+    elif tipo_tarea == 'TAREA_INGENIERIA':
+        return ADJUNTO_TAREA_INGENIERIA
+    elif tipo_tarea == 'TAREA_FINANCIERA':
+        return ADJUNTO_TAREA_FINANCIERA
+    raise ValueError(f"Tipo de tarea no válido: {tipo_tarea}")
+
+def get_adjunto_model_and_prefix(tipo_tarea):
+    if tipo_tarea == 'TAREA_GENERAL':
+        return ADJUNTO_TAREA_GENERAL, 'AT'
+    elif tipo_tarea == 'TAREA_INGENIERIA':
+        return ADJUNTO_TAREA_INGENIERIA, 'ATI'
+    elif tipo_tarea == 'TAREA_FINANCIERA':
+        return ADJUNTO_TAREA_FINANCIERA, 'ATF'
+    else:
+        raise ValueError(f"Tipo de tarea no válido: {tipo_tarea}")
+
+def tarea_adjuntos_lista(request, tarea_id, tipo_tarea):
+    if not has_auth(request.user, 'VER_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        if tipo_tarea == 'TAREA_GENERAL':
+            adjuntos = ADJUNTO_TAREA_GENERAL.objects.filter(AT_TAREA_id=tarea_id)
+            prefix = 'AT'
+        elif tipo_tarea == 'TAREA_INGENIERIA':
+            adjuntos = ADJUNTO_TAREA_INGENIERIA.objects.filter(ATI_TAREA_id=tarea_id)
+            prefix = 'ATI'
+        elif tipo_tarea == 'TAREA_FINANCIERA':
+            adjuntos = ADJUNTO_TAREA_FINANCIERA.objects.filter(ATF_TAREA_id=tarea_id)
+            prefix = 'ATF'
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': f'Tipo de tarea no válido: {tipo_tarea}'
+            }, status=400)
+        
+        adjuntos_data = []
+        for adjunto in adjuntos:
+            adjuntos_data.append({
+                'nombre': getattr(adjunto, f'{prefix}_CNOMBRE'),
+                'descripcion': getattr(adjunto, f'{prefix}_CDESCRIPCION'),
+                'fecha_creacion': getattr(adjunto, f'{prefix}_FFECHA_CREACION').strftime('%d/%m/%Y'),
+                'id': adjunto.id
+            })
+        
+        return JsonResponse({'success': True, 'adjuntos': adjuntos_data})
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al obtener los adjuntos: {str(e)}'
+        }, status=400)
+
+def tarea_adjunto_agregar(request, tarea_id, tipo_tarea):
+    if not has_auth(request.user, 'ADD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        AdjuntoModel, prefix = get_adjunto_model_and_prefix(tipo_tarea)
+        form = AdjuntoTareaForm(request.POST, request.FILES, tipo_tarea=tipo_tarea)
+        if form.is_valid():
+            adjunto = AdjuntoModel(**{
+                f'{prefix}_TAREA_id': tarea_id,
+                f'{prefix}_CARCHIVO': form.cleaned_data['CARCHIVO'],
+                f'{prefix}_CNOMBRE': form.cleaned_data['CNOMBRE'],
+                f'{prefix}_CDESCRIPCION': form.cleaned_data['CDESCRIPCION'],
+                f'{prefix}_CUSUARIO_CREADOR': request.user,
+            })
+            adjunto.save()
+            return JsonResponse({'success': True, 'message': 'Adjunto agregado correctamente'})
+        else:
+            return JsonResponse({'success': False, 'message': 'Formulario inválido', 'errors': form.errors})
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al agregar el adjunto: {str(e)}'
+        }, status=400)
+        
+@ensure_csrf_cookie        
+@require_http_methods(["GET", "POST"])
+def tarea_adjunto_editar(request, pk, tipo_tarea):
+    if not has_auth(request.user, 'UPD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        AdjuntoModel, prefix = get_adjunto_model_and_prefix(tipo_tarea)
+        adjunto = get_object_or_404(AdjuntoModel, pk=pk)
+        
+        if request.method == 'GET':
+            initial_data = {
+                'CNOMBRE': getattr(adjunto, f'{prefix}_CNOMBRE'),
+                'CDESCRIPCION': getattr(adjunto, f'{prefix}_CDESCRIPCION'),
+            }
+            form = AdjuntoTareaForm(initial=initial_data, tipo_tarea=tipo_tarea, is_edit=True)
+            csrf_token = get_token(request)
+            form_html = render_to_string('home/TAREA/adjunto_form_partial.html', {
+                'form': form, 
+                'adjunto': adjunto, 
+                'tipo_tarea': tipo_tarea,
+                'csrf_token': csrf_token
+            }, request=request)
+            return HttpResponse(form_html)
+        
+        elif request.method == 'POST':
+            form = AdjuntoTareaForm(request.POST, request.FILES, tipo_tarea=tipo_tarea, is_edit=True)
+            if form.is_valid():
+                setattr(adjunto, f'{prefix}_CNOMBRE', form.cleaned_data['CNOMBRE'])
+                setattr(adjunto, f'{prefix}_CDESCRIPCION', form.cleaned_data['CDESCRIPCION'])
+                if form.cleaned_data['CARCHIVO']:
+                    setattr(adjunto, f'{prefix}_CARCHIVO', form.cleaned_data['CARCHIVO'])
+                setattr(adjunto, f'{prefix}_CUSUARIO_MODIFICADOR', request.user)
+                adjunto.save()
+                return JsonResponse({'success': True, 'message': 'Adjunto editado correctamente'})
+            else:
+                return JsonResponse({'success': False, 'message': 'Formulario inválido', 'errors': form.errors})
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al editar el adjunto: {str(e)}'
+        }, status=400)
+
+def tarea_adjunto_eliminar(request, pk, tipo_tarea):
+    if not has_auth(request.user, 'UPD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        AdjuntoModel = get_adjunto_model(tipo_tarea)
+        adjunto = get_object_or_404(AdjuntoModel, pk=pk)
+        adjunto.delete()
+        return JsonResponse({'success': True, 'message': 'Adjunto eliminado correctamente'})
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al eliminar el adjunto: {str(e)}'
+        }, status=400)
+
+def tarea_adjunto_descargar(request, pk, tipo_tarea):
+    if not has_auth(request.user, 'VER_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        AdjuntoModel, prefix = get_adjunto_model_and_prefix(tipo_tarea)
+        adjunto = get_object_or_404(AdjuntoModel, pk=pk)
+        
+        file_field = getattr(adjunto, f'{prefix}_CARCHIVO')
+        if not file_field:
+            return HttpResponseNotFound('El archivo no existe')
+
+        file_path = file_field.path
+        if not os.path.exists(file_path):
+            return HttpResponseNotFound('El archivo no existe en el sistema de archivos')
+
+        # Obtener el nombre original del archivo
+        original_filename = os.path.basename(file_field.name)
+        
+        # Determinar el tipo MIME
+        content_type, encoding = mimetypes.guess_type(file_path)
+        content_type = content_type or 'application/octet-stream'
+        
+        # Abrir el archivo en modo binario
+        file = open(file_path, 'rb')
+        response = FileResponse(file, content_type=content_type)
+        
+        # Configurar los encabezados de la respuesta
+        response['Content-Disposition'] = f'attachment; filename="{original_filename}"'
+        
+        # Añadir el tamaño del archivo al encabezado
+        response['Content-Length'] = os.path.getsize(file_path)
+        
+        return response
+    except Exception as e:
+        # Registrar el error para debugging
+        import logging
+        logging.error(f"Error al descargar adjunto: {str(e)}")
+        
+        return HttpResponseNotFound('Error al descargar el archivo')
+# ----------TAREA DOCUMENTOS--------------
+
 #--------------------------------------
 #----------------TAREAS----------------
 #--------------------------------------
@@ -3108,7 +3427,6 @@ def ORDEN_VENTA_GET_DATA(request, pk):
         print("ERROR:", e)
         return JsonResponse({'error': str(e)}, status=500)
 
-
 def ORDEN_VENTA_LISTONE_FORMAT(request, pk):
     if not has_auth(request.user, 'VER_DOCUMENTOS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
@@ -3178,7 +3496,6 @@ def CHECK_OV_NUMERO(request):
         return JsonResponse({'exists': exists})
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
-
 def FACTURA_LISTALL(request):
     if not has_auth(request.user, 'VER_DOCUMENTOS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
@@ -3242,6 +3559,7 @@ def FACTURA_ADDONE(request):
         print(e)
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
+
 def FACTURA_ADD_LINE(request):
     if not has_auth(request.user, 'ADD_DOCUMENTOS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')

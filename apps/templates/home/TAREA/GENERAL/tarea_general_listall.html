@@ -81,8 +81,12 @@
                                                         <path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8Zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002a.274.274 0 0 1-.014.002H7.022ZM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816ZM4.92 10A5.493 5.493 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275ZM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0Zm3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/>
                                                     </svg>
                                                 </a>
-                                                {% endif %}
-                                                {% comment %} <a href="#" class="btn btn-danger btn-sm">Eliminar</a> {% endcomment %}
+                                                {% endif %}                                                                                            
+                                                <button type="button" class="btn btn-primary" onclick="openAdjuntosModal({{ tarea.id }}, 'TAREA_GENERAL')">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-paperclip" viewBox="0 0 16 16">
+                                                        <path d="M4.5 3a2.5 2.5 0 0 1 5 0v9a1.5 1.5 0 0 1-3 0V5a.5.5 0 0 1 1 0v7a.5.5 0 0 0 1 0V3a1.5 1.5 0 1 0-3 0v9a2.5 2.5 0 0 0 5 0V5a.5.5 0 0 1 1 0v7a3.5 3.5 0 1 1-7 0z"/>
+                                                      </svg>
+                                                </button>
                                             </td>
                                             <td>{{tarea.TG_CCODIGO|default_if_none:""}}</td>
                                             <td>{{tarea.TG_CNOMBRE|default_if_none:""}}</td>
@@ -105,7 +109,9 @@
         </div>
     </section>
     <!-- [ Main Content ] end -->
-
+    <!-- Include del modal de adjuntos -->
+    {% include "home/TAREA/tarea_documents.html" %}
+    
 {% endblock content %}
 
 <!-- Specific Page JS goes HERE  -->
@@ -120,5 +126,151 @@
     <script src="/static/assets/js/plugins/dataTables.buttons.min.js"></script>
     <script src="/static/assets/js/plugins/buttons.html5.min.js"></script>
     <script src="/static/assets/js/plugins/buttons.bootstrap4.min.js"></script>
-    <script src="/static/assets/js/pages/data-export-custom.js"></script>
+    <script src="/static/assets/js/pages/data-export-custom.js"></script>    
+    <script>
+        var currentTareaId, currentTipoTarea;
+        
+        function openAdjuntosModal(tareaId, tipoTarea) {
+            currentTareaId = tareaId;
+            currentTipoTarea = tipoTarea;
+            $('#adjuntosModal').modal('show');
+            cargarListaAdjuntos();
+        }
+        
+        function cargarListaAdjuntos() {
+            $.ajax({
+                url: `/tarea_adjuntos/${currentTareaId}/${currentTipoTarea}/`,
+                method: 'GET',
+                success: function(data) {
+                    var tableHtml = '<table class="table table-striped">' +
+                                    '<thead><tr><th>Nombre</th><th>Descripción</th><th>Fecha de Creación</th><th>Acciones</th></tr></thead>' +
+                                    '<tbody>';
+                    
+                    if (data.adjuntos.length === 0) {
+                        tableHtml += '<tr><td colspan="4" class="text-center">No hay adjuntos para esta tarea.</td></tr>';
+                    } else {
+                        data.adjuntos.forEach(function(adjunto) {
+                            tableHtml += `<tr>
+                                <td>${adjunto.nombre}</td>
+                                <td>${adjunto.descripcion}</td>
+                                <td>${adjunto.fecha_creacion}</td>
+                                <td>
+                                    <button onclick="editarAdjunto(${adjunto.id})" class="btn btn-primary btn-sm"><i class="fas fa-edit"></i> Editar</button>
+                                    <button onclick="eliminarAdjunto(${adjunto.id})" class="btn btn-danger btn-sm"><i class="fas fa-trash-alt"></i> Eliminar</button>
+                                    <a href="/tarea_adjunto/descargar/${adjunto.id}/${currentTipoTarea}/" class="btn btn-success btn-sm"><i class="fas fa-download"></i> Descargar</a>
+                                </td>
+                            </tr>`;
+                        });
+                    }
+                    
+                    tableHtml += '</tbody></table>';
+                    $('#lista').html(tableHtml);
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error al cargar los adjuntos:", error);
+                    $('#lista').html('<p class="text-danger">Error al cargar los adjuntos. Por favor, intente nuevamente.</p>');
+                }
+            });
+        }
+        
+        $(document).ready(function() {
+            $('#formAgregarAdjunto').on('submit', function(e) {
+                e.preventDefault();
+                var formData = new FormData(this);
+                
+                $.ajax({
+                    url: `/tarea_adjunto/agregar/${currentTareaId}/${currentTipoTarea}/`,
+                    type: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        if (response.success) {
+                            alert(response.message);
+                            $('#formAgregarAdjunto')[0].reset();
+                            cargarListaAdjuntos();
+                            $('#lista-tab').tab('show');
+                        } else {
+                            alert('Error: ' + response.message);
+                        }
+                    },
+                    error: function(xhr, errmsg, err) {
+                        console.log(xhr.status + ": " + xhr.responseText);
+                        alert('Error al agregar el adjunto');
+                    },
+                    cache: false,
+                    contentType: false,
+                    processData: false
+                });
+            });
+        });
+        
+        function editarAdjunto(adjuntoId) {
+            $.ajax({
+                url: `/tarea_adjunto/editar/${adjuntoId}/${currentTipoTarea}/`,
+                method: 'GET',
+                success: function(data) {
+                    $('#editar').html(data);
+                    $('#editar-tab').show().tab('show');
+                    
+                    $('#adjuntoForm').off('submit').on('submit', function(e) {
+                        e.preventDefault();
+                        var formData = new FormData(this);
+                        
+                        $.ajax({
+                            url: `/tarea_adjunto/editar/${adjuntoId}/${currentTipoTarea}/`,
+                            type: 'POST',
+                            data: formData,
+                            headers: {
+                                'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                            },
+                            success: function(response) {
+                                if (response.success) {
+                                    alert(response.message);
+                                    cargarListaAdjuntos();
+                                    $('#lista-tab').tab('show');
+                                    $('#editar-tab').hide();
+                                } else {
+                                    alert('Error: ' + response.message);
+                                }
+                            },
+                            error: function(xhr, errmsg, err) {
+                                console.log(xhr.status + ": " + xhr.responseText);
+                                alert('Error al editar el adjunto');
+                            },
+                            cache: false,
+                            contentType: false,
+                            processData: false
+                        });
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error al cargar el formulario de edición:", error);
+                    alert('Error al cargar el formulario de edición');
+                }
+            });
+        }
+        
+        function eliminarAdjunto(adjuntoId) {
+            if (confirm('¿Está seguro de que desea eliminar este adjunto?')) {
+                $.ajax({
+                    url: `/tarea_adjunto/eliminar/${adjuntoId}/${currentTipoTarea}/`,
+                    method: 'POST',
+                    data: {
+                        csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val()
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            alert(response.message);
+                            cargarListaAdjuntos();
+                        } else {
+                            alert('Error: ' + response.message);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error al eliminar el adjunto:", error);
+                        alert('Error al eliminar el adjunto');
+                    }
+                });
+            }
+        }
+    </script>
 {% endblock javascripts %}

@@ -1,0 +1,16 @@
+<form id="adjuntoForm" method="POST" enctype="multipart/form-data">
+    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+    <div class="form-group">
+        <label for="id_CNOMBRE">Nombre del Adjunto</label>
+        {{ form.CNOMBRE }}
+    </div>
+    <div class="form-group">
+        <label for="id_CDESCRIPCION">Descripción del Adjunto</label>
+        {{ form.CDESCRIPCION }}
+    </div>
+    <div class="form-group">
+        <label for="id_CARCHIVO">Archivo del Adjunto (opcional, dejar en blanco para mantener el archivo actual)</label>
+        {{ form.CARCHIVO }}
+    </div>
+    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+</form>
