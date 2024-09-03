@@ -3,30 +3,41 @@
 Copyright (c) 2019 - present AppSeed.us
 """
 
-from decimal import Decimal
+# Módulos de Python estándar
 import json
-import re
-import os
 import mimetypes
+import os
+import re
+from decimal import Decimal
+
+# Módulos de Django
 from django import template
-from django.contrib.auth.decorators import login_required
-from django.db import connection
-from django.http import FileResponse, HttpResponse, HttpResponseBadRequest, HttpResponseRedirect, JsonResponse, HttpResponseNotFound
-from django.utils.encoding import smart_str
-from django.template import loader
-from django.template.loader import render_to_string
-from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import ensure_csrf_cookie
-from django.middleware.csrf import get_token
-from django.urls import reverse
-from django.db.models import Sum, Avg, Count, Case, When, F, DecimalField, IntegerField, Q
-from django.db.models.functions import Coalesce
-from apps.home.models import * 
-from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from .models import *
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db import connection
+from django.db.models import (
+    Avg, Case, Count, DecimalField, ExpressionWrapper, F, Func,
+    IntegerField, Q, Sum, Value, When
+)
+from django.db.models.functions import Coalesce, Least, Cast
+from django.http import (
+    FileResponse, HttpResponse, HttpResponseBadRequest,
+    HttpResponseNotFound, HttpResponseRedirect, JsonResponse
+)
+from django.middleware.csrf import get_token
+from django.shortcuts import get_object_or_404, redirect, render
+from django.template import loader
+from django.template.loader import render_to_string
+from django.urls import reverse
+from django.utils.encoding import smart_str
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.http import require_http_methods
+
+# Módulos locales
+from apps.home.models import *
 from .forms import *
+from .models import *
 
 @login_required(login_url="/login/")
 def index(request):
@@ -36,6 +47,24 @@ def index(request):
     html_template = loader.get_template('home/index.html')
     return HttpResponse(html_template.render(context, request))
 
+class DecimalEncoder(DjangoJSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return float(obj)
+        return super(DecimalEncoder, self).default(obj)
+
+class WeightedAvg(Func):
+    function = 'SUM'
+    template = '(%(expressions)s) / NULLIF(SUM(%(weight)s), 0)'
+    
+    def __init__(self, expression, weight, **extras):
+        super().__init__(
+            expression * weight,
+            weight=weight,
+            output_field=DecimalField(),
+            **extras
+        )
+
 def proyecto_index(request):
     fecha_actual = datetime.datetime.now()
     proyectos = PROYECTO_CLIENTE.objects.all()
@@ -43,26 +72,81 @@ def proyecto_index(request):
     # Calcular estadísticas generales
     estadisticas = proyectos.aggregate(
         total_proyectos=Count('id'),
-        proyectos_activos=Count('id', filter=Q(PC_CESTADO='En progreso')),
-        total_presupuesto=Coalesce(Sum('PC_NPRESUPUESTO'), 0, output_field=DecimalField()),
-        total_costo_real=Coalesce(Sum('PC_NCOSTO_REAL'), 0, output_field=DecimalField()),
-        promedio_margen=Coalesce(Avg('PC_NMARGEN'), 0, output_field=DecimalField()),
+        proyectos_activos=Count('id', filter=~Q(PC_CESTADO__iexact='Cerrado')),
+        total_presupuesto=Coalesce(Sum('PC_NPRESUPUESTO'), Decimal('0')),
+        total_costo_real=Coalesce(Sum('PC_NCOSTO_REAL'), Decimal('0')),
+        promedio_margen=Coalesce(Avg('PC_NMARGEN'), Decimal('0')),
     )
 
     # Preparar datos para el gráfico y la tabla de proyectos
     proyectos_data = proyectos.annotate(
         alerta_fecha=Case(
-            When(PC_FFECHA_FIN_REAL__isnull=True, PC_FFECHA_FIN_ESTIMADA__lt=fecha_actual, then=True),
-            default=False,
+            When(PC_FFECHA_FIN_REAL__isnull=True, PC_FFECHA_FIN_ESTIMADA__lt=fecha_actual, then=Value(1)),
+            default=Value(0),
             output_field=IntegerField()
         ),
         alerta_costo=Case(
-            When(PC_NCOSTO_REAL__gt=F('PC_NPRESUPUESTO'), then=True),
-            default=False,
+            When(PC_NCOSTO_REAL__gt=F('PC_NCOSTO_ESTIMADO'), then=Value(1)),
+            default=Value(0),
+            output_field=IntegerField()
+        ),
+        porcentaje_avance=Coalesce(
+            Avg(
+                Case(
+                    When(tareas_generales_proyecto__TG_NPROGRESO__isnull=False, 
+                            then='tareas_generales_proyecto__TG_NPROGRESO'),
+                    When(tareas_ingenieria_proyecto__TI_NPROGRESO__isnull=False, 
+                            then='tareas_ingenieria_proyecto__TI_NPROGRESO'),
+                    When(tareas_financieras_proyecto__TF_NPROGRESO__isnull=False, 
+                            then='tareas_financieras_proyecto__TF_NPROGRESO'),
+                    output_field=DecimalField()
+                )
+            ),
+            Value(0),
+            output_field=DecimalField(max_digits=5, decimal_places=2)
+        ),
+        alerta_prioridad=Case(
+            When(Q(alerta_fecha=1) | Q(alerta_costo=1), then=Value(1)),
+            default=Value(0),
             output_field=IntegerField()
         )
-    ).values('id', 'PC_CCODIGO', 'PC_CNOMBRE', 'PC_CESTADO', 'PC_NPRESUPUESTO', 'PC_NCOSTO_REAL', 
-             'PC_FFECHA_INICIO', 'PC_FFECHA_FIN_ESTIMADA', 'PC_FFECHA_FIN_REAL', 'alerta_fecha', 'alerta_costo')
+    ).values(
+        'id', 'PC_CCODIGO', 'PC_CNOMBRE', 'PC_CESTADO', 'PC_NPRESUPUESTO', 'PC_NCOSTO_REAL', 
+        'PC_NCOSTO_ESTIMADO', 'PC_FFECHA_INICIO', 'PC_FFECHA_FIN_ESTIMADA', 'PC_FFECHA_FIN_REAL', 
+        'alerta_fecha', 'alerta_costo', 'porcentaje_avance', 'alerta_prioridad'
+    ).order_by('-alerta_prioridad', 'PC_FFECHA_FIN_ESTIMADA')
+
+    # Filtrar y preparar datos de proyectos activos
+    proyectos_activos = list(proyectos.filter(~Q(PC_CESTADO__iexact='Cerrado')).annotate(
+        porcentaje_avance=Coalesce(
+            Avg(
+                Case(
+                    When(tareas_generales_proyecto__TG_NPROGRESO__isnull=False, 
+                            then='tareas_generales_proyecto__TG_NPROGRESO'),
+                    When(tareas_ingenieria_proyecto__TI_NPROGRESO__isnull=False, 
+                            then='tareas_ingenieria_proyecto__TI_NPROGRESO'),
+                    When(tareas_financieras_proyecto__TF_NPROGRESO__isnull=False, 
+                            then='tareas_financieras_proyecto__TF_NPROGRESO'),
+                    output_field=DecimalField()
+                )
+            ),
+            Value(0),
+            output_field=DecimalField(max_digits=5, decimal_places=2)
+        )
+    ).values(
+        'id', 'PC_CCODIGO', 'PC_CNOMBRE', 'PC_FFECHA_INICIO', 'PC_FFECHA_FIN_ESTIMADA', 
+        'PC_NPRESUPUESTO', 'PC_NCOSTO_REAL', 'PC_CESTADO', 'porcentaje_avance'
+    ))
+
+    # Convertir las fechas a strings y los Decimales a float
+    for proyecto in proyectos_activos:
+        if proyecto['PC_FFECHA_INICIO']:
+            proyecto['PC_FFECHA_INICIO'] = proyecto['PC_FFECHA_INICIO'].strftime('%Y-%m-%d')
+        if proyecto['PC_FFECHA_FIN_ESTIMADA']:
+            proyecto['PC_FFECHA_FIN_ESTIMADA'] = proyecto['PC_FFECHA_FIN_ESTIMADA'].strftime('%Y-%m-%d')
+        proyecto['PC_NPRESUPUESTO'] = float(proyecto['PC_NPRESUPUESTO'])
+        proyecto['PC_NCOSTO_REAL'] = float(proyecto['PC_NCOSTO_REAL'])
+        proyecto['porcentaje_avance'] = min(float(proyecto['porcentaje_avance']), 100)
 
     context = {
         'estadisticas': estadisticas,
@@ -71,9 +155,11 @@ def proyecto_index(request):
         'chart_labels': [p['PC_CCODIGO'] for p in proyectos_data],
         'chart_presupuestos': [float(p['PC_NPRESUPUESTO']) for p in proyectos_data],
         'chart_costos_reales': [float(p['PC_NCOSTO_REAL']) for p in proyectos_data],
+        'proyectos_activos': json.dumps(proyectos_activos, cls=DecimalEncoder),
     }
 
     return render(request, 'home/proyecto_index.html', context)
+
 @login_required(login_url="/login/")
 def pages(request):
     context = {}
