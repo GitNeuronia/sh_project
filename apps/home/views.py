@@ -3,30 +3,41 @@
 Copyright (c) 2019 - present AppSeed.us
 """
 
-from decimal import Decimal
+# Módulos de Python estándar
 import json
-import re
-import os
 import mimetypes
+import os
+import re
+from decimal import Decimal
+
+# Módulos de Django
 from django import template
-from django.contrib.auth.decorators import login_required
-from django.db import connection
-from django.http import FileResponse, HttpResponse, HttpResponseBadRequest, HttpResponseRedirect, JsonResponse, HttpResponseNotFound
-from django.utils.encoding import smart_str
-from django.template import loader
-from django.template.loader import render_to_string
-from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import ensure_csrf_cookie
-from django.middleware.csrf import get_token
-from django.urls import reverse
-from django.db.models import Sum, Avg, Count, Case, When, F, DecimalField, IntegerField, Q
-from django.db.models.functions import Coalesce
-from apps.home.models import * 
-from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from .models import *
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db import connection
+from django.db.models import (
+    Avg, Case, Count, DecimalField, ExpressionWrapper, F, Func,
+    IntegerField, Q, Sum, Value, When
+)
+from django.db.models.functions import Coalesce, Least, Cast
+from django.http import (
+    FileResponse, HttpResponse, HttpResponseBadRequest,
+    HttpResponseNotFound, HttpResponseRedirect, JsonResponse
+)
+from django.middleware.csrf import get_token
+from django.shortcuts import get_object_or_404, redirect, render
+from django.template import loader
+from django.template.loader import render_to_string
+from django.urls import reverse
+from django.utils.encoding import smart_str
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.http import require_http_methods
+
+# Módulos locales
+from apps.home.models import *
 from .forms import *
+from .models import *
 
 @login_required(login_url="/login/")
 def index(request):
@@ -36,6 +47,24 @@ def index(request):
     html_template = loader.get_template('home/index.html')
     return HttpResponse(html_template.render(context, request))
 
+class DecimalEncoder(DjangoJSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return float(obj)
+        return super(DecimalEncoder, self).default(obj)
+
+class WeightedAvg(Func):
+    function = 'SUM'
+    template = '(%(expressions)s) / NULLIF(SUM(%(weight)s), 0)'
+    
+    def __init__(self, expression, weight, **extras):
+        super().__init__(
+            expression * weight,
+            weight=weight,
+            output_field=DecimalField(),
+            **extras
+        )
+
 def proyecto_index(request):
     fecha_actual = datetime.datetime.now()
     proyectos = PROYECTO_CLIENTE.objects.all()
@@ -43,26 +72,81 @@ def proyecto_index(request):
     # Calcular estadísticas generales
     estadisticas = proyectos.aggregate(
         total_proyectos=Count('id'),
-        proyectos_activos=Count('id', filter=Q(PC_CESTADO='En progreso')),
-        total_presupuesto=Coalesce(Sum('PC_NPRESUPUESTO'), 0, output_field=DecimalField()),
-        total_costo_real=Coalesce(Sum('PC_NCOSTO_REAL'), 0, output_field=DecimalField()),
-        promedio_margen=Coalesce(Avg('PC_NMARGEN'), 0, output_field=DecimalField()),
+        proyectos_activos=Count('id', filter=~Q(PC_CESTADO__iexact='Cerrado')),
+        total_presupuesto=Coalesce(Sum('PC_NPRESUPUESTO'), Decimal('0')),
+        total_costo_real=Coalesce(Sum('PC_NCOSTO_REAL'), Decimal('0')),
+        promedio_margen=Coalesce(Avg('PC_NMARGEN'), Decimal('0')),
     )
 
     # Preparar datos para el gráfico y la tabla de proyectos
     proyectos_data = proyectos.annotate(
         alerta_fecha=Case(
-            When(PC_FFECHA_FIN_REAL__isnull=True, PC_FFECHA_FIN_ESTIMADA__lt=fecha_actual, then=True),
-            default=False,
+            When(PC_FFECHA_FIN_REAL__isnull=True, PC_FFECHA_FIN_ESTIMADA__lt=fecha_actual, then=Value(1)),
+            default=Value(0),
             output_field=IntegerField()
         ),
         alerta_costo=Case(
-            When(PC_NCOSTO_REAL__gt=F('PC_NPRESUPUESTO'), then=True),
-            default=False,
+            When(PC_NCOSTO_REAL__gt=F('PC_NCOSTO_ESTIMADO'), then=Value(1)),
+            default=Value(0),
+            output_field=IntegerField()
+        ),
+        porcentaje_avance=Coalesce(
+            Avg(
+                Case(
+                    When(tareas_generales_proyecto__TG_NPROGRESO__isnull=False, 
+                            then='tareas_generales_proyecto__TG_NPROGRESO'),
+                    When(tareas_ingenieria_proyecto__TI_NPROGRESO__isnull=False, 
+                            then='tareas_ingenieria_proyecto__TI_NPROGRESO'),
+                    When(tareas_financieras_proyecto__TF_NPROGRESO__isnull=False, 
+                            then='tareas_financieras_proyecto__TF_NPROGRESO'),
+                    output_field=DecimalField()
+                )
+            ),
+            Value(0),
+            output_field=DecimalField(max_digits=5, decimal_places=2)
+        ),
+        alerta_prioridad=Case(
+            When(Q(alerta_fecha=1) | Q(alerta_costo=1), then=Value(1)),
+            default=Value(0),
             output_field=IntegerField()
         )
-    ).values('id', 'PC_CCODIGO', 'PC_CNOMBRE', 'PC_CESTADO', 'PC_NPRESUPUESTO', 'PC_NCOSTO_REAL', 
-             'PC_FFECHA_INICIO', 'PC_FFECHA_FIN_ESTIMADA', 'PC_FFECHA_FIN_REAL', 'alerta_fecha', 'alerta_costo')
+    ).values(
+        'id', 'PC_CCODIGO', 'PC_CNOMBRE', 'PC_CESTADO', 'PC_NPRESUPUESTO', 'PC_NCOSTO_REAL', 
+        'PC_NCOSTO_ESTIMADO', 'PC_FFECHA_INICIO', 'PC_FFECHA_FIN_ESTIMADA', 'PC_FFECHA_FIN_REAL', 
+        'alerta_fecha', 'alerta_costo', 'porcentaje_avance', 'alerta_prioridad'
+    ).order_by('-alerta_prioridad', 'PC_FFECHA_FIN_ESTIMADA')
+
+    # Filtrar y preparar datos de proyectos activos
+    proyectos_activos = list(proyectos.filter(~Q(PC_CESTADO__iexact='Cerrado')).annotate(
+        porcentaje_avance=Coalesce(
+            Avg(
+                Case(
+                    When(tareas_generales_proyecto__TG_NPROGRESO__isnull=False, 
+                            then='tareas_generales_proyecto__TG_NPROGRESO'),
+                    When(tareas_ingenieria_proyecto__TI_NPROGRESO__isnull=False, 
+                            then='tareas_ingenieria_proyecto__TI_NPROGRESO'),
+                    When(tareas_financieras_proyecto__TF_NPROGRESO__isnull=False, 
+                            then='tareas_financieras_proyecto__TF_NPROGRESO'),
+                    output_field=DecimalField()
+                )
+            ),
+            Value(0),
+            output_field=DecimalField(max_digits=5, decimal_places=2)
+        )
+    ).values(
+        'id', 'PC_CCODIGO', 'PC_CNOMBRE', 'PC_FFECHA_INICIO', 'PC_FFECHA_FIN_ESTIMADA', 
+        'PC_NPRESUPUESTO', 'PC_NCOSTO_REAL', 'PC_CESTADO', 'porcentaje_avance'
+    ))
+
+    # Convertir las fechas a strings y los Decimales a float
+    for proyecto in proyectos_activos:
+        if proyecto['PC_FFECHA_INICIO']:
+            proyecto['PC_FFECHA_INICIO'] = proyecto['PC_FFECHA_INICIO'].strftime('%Y-%m-%d')
+        if proyecto['PC_FFECHA_FIN_ESTIMADA']:
+            proyecto['PC_FFECHA_FIN_ESTIMADA'] = proyecto['PC_FFECHA_FIN_ESTIMADA'].strftime('%Y-%m-%d')
+        proyecto['PC_NPRESUPUESTO'] = float(proyecto['PC_NPRESUPUESTO'])
+        proyecto['PC_NCOSTO_REAL'] = float(proyecto['PC_NCOSTO_REAL'])
+        proyecto['porcentaje_avance'] = min(float(proyecto['porcentaje_avance']), 100)
 
     context = {
         'estadisticas': estadisticas,
@@ -71,9 +155,11 @@ def proyecto_index(request):
         'chart_labels': [p['PC_CCODIGO'] for p in proyectos_data],
         'chart_presupuestos': [float(p['PC_NPRESUPUESTO']) for p in proyectos_data],
         'chart_costos_reales': [float(p['PC_NCOSTO_REAL']) for p in proyectos_data],
+        'proyectos_activos': json.dumps(proyectos_activos, cls=DecimalEncoder),
     }
 
     return render(request, 'home/proyecto_index.html', context)
+
 @login_required(login_url="/login/")
 def pages(request):
     context = {}
@@ -4333,3 +4419,220 @@ def BOLETA_GARANTIA_UPDATE(request, pk):
         print(e)
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
+
+def EDP_LISTALL(request):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        object_list = ESTADO_DE_PAGO.objects.all()
+        ctx = {
+            'object_list': object_list
+        }
+        return render(request, 'home/ESTADO_DE_PAGO/edp_listall.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def EDP_ADDONE(request):
+    if not has_auth(request.user, 'ADD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        if request.method == 'POST':
+            form = formESTADO_DE_PAGO(request.POST)
+            if form.is_valid():
+                edp = form.save(commit=False)
+                edp.EP_CUSUARIO_CREADOR = request.user
+                edp.save()
+                crear_log(request.user, f'Crear Estado de Pago', f'Se creó el Estado de Pago: {edp.EP_CNUMERO}')
+                messages.success(request, 'Estado de Pago guardado correctamente')
+                return redirect('/edp_listall/')
+        form = formESTADO_DE_PAGO()
+        ctx = {
+            'form': form,
+            'state': 'add'
+        }
+        return render(request, 'home/ESTADO_DE_PAGO/edp_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def EDP_UPDATE(request, pk):
+    if not has_auth(request.user, 'EDITAR_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        edp = ESTADO_DE_PAGO.objects.get(id=pk)
+        if request.method == 'POST':
+            form = formESTADO_DE_PAGO(request.POST, instance=edp)
+            if form.is_valid():
+                edp = form.save(commit=False)
+                edp.EP_CUSUARIO_MODIFICADOR = request.user
+                edp.save()
+                crear_log(request.user, f'Editar Estado de Pago', f'Se editó el Estado de Pago: {edp.EP_CNUMERO}')
+                messages.success(request, 'Estado de Pago actualizado correctamente')
+                return redirect('/edp_listall/')
+        form = formESTADO_DE_PAGO(instance=edp)
+        ctx = {
+            'form': form,
+            'state': 'update'
+        }
+        return render(request, 'home/ESTADO_DE_PAGO/edp_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def EDP_LISTONE(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        edp = ESTADO_DE_PAGO.objects.get(id=pk)
+        product_list = list(PRODUCTO.objects.filter(PR_BACTIVO=True).values_list('id', 'PR_CNOMBRE'))
+        ctx = {
+            'edp': edp,
+            'product_list': product_list
+        }
+        return render(request, 'home/ESTADO_DE_PAGO/edp_listone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/edp_listall/')
+
+def EDP_LISTONE_FORMAT(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        edp = ESTADO_DE_PAGO.objects.get(id=pk)
+        product_list = list(PRODUCTO.objects.filter(PR_BACTIVO=True).values_list('id', 'PR_CNOMBRE'))
+        
+        ctx = {
+            'edp': edp,
+            'product_list': product_list,
+        }
+        return render(request, 'home/ESTADO_DE_PAGO/edp_listone_format.html', ctx)
+    except Exception as e:
+        print("ERROR:", e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/edp_listall/')
+    
+def EDP_GET_LINE(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        print("id línea:", pk)
+        detalle = ESTADO_DE_PAGO_DETALLE.objects.get(id=pk)
+        
+        data = {
+            'id': detalle.id,
+            'producto': detalle.EDD_PRODUCTO.id,
+            'cantidad': detalle.EDD_NCANTIDAD,
+            'precioUnitario': detalle.EDD_NPRECIO_UNITARIO,
+            'descuento': detalle.EDD_NDESCUENTO
+        }
+        return JsonResponse(data)
+    except ESTADO_DE_PAGO_DETALLE.DoesNotExist:
+        return JsonResponse({'error': 'Línea de estado de pago no encontrada'}, status=404)
+    except Exception as e:
+        print("ERROR:", e)
+        return JsonResponse({'error': str(e)}, status=500)
+
+def EDP_ADD_LINE(request):
+    if not has_auth(request.user, 'ADD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        if request.method == 'POST':
+            edp_id = request.POST.get('edp_id')
+            producto_id = request.POST.get('producto')
+            cantidad = request.POST.get('cantidad')
+            precio_unitario = request.POST.get('precioUnitario')
+            descuento = request.POST.get('descuento')
+
+            # Ensure cantidad and precio_unitario are at least 1
+            cantidad = max(1, int(cantidad or 0))
+            precio_unitario = max(Decimal('1'), Decimal(precio_unitario or '0'))
+
+            # Recalculate subtotal
+            subtotal = Decimal(cantidad) * precio_unitario
+
+            # Ensure descuento is non-negative and not greater than subtotal
+            descuento = max(Decimal('0'), min(Decimal(descuento or '0'), subtotal))
+
+            edp = ESTADO_DE_PAGO.objects.get(id=edp_id)
+            producto = PRODUCTO.objects.get(id=producto_id)
+
+            subtotal = Decimal(cantidad) * Decimal(precio_unitario)
+            total = subtotal - Decimal(descuento)
+
+            # Verificar si la combinación de estado de pago y producto ya existe
+            existing_detail = ESTADO_DE_PAGO_DETALLE.objects.filter(EDD_ESTADO_DE_PAGO=edp, EDD_PRODUCTO=producto).first()
+            if existing_detail:
+                existing_detail.delete()
+
+            # Recalculate total
+            total = subtotal - descuento
+
+            detalle = ESTADO_DE_PAGO_DETALLE(
+                EDD_ESTADO_DE_PAGO=edp,
+                EDD_PRODUCTO=producto,
+                EDD_NCANTIDAD=cantidad,
+                EDD_NPRECIO_UNITARIO=precio_unitario,
+                EDD_NSUBTOTAL=subtotal,
+                EDD_NDESCUENTO=descuento,
+                EDD_NTOTAL=total,
+                EDD_CUSUARIO_CREADOR=request.user
+            )
+            crear_log(request.user, f'Crear Línea de Estado de Pago', f'Se creó la línea de estado de pago: {detalle.EDD_PRODUCTO}')
+            detalle.save()
+
+            # Recalculate ESTADO_DE_PAGO.EP_NTOTAL
+            total_edp = ESTADO_DE_PAGO_DETALLE.objects.filter(EDD_ESTADO_DE_PAGO=edp).aggregate(Sum('EDD_NTOTAL'))['EDD_NTOTAL__sum'] or 0
+            edp.EP_NTOTAL = total_edp
+            crear_log(request.user, f'Actualizar Estado de Pago', f'Se actualizó el estado de pago: {edp.EP_CNUMERO}')
+            edp.save()
+
+            messages.success(request, 'Línea de estado de pago agregada correctamente')
+            return redirect(f'/edp_listone/{edp_id}')
+        
+        return redirect('/edp_listall/')
+    except Exception as e:
+        errMsg=print(f"Error al agregar línea de estado de pago: {str(e)}")
+        messages.error(request, errMsg)
+        return JsonResponse({'error': str(errMsg)}, status=400)
+
+def EDP_DELETE_LINE(request, pk):
+    if not has_auth(request.user, 'UPD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        detalle = ESTADO_DE_PAGO_DETALLE.objects.get(id=pk)
+        edp_id = detalle.EDD_ESTADO_DE_PAGO.id
+        detalle.delete()
+        crear_log(request.user, f'Eliminar Línea de Estado de Pago', f'Se eliminó la línea de estado de pago: {detalle.EDD_PRODUCTO}')
+        # Recalculate ESTADO_DE_PAGO.EP_NTOTAL
+        total_edp = ESTADO_DE_PAGO_DETALLE.objects.filter(EDD_ESTADO_DE_PAGO=detalle.EDD_ESTADO_DE_PAGO).aggregate(Sum('EDD_NTOTAL'))['EDD_NTOTAL__sum'] or 0
+        detalle.EDD_ESTADO_DE_PAGO.EP_NTOTAL = total_edp
+        crear_log(request.user, f'Actualizar Estado de Pago', f'Se actualizó el estado de pago: {detalle.EDD_ESTADO_DE_PAGO.EP_CNUMERO}')
+        detalle.EDD_ESTADO_DE_PAGO.save()
+        return JsonResponse({'success': 'Línea de estado de pago eliminada correctamente', 'edp_id': edp_id})
+    except ESTADO_DE_PAGO_DETALLE.DoesNotExist:
+        return JsonResponse({'error': 'Línea de estado de pago no encontrada'}, status=404)
+    except Exception as e:
+        print("ERROR:", e)
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+
+def CHECK_EDP_NUMERO(request):
+    if request.method == 'POST':
+        edp_numero = request.POST.get('edp_numero')
+        exists = ESTADO_DE_PAGO.objects.filter(EP_CNUMERO=edp_numero).exists()
+        return JsonResponse({'exists': exists})
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
