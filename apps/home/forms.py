@@ -1593,3 +1593,102 @@ class formQUERY(forms.ModelForm):
             'QR_NHABILITADO': forms.CheckboxInput(attrs={'class': 'form-check-input', 'id': 'switch-s-2'}),
         }
 
+class formESTADO_DE_PAGO(forms.ModelForm):
+    class Meta:
+        model = ESTADO_DE_PAGO
+        fields = [
+            'EP_PROYECTO', 'EP_CNUMERO', 'EP_FFECHA', 'EP_CESTADO',
+            'EP_NTOTAL', 'EP_COBSERVACIONES', 'EP_CESTADO_PAGO',
+            'EP_NMONTO_PAGADO', 'EP_FFECHA_ULTIMO_PAGO'
+        ]
+        labels = {
+            'EP_PROYECTO': 'Proyecto cliente',
+            'EP_CNUMERO': 'Número de estado de pago',
+            'EP_FFECHA': 'Fecha de estado de pago',
+            'EP_CESTADO': 'Estado',
+            'EP_NTOTAL': 'Total',
+            'EP_COBSERVACIONES': 'Observaciones',
+            'EP_CESTADO_PAGO': 'Estado de pago',
+            'EP_NMONTO_PAGADO': 'Monto pagado',
+            'EP_FFECHA_ULTIMO_PAGO': 'Fecha del último pago'
+        }
+        widgets = {
+            'EP_PROYECTO': forms.Select(attrs={'class': 'form-control'}),
+            'EP_CNUMERO': forms.TextInput(attrs={'class': 'form-control'}),
+            'EP_FFECHA': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'EP_CESTADO': forms.Select(attrs={'class': 'form-control'}),
+            'EP_NTOTAL': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'EP_COBSERVACIONES': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'EP_CESTADO_PAGO': forms.Select(attrs={'class': 'form-control'}),
+            'EP_NMONTO_PAGADO': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'EP_FFECHA_ULTIMO_PAGO': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+        }
+
+    def __init__(self, *args, **kwargs):
+        super(formESTADO_DE_PAGO, self).__init__(*args, **kwargs)
+        for field in ['EP_FFECHA_CREACION', 'EP_FFECHA_MODIFICACION', 'EP_CUSUARIO_CREADOR', 'EP_CUSUARIO_MODIFICADOR']:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        ep_ntotal = cleaned_data.get('EP_NTOTAL')
+        ep_nmonto_pagado = cleaned_data.get('EP_NMONTO_PAGADO')
+
+        if ep_ntotal and ep_nmonto_pagado:
+            if ep_nmonto_pagado > ep_ntotal:
+                raise forms.ValidationError("El monto pagado no puede ser mayor que el total.")
+
+        return cleaned_data
+    
+class formEDP_DETALLE(forms.ModelForm):
+    class Meta:
+        model = ESTADO_DE_PAGO_DETALLE
+        fields = [
+            'EDD_ESTADO_DE_PAGO', 'EDD_PRODUCTO', 'EDD_NCANTIDAD',
+            'EDD_NPRECIO_UNITARIO', 'EDD_NSUBTOTAL', 'EDD_NDESCUENTO', 'EDD_NTOTAL'
+        ]
+        labels = {
+            'EDD_ESTADO_DE_PAGO': 'Estado de Pago',
+            'EDD_PRODUCTO': 'Producto',
+            'EDD_NCANTIDAD': 'Cantidad',
+            'EDD_NPRECIO_UNITARIO': 'Precio unitario',
+            'EDD_NSUBTOTAL': 'Subtotal',
+            'EDD_NDESCUENTO': 'Descuento',
+            'EDD_NTOTAL': 'Total'
+        }
+        widgets = {
+            'EDD_ESTADO_DE_PAGO': forms.Select(attrs={'class': 'form-control'}),
+            'EDD_PRODUCTO': forms.Select(attrs={'class': 'form-control'}),
+            'EDD_NCANTIDAD': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'EDD_NPRECIO_UNITARIO': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'EDD_NSUBTOTAL': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'EDD_NDESCUENTO': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'EDD_NTOTAL': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+        }
+
+    def __init__(self, *args, **kwargs):
+        super(formEDP_DETALLE, self).__init__(*args, **kwargs)
+        for field in ['EDD_FFECHA_CREACION', 'EDD_FFECHA_MODIFICACION', 'EDD_CUSUARIO_CREADOR', 'EDD_CUSUARIO_MODIFICADOR']:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        cantidad = cleaned_data.get('EDD_NCANTIDAD')
+        precio_unitario = cleaned_data.get('EDD_NPRECIO_UNITARIO')
+        subtotal = cleaned_data.get('EDD_NSUBTOTAL')
+        descuento = cleaned_data.get('EDD_NDESCUENTO')
+        total = cleaned_data.get('EDD_NTOTAL')
+
+        if cantidad and precio_unitario and subtotal:
+            calculated_subtotal = cantidad * precio_unitario
+            if abs(calculated_subtotal - subtotal) > 0.01:
+                raise forms.ValidationError("El subtotal no coincide con la cantidad y el precio unitario.")
+
+        if subtotal and descuento and total:
+            calculated_total = subtotal - descuento
+            if abs(calculated_total - total) > 0.01:
+                raise forms.ValidationError("El total no coincide con el subtotal menos el descuento.")
+
+        return cleaned_data

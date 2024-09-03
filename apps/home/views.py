@@ -4419,3 +4419,220 @@ def BOLETA_GARANTIA_UPDATE(request, pk):
         print(e)
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
+
+def EDP_LISTALL(request):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        object_list = ESTADO_DE_PAGO.objects.all()
+        ctx = {
+            'object_list': object_list
+        }
+        return render(request, 'home/ESTADO_DE_PAGO/edp_listall.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def EDP_ADDONE(request):
+    if not has_auth(request.user, 'ADD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        if request.method == 'POST':
+            form = formESTADO_DE_PAGO(request.POST)
+            if form.is_valid():
+                edp = form.save(commit=False)
+                edp.EP_CUSUARIO_CREADOR = request.user
+                edp.save()
+                crear_log(request.user, f'Crear Estado de Pago', f'Se creó el Estado de Pago: {edp.EP_CNUMERO}')
+                messages.success(request, 'Estado de Pago guardado correctamente')
+                return redirect('/edp_listall/')
+        form = formESTADO_DE_PAGO()
+        ctx = {
+            'form': form,
+            'state': 'add'
+        }
+        return render(request, 'home/ESTADO_DE_PAGO/edp_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def EDP_UPDATE(request, pk):
+    if not has_auth(request.user, 'EDITAR_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        edp = ESTADO_DE_PAGO.objects.get(id=pk)
+        if request.method == 'POST':
+            form = formESTADO_DE_PAGO(request.POST, instance=edp)
+            if form.is_valid():
+                edp = form.save(commit=False)
+                edp.EP_CUSUARIO_MODIFICADOR = request.user
+                edp.save()
+                crear_log(request.user, f'Editar Estado de Pago', f'Se editó el Estado de Pago: {edp.EP_CNUMERO}')
+                messages.success(request, 'Estado de Pago actualizado correctamente')
+                return redirect('/edp_listall/')
+        form = formESTADO_DE_PAGO(instance=edp)
+        ctx = {
+            'form': form,
+            'state': 'update'
+        }
+        return render(request, 'home/ESTADO_DE_PAGO/edp_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def EDP_LISTONE(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        edp = ESTADO_DE_PAGO.objects.get(id=pk)
+        product_list = list(PRODUCTO.objects.filter(PR_BACTIVO=True).values_list('id', 'PR_CNOMBRE'))
+        ctx = {
+            'edp': edp,
+            'product_list': product_list
+        }
+        return render(request, 'home/ESTADO_DE_PAGO/edp_listone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/edp_listall/')
+
+def EDP_LISTONE_FORMAT(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        edp = ESTADO_DE_PAGO.objects.get(id=pk)
+        product_list = list(PRODUCTO.objects.filter(PR_BACTIVO=True).values_list('id', 'PR_CNOMBRE'))
+        
+        ctx = {
+            'edp': edp,
+            'product_list': product_list,
+        }
+        return render(request, 'home/ESTADO_DE_PAGO/edp_listone_format.html', ctx)
+    except Exception as e:
+        print("ERROR:", e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/edp_listall/')
+    
+def EDP_GET_LINE(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        print("id línea:", pk)
+        detalle = ESTADO_DE_PAGO_DETALLE.objects.get(id=pk)
+        
+        data = {
+            'id': detalle.id,
+            'producto': detalle.EDD_PRODUCTO.id,
+            'cantidad': detalle.EDD_NCANTIDAD,
+            'precioUnitario': detalle.EDD_NPRECIO_UNITARIO,
+            'descuento': detalle.EDD_NDESCUENTO
+        }
+        return JsonResponse(data)
+    except ESTADO_DE_PAGO_DETALLE.DoesNotExist:
+        return JsonResponse({'error': 'Línea de estado de pago no encontrada'}, status=404)
+    except Exception as e:
+        print("ERROR:", e)
+        return JsonResponse({'error': str(e)}, status=500)
+
+def EDP_ADD_LINE(request):
+    if not has_auth(request.user, 'ADD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        if request.method == 'POST':
+            edp_id = request.POST.get('edp_id')
+            producto_id = request.POST.get('producto')
+            cantidad = request.POST.get('cantidad')
+            precio_unitario = request.POST.get('precioUnitario')
+            descuento = request.POST.get('descuento')
+
+            # Ensure cantidad and precio_unitario are at least 1
+            cantidad = max(1, int(cantidad or 0))
+            precio_unitario = max(Decimal('1'), Decimal(precio_unitario or '0'))
+
+            # Recalculate subtotal
+            subtotal = Decimal(cantidad) * precio_unitario
+
+            # Ensure descuento is non-negative and not greater than subtotal
+            descuento = max(Decimal('0'), min(Decimal(descuento or '0'), subtotal))
+
+            edp = ESTADO_DE_PAGO.objects.get(id=edp_id)
+            producto = PRODUCTO.objects.get(id=producto_id)
+
+            subtotal = Decimal(cantidad) * Decimal(precio_unitario)
+            total = subtotal - Decimal(descuento)
+
+            # Verificar si la combinación de estado de pago y producto ya existe
+            existing_detail = ESTADO_DE_PAGO_DETALLE.objects.filter(EDD_ESTADO_DE_PAGO=edp, EDD_PRODUCTO=producto).first()
+            if existing_detail:
+                existing_detail.delete()
+
+            # Recalculate total
+            total = subtotal - descuento
+
+            detalle = ESTADO_DE_PAGO_DETALLE(
+                EDD_ESTADO_DE_PAGO=edp,
+                EDD_PRODUCTO=producto,
+                EDD_NCANTIDAD=cantidad,
+                EDD_NPRECIO_UNITARIO=precio_unitario,
+                EDD_NSUBTOTAL=subtotal,
+                EDD_NDESCUENTO=descuento,
+                EDD_NTOTAL=total,
+                EDD_CUSUARIO_CREADOR=request.user
+            )
+            crear_log(request.user, f'Crear Línea de Estado de Pago', f'Se creó la línea de estado de pago: {detalle.EDD_PRODUCTO}')
+            detalle.save()
+
+            # Recalculate ESTADO_DE_PAGO.EP_NTOTAL
+            total_edp = ESTADO_DE_PAGO_DETALLE.objects.filter(EDD_ESTADO_DE_PAGO=edp).aggregate(Sum('EDD_NTOTAL'))['EDD_NTOTAL__sum'] or 0
+            edp.EP_NTOTAL = total_edp
+            crear_log(request.user, f'Actualizar Estado de Pago', f'Se actualizó el estado de pago: {edp.EP_CNUMERO}')
+            edp.save()
+
+            messages.success(request, 'Línea de estado de pago agregada correctamente')
+            return redirect(f'/edp_listone/{edp_id}')
+        
+        return redirect('/edp_listall/')
+    except Exception as e:
+        errMsg=print(f"Error al agregar línea de estado de pago: {str(e)}")
+        messages.error(request, errMsg)
+        return JsonResponse({'error': str(errMsg)}, status=400)
+
+def EDP_DELETE_LINE(request, pk):
+    if not has_auth(request.user, 'UPD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        detalle = ESTADO_DE_PAGO_DETALLE.objects.get(id=pk)
+        edp_id = detalle.EDD_ESTADO_DE_PAGO.id
+        detalle.delete()
+        crear_log(request.user, f'Eliminar Línea de Estado de Pago', f'Se eliminó la línea de estado de pago: {detalle.EDD_PRODUCTO}')
+        # Recalculate ESTADO_DE_PAGO.EP_NTOTAL
+        total_edp = ESTADO_DE_PAGO_DETALLE.objects.filter(EDD_ESTADO_DE_PAGO=detalle.EDD_ESTADO_DE_PAGO).aggregate(Sum('EDD_NTOTAL'))['EDD_NTOTAL__sum'] or 0
+        detalle.EDD_ESTADO_DE_PAGO.EP_NTOTAL = total_edp
+        crear_log(request.user, f'Actualizar Estado de Pago', f'Se actualizó el estado de pago: {detalle.EDD_ESTADO_DE_PAGO.EP_CNUMERO}')
+        detalle.EDD_ESTADO_DE_PAGO.save()
+        return JsonResponse({'success': 'Línea de estado de pago eliminada correctamente', 'edp_id': edp_id})
+    except ESTADO_DE_PAGO_DETALLE.DoesNotExist:
+        return JsonResponse({'error': 'Línea de estado de pago no encontrada'}, status=404)
+    except Exception as e:
+        print("ERROR:", e)
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+
+def CHECK_EDP_NUMERO(request):
+    if request.method == 'POST':
+        edp_numero = request.POST.get('edp_numero')
+        exists = ESTADO_DE_PAGO.objects.filter(EP_CNUMERO=edp_numero).exists()
+        return JsonResponse({'exists': exists})
+    return JsonResponse({'error': 'Invalid request method'}, status=400)

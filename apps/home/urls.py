@@ -199,7 +199,7 @@ urlpatterns = [
     path('factura_addline/', login_required(views.FACTURA_ADD_LINE), name='factura_addline'),
     path('check_fa_numero/', login_required(views.CHECK_FA_NUMERO), name='check_fa_numero'),
 
-
+    # URLs para query manager
     path('query_listall/', login_required(views.QUERY_LISTALL), name='query_listall'),
     path('query_listone/<int:pk>', login_required(views.QUERY_LISTONE), name='query_listone'),
     path('query_addone/', login_required(views.QUERY_ADDONE), name='query_addone'),
@@ -207,6 +207,17 @@ urlpatterns = [
     path('query_delete/<int:pk>', login_required(views.QUERY_DELETE), name='query_delete'),
     path('query_run/<int:pk>', login_required(views.QUERY_RUN), name='query_run'),
     path('run_query_param/', login_required(views.run_query_param), name='run_query_param'),
+
+    #URLs para EDP
+    path('edp_listall/', login_required(views.EDP_LISTALL), name='edp_listall'),
+    path('edp_addone/', login_required(views.EDP_ADDONE), name='edp_addone'),
+    path('edp_update/<int:pk>/', login_required(views.EDP_UPDATE), name='edp_update'),
+    path('edp_listone/<int:pk>/', login_required(views.EDP_LISTONE), name='edp_listone'),
+    path('edp_listone_format/<int:pk>/', login_required(views.EDP_LISTONE_FORMAT), name='edp_listone_format'),
+    path('edp_getline/<int:pk>', login_required(views.EDP_GET_LINE), name='edp_getline'),
+    path('edp_deleteline/<int:pk>', login_required(views.EDP_DELETE_LINE), name='edp_deleteline'),
+    path('edp_addline/', login_required(views.EDP_ADD_LINE), name='edp_addline'),
+    path('check_edp_numero/', login_required(views.CHECK_EDP_NUMERO), name='check_edp_numero'),
     # Coincide con cualquier archivo html
     re_path(r'^.*\.*', views.pages, name='pages'),
 
