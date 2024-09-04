@@ -10,7 +10,8 @@ from django.contrib.auth.views import login_required
 urlpatterns = [
 
     # La página de inicio
-    path('', views.proyecto_index, name='proyecto_index'),
+    path('', login_required(views.proyecto_index), name='proyecto_index'),
+    path('api/proyectos-edp/', login_required(views.api_proyectos_edp), name='api_proyectos_edp'),
     path('', views.index, name='home'),
     # URLs para la gestión de regiones
     path('reg_listall/', login_required(views.REGION_LISTALL), name='reg_listall'),

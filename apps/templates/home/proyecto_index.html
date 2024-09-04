@@ -99,6 +99,13 @@
     .alert-row:hover {
         background-color: #ffeeba;
     }
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+        padding: 0.3em 0.8em;
+    }
+    
+    .dataTables_wrapper .dataTables_filter {
+        margin-bottom: 1em;
+    }
 </style>
 {% endblock stylesheets %}
 
@@ -153,6 +160,15 @@
                     <span class="count-name">Margen Promedio</span>
                 </div>
             </div>
+
+            <div class="col-md-3">
+                <div class="card-counter warning">
+                    <i class="fa fa-file-text-o"></i>
+                    <span class="count-numbers">${{ estadisticas.total_saldo_edp|floatformat:2 }}</span>
+                    <span class="count-name">Saldo Total EdP</span>
+                </div>
+            </div>
+
         </div>
 
         <div class="row mt-4">
@@ -172,65 +188,23 @@
             <div class="col-md-12">
                 <div class="card">
                     <div class="card-header">
-                        <h5>Alertas y Estado de Proyectos (Priorizados por Alertas)</h5>
+                        <h5>Estados de Pago por Proyecto</h5>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
-                            <table class="table table-hover">
+                            <table id="tabla-edp" class="table table-hover table-edp">
                                 <thead>
                                     <tr>
-                                        <th>Código</th>
-                                        <th>Nombre</th>
-                                        <th>Estado</th>
-                                        <th>Avance</th>
-                                        <th>Fecha Inicio</th>
-                                        <th>Fecha Fin Estimada</th>
-                                        <th>Fecha Fin Real</th>
-                                        <th>Presupuesto</th>
-                                        <th>Costo Real</th>
-                                        <th>Alertas</th>
-                                        <th>Acciones</th>
+                                        <th>Proyecto</th>
+                                        <th>Total EdP</th>
+                                        <th>Pendiente</th>
+                                        <th>Aprobado</th>
+                                        <th>Rechazado</th>
+                                        <th>Progreso de Pago</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for proyecto in proyectos|dictsort:"alerta_prioridad" reversed %}
-                                    <tr class="{% if proyecto.alerta_fecha or proyecto.alerta_costo %}alert-row{% endif %}">
-                                        <td>{{ proyecto.PC_CCODIGO }}</td>
-                                        <td>{{ proyecto.PC_CNOMBRE }}</td>
-                                        <td><span class="badge {% if proyecto.PC_CESTADO == 'En progreso' %}badge-primary{% elif proyecto.PC_CESTADO == 'Completado' %}badge-success{% else %}badge-secondary{% endif %}">{{ proyecto.PC_CESTADO }}</span></td>
-                                        <td>
-                                            <div class="progress">
-                                                <div class="progress-bar" role="progressbar" 
-                                                     style="width: {{ proyecto.porcentaje_avance|floatformat:2 }}%;" 
-                                                     aria-valuenow="{{ proyecto.porcentaje_avance|floatformat:2 }}" 
-                                                     aria-valuemin="0" 
-                                                     aria-valuemax="100">
-                                                    {{ proyecto.porcentaje_avance|floatformat:2 }}%
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>{{ proyecto.PC_FFECHA_INICIO|date:"d/m/Y" }}</td>
-                                        <td>{{ proyecto.PC_FFECHA_FIN_ESTIMADA|date:"d/m/Y" }}</td>
-                                        <td>{{ proyecto.PC_FFECHA_FIN_REAL|default:"-"|date:"d/m/Y" }}</td>
-                                        <td>${{ proyecto.PC_NPRESUPUESTO|floatformat:2 }}</td>
-                                        <td>${{ proyecto.PC_NCOSTO_REAL|floatformat:2 }}</td>
-                                        <td>
-                                            {% if proyecto.alerta_fecha %}
-                                            <div class="project-alert date-alert">
-                                                <i class="fa fa-exclamation-triangle alert-icon"></i> Fecha estimada superada
-                                            </div>
-                                            {% endif %}
-                                            {% if proyecto.alerta_costo %}
-                                            <div class="project-alert cost-alert">
-                                                <i class="fa fa-exclamation-circle alert-icon"></i> Costo real supera presupuesto
-                                            </div>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            <button class="btn btn-primary btn-sm" onclick="verProyecto({{ proyecto.id }})">Ver Proyecto</button>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
+                                    <!-- Los datos se cargarán dinámicamente via AJAX -->
                                 </tbody>
                             </table>
                         </div>
@@ -284,6 +258,17 @@
 {% block javascripts %}
     {{ block.super }}
     <script src="/static/assets/js/plugins/apexcharts.min.js"></script>
+    <!-- datatable Js -->
+    <script src="/static/assets/js/plugins/jquery.dataTables.min.js"></script>
+    <script src="/static/assets/js/plugins/dataTables.bootstrap4.min.js"></script>
+    <script src="/static/assets/js/plugins/buttons.colVis.min.js"></script>
+    <script src="/static/assets/js/plugins/buttons.print.min.js"></script>
+    <script src="/static/assets/js/plugins/pdfmake.min.js"></script>
+    <script src="/static/assets/js/plugins/jszip.min.js"></script>
+    <script src="/static/assets/js/plugins/dataTables.buttons.min.js"></script>
+    <script src="/static/assets/js/plugins/buttons.html5.min.js"></script>
+    <script src="/static/assets/js/plugins/buttons.bootstrap4.min.js"></script>
+    <script src="/static/assets/js/pages/data-export-custom.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             var options = {
@@ -335,7 +320,43 @@
         
             var chart = new ApexCharts(document.querySelector("#proyecto-chart"), options);
             chart.render();
-        
+            
+            // Inicializar DataTable para la tabla de EdP
+            $('#tabla-edp').DataTable({
+                "processing": true,
+                "serverSide": true,
+                "ajax": {
+                    "url": "/api/proyectos-edp/",
+                    "type": "GET",
+                    "error": function (xhr, error, thrown) {
+                        console.error("Error en la llamada AJAX:", error);
+                        alert("Ha ocurrido un error al cargar los datos. Por favor, intente nuevamente más tarde.");
+                    }
+                },
+                "columns": [
+                    {"data": "PC_CNOMBRE"},
+                    {"data": "total_edp", "render": $.fn.dataTable.render.number(',', '.', 2, '$')},
+                    {"data": "pendiente", "render": $.fn.dataTable.render.number(',', '.', 2, '$')},
+                    {"data": "aprobado", "render": $.fn.dataTable.render.number(',', '.', 2, '$')},
+                    {"data": "rechazado", "render": $.fn.dataTable.render.number(',', '.', 2, '$')},
+                    {
+                        "data": "porcentaje_pagado",
+                        "render": function(data, type, row) {
+                            var percentage = parseFloat(data);
+                            return '<div class="progress">' +
+                                   '<div class="progress-bar bg-success" role="progressbar" ' +
+                                   'style="width: ' + percentage + '%;" ' +
+                                   'aria-valuenow="' + percentage + '" ' +
+                                   'aria-valuemin="0" ' +
+                                   'aria-valuemax="100">' +
+                                   percentage.toFixed(2) + '%</div></div>';
+                        }
+                    }
+                ],
+                
+                "pageLength": 10
+            });
+
             // Agregar el evento de clic a la tarjeta de Proyectos Activos
             document.getElementById('proyectos-activos-card').addEventListener('click', function() {
                 cargarProyectosActivos();

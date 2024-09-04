@@ -8,6 +8,7 @@ import json
 import mimetypes
 import os
 import re
+import logging
 from decimal import Decimal
 
 # Módulos de Django
@@ -15,12 +16,14 @@ from django import template
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.serializers.json import DjangoJSONEncoder
+from django.core.exceptions import FieldError
 from django.db import connection
+from django.db.utils import DatabaseError
 from django.db.models import (
     Avg, Case, Count, DecimalField, ExpressionWrapper, F, Func,
     IntegerField, Q, Sum, Value, When
 )
-from django.db.models.functions import Coalesce, Least, Cast
+from django.db.models.functions import Coalesce, Least, Cast, Greatest
 from django.http import (
     FileResponse, HttpResponse, HttpResponseBadRequest,
     HttpResponseNotFound, HttpResponseRedirect, JsonResponse
@@ -38,6 +41,9 @@ from django.views.decorators.http import require_http_methods
 from apps.home.models import *
 from .forms import *
 from .models import *
+
+logger = logging.getLogger(__name__)
+
 
 @login_required(login_url="/login/")
 def index(request):
@@ -78,6 +84,13 @@ def proyecto_index(request):
         promedio_margen=Coalesce(Avg('PC_NMARGEN'), Decimal('0')),
     )
 
+    # Agregar estadísticas de EdP
+    estadisticas_edp = ESTADO_DE_PAGO.objects.aggregate(
+        total_edp=Coalesce(Sum('EP_NTOTAL'), Decimal('0')),
+        total_pagado=Coalesce(Sum('EP_NMONTO_PAGADO'), Decimal('0')),
+    )
+    estadisticas['total_saldo_edp'] = estadisticas_edp['total_edp'] - estadisticas_edp['total_pagado']
+
     # Preparar datos para el gráfico y la tabla de proyectos
     proyectos_data = proyectos.annotate(
         alerta_fecha=Case(
@@ -115,6 +128,33 @@ def proyecto_index(request):
         'PC_NCOSTO_ESTIMADO', 'PC_FFECHA_INICIO', 'PC_FFECHA_FIN_ESTIMADA', 'PC_FFECHA_FIN_REAL', 
         'alerta_fecha', 'alerta_costo', 'porcentaje_avance', 'alerta_prioridad'
     ).order_by('-alerta_prioridad', 'PC_FFECHA_FIN_ESTIMADA')
+
+    # Preparar datos de EdP por proyecto
+    proyectos_edp = PROYECTO_CLIENTE.objects.annotate(
+        total_edp=Coalesce(Sum('estados_de_pago__EP_NTOTAL'), Decimal('0')),
+        pendiente=Coalesce(Sum(Case(
+            When(estados_de_pago__EP_CESTADO='PENDIENTE', then=F('estados_de_pago__EP_NTOTAL')),
+            default=0,
+            output_field=DecimalField()
+        )), Decimal('0')),
+        aprobado=Coalesce(Sum(Case(
+            When(estados_de_pago__EP_CESTADO='APROBADO', then=F('estados_de_pago__EP_NTOTAL')),
+            default=0,
+            output_field=DecimalField()
+        )), Decimal('0')),
+        rechazado=Coalesce(Sum(Case(
+            When(estados_de_pago__EP_CESTADO='RECHAZADO', then=F('estados_de_pago__EP_NTOTAL')),
+            default=0,
+            output_field=DecimalField()
+        )), Decimal('0')),
+        monto_pagado=Coalesce(Sum('estados_de_pago__EP_NMONTO_PAGADO'), Decimal('0'))
+    ).annotate(
+        porcentaje_pagado=Case(
+            When(total_edp=0, then=0),
+            default=F('monto_pagado') * 100 / F('total_edp'),
+            output_field=DecimalField(max_digits=5, decimal_places=2)
+        )
+    ).values('PC_CNOMBRE', 'total_edp', 'pendiente', 'aprobado', 'rechazado', 'monto_pagado', 'porcentaje_pagado')
 
     # Filtrar y preparar datos de proyectos activos
     proyectos_activos = list(proyectos.filter(~Q(PC_CESTADO__iexact='Cerrado')).annotate(
@@ -156,10 +196,81 @@ def proyecto_index(request):
         'chart_presupuestos': [float(p['PC_NPRESUPUESTO']) for p in proyectos_data],
         'chart_costos_reales': [float(p['PC_NCOSTO_REAL']) for p in proyectos_data],
         'proyectos_activos': json.dumps(proyectos_activos, cls=DecimalEncoder),
+        'proyectos_edp': proyectos_edp,
     }
 
     return render(request, 'home/proyecto_index.html', context)
 
+def api_proyectos_edp(request):
+    try:
+        draw = int(request.GET.get('draw', 1))
+        start = int(request.GET.get('start', 0))
+        length = int(request.GET.get('length', 10))
+        search_value = request.GET.get('search[value]', '')
+
+        queryset = PROYECTO_CLIENTE.objects.annotate(
+            total_edp=Coalesce(Sum('estados_de_pago__EP_NTOTAL'), Value(0, output_field=DecimalField(max_digits=20, decimal_places=2))),
+            pendiente=Coalesce(Sum(Case(
+                When(estados_de_pago__EP_CESTADO='PENDIENTE', 
+                     then=ExpressionWrapper(F('estados_de_pago__EP_NTOTAL'), output_field=DecimalField(max_digits=20, decimal_places=2))),
+                default=Value(0, output_field=DecimalField(max_digits=20, decimal_places=2))
+            )), Value(0, output_field=DecimalField(max_digits=20, decimal_places=2))),
+            aprobado=Coalesce(Sum(Case(
+                When(estados_de_pago__EP_CESTADO='APROBADO', 
+                     then=ExpressionWrapper(F('estados_de_pago__EP_NTOTAL'), output_field=DecimalField(max_digits=20, decimal_places=2))),
+                default=Value(0, output_field=DecimalField(max_digits=20, decimal_places=2))
+            )), Value(0, output_field=DecimalField(max_digits=20, decimal_places=2))),
+            rechazado=Coalesce(Sum(Case(
+                When(estados_de_pago__EP_CESTADO='RECHAZADO', 
+                     then=ExpressionWrapper(F('estados_de_pago__EP_NTOTAL'), output_field=DecimalField(max_digits=20, decimal_places=2))),
+                default=Value(0, output_field=DecimalField(max_digits=20, decimal_places=2))
+            )), Value(0, output_field=DecimalField(max_digits=20, decimal_places=2))),
+            monto_pagado=Coalesce(Sum('estados_de_pago__EP_NMONTO_PAGADO'), Value(0, output_field=DecimalField(max_digits=20, decimal_places=2)))
+        )
+
+        if search_value:
+            queryset = queryset.filter(PC_CNOMBRE__icontains=search_value)
+
+        total_records = queryset.count()
+        queryset = queryset[start:start+length]
+
+        data = []
+        for proyecto in queryset:
+            total_edp = float(proyecto.total_edp)
+            monto_pagado = float(proyecto.monto_pagado)
+            
+            if total_edp > 0:
+                porcentaje_pagado = (monto_pagado / total_edp) * 100
+            else:
+                porcentaje_pagado = 0
+
+            logger.debug(f"Proyecto: {proyecto.PC_CNOMBRE}")
+            logger.debug(f"Total EdP: {total_edp}")
+            logger.debug(f"Monto Pagado: {monto_pagado}")
+            logger.debug(f"Porcentaje Pagado: {porcentaje_pagado:.2f}%")
+            logger.debug("--------------------")
+
+            data.append({
+                'PC_CNOMBRE': proyecto.PC_CNOMBRE,
+                'total_edp': total_edp,
+                'pendiente': float(proyecto.pendiente),
+                'aprobado': float(proyecto.aprobado),
+                'rechazado': float(proyecto.rechazado),
+                'monto_pagado': monto_pagado,
+                'porcentaje_pagado': round(porcentaje_pagado, 2)
+            })
+
+        return JsonResponse({
+            'draw': draw,
+            'recordsTotal': total_records,
+            'recordsFiltered': total_records,
+            'data': data
+        })
+
+    except Exception as e:
+        logger.exception("Error in api_proyectos_edp")
+        return JsonResponse({'error': str(e)}, status=500)
+    
 @login_required(login_url="/login/")
 def pages(request):
     context = {}
