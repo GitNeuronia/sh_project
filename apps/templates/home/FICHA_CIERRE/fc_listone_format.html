@@ -1,0 +1,215 @@
+{% extends "layouts/base.html" %}
+{% load humanize %}
+{% load l10n %}
+{% block title %} Ficha de Cierre {% endblock %} 
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}{% endblock stylesheets %}
+
+{% block content %}	
+
+	<!-- [ Main Content ] start -->
+	<section class="pcoded-main-container">
+		<div class="pcoded-content">
+			<!-- [ breadcrumb ] start -->
+			<div class="page-header">
+				<div class="page-block">
+					<div class="row align-items-center">
+						<div class="col-md-12">
+							<div class="page-header-title">
+								<h5 class="m-b-10">Ficha de Cierre</h5>
+							</div>
+							<ul class="breadcrumb">
+								<li class="breadcrumb-item"><a href="/"><i class="feather icon-home"></i></a></li>
+								<li class="breadcrumb-item"><a href="{% url 'fc_listall' %}">Fichas de Cierre</a></li>
+								<li class="breadcrumb-item"><a href="#!">Detalle de Ficha de Cierre</a></li>
+							</ul>
+						</div>
+					</div>
+				</div>
+			</div>
+			<!-- [ breadcrumb ] end -->
+			<!-- [ Main Content ] start -->
+			<div class="row">
+				<!-- [ Ficha de Cierre ] start -->
+				<div class="container" id="printTable">
+					<div>
+						<div class="card">
+							<div class="row invoice-contact">
+								<div class="col-md-8">
+									<div class="invoice-box row">
+										<div class="col-sm-12">
+											<table class="table table-responsive invoice-table table-borderless p-l-20">
+												<tbody>
+													<tr>
+														<td><a href="/" class="b-brand">
+																<img class="img-fluid" src="/static/assets/images/logo_png_sin_fondo.png" alt="Neuronia" width="200" height="200" >
+															</a>
+														</td>
+													</tr>
+													<tr>
+														<td>Neuronia S.p.A. </td>
+													</tr>
+													<tr>
+														<td>La Concepción 81, Providencia</td>
+													</tr>
+													<tr>
+														<td><a class="text-secondary" href="mailto:contacto@neuronia.cl" target="_top">contacto@neuronia.cl</a></td>
+													</tr>
+													<tr>
+														<td>+562 8000 9000</td>
+													</tr>
+												</tbody>
+											</table>
+										</div>
+									</div>
+								</div>
+								<div class="col-md-4"></div>
+							</div>
+							<div class="card-body">
+								<div class="row invoive-info">
+									<div class="col-md-4 col-xs-12 invoice-client-info">
+										<h6>PROYECTO :</h6>
+										<table class="table table-responsive invoice-table invoice-order table-borderless">
+											<tbody>
+												<tr>
+													<td><b>{{ fc.FC_NOMBRE_DE_PROYECTO }}</b></td>
+												</tr>
+												<tr>
+													<td>Jefe de Proyecto: {{ fc.FC_JEFE_DE_PROYECTO }}</td>
+												</tr>
+											</tbody>
+										</table>
+									</div>
+									<div class="col-md-4 col-sm-6">
+										<h6>DATOS DE LA FICHA DE CIERRE :</h6>
+										<table class="table table-responsive invoice-table invoice-order table-borderless">
+											<tbody>
+												<tr>
+													<th>Fecha de Cierre :</th>
+													<td>{{ fc.FC_FECHA_DE_CIERRE|date:"SHORT_DATE_FORMAT" }}</td>
+												</tr>
+												<tr>
+													<th>HH Gastadas :</th>
+													<td>{{ fc.FC_HH_GASTADAS|floatformat:2 }}</td>
+												</tr>
+												<tr>
+													<th>HH Cobradas :</th>
+													<td>{{ fc.FC_HH_COBRADAS|floatformat:2 }}</td>
+												</tr>
+											</tbody>
+										</table>
+									</div>
+									<div class="col-md-4 col-sm-6">
+										<h6 class="m-b-20">NÚMERO DE FICHA DE CIERRE </h6>
+										<table class="table table-responsive invoice-table invoice-order table-borderless">
+											<tbody>
+												<tr>
+													<th>Número de Proyecto:</th>
+													<td>
+														<b># {{ fc.FC_NUMERO_DE_PROYECTO }}</b>
+													</td>
+												</tr>
+												<tr>
+													<th>Excedentes:</th>
+													<td>
+														<span>$ {{ fc.FC_EXCEDENTES|floatformat:0|intcomma }}</span>
+													</td>
+												</tr>
+												<tr>
+													<th>Proyección con el Cliente:</th>
+													<td>
+														<span>$ {{ fc.FC_PROYECCION_CON_EL_CLIENTE|floatformat:0|intcomma }}</span>
+													</td>
+												</tr>
+											</tbody>
+										</table>
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-sm-12">
+										<div class="table-responsive">
+											<div class="mb-3">
+                                                <a class="btn btn-primary mr-2" href="{% url 'fc_listall' %}">
+                                                    <svg fill="#ffffff" width="16px" height="16px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21.92,11.6C19.9,6.91,16.1,4,12,4S4.1,6.91,2.08,11.6a1,1,0,0,0,0,.8C4.1,17.09,7.9,20,12,20s7.9-2.91,9.92-7.6A1,1,0,0,0,21.92,11.6ZM12,18c-3.17,0-6.17-2.29-7.9-6C5.83,8.29,8.83,6,12,6s6.17,2.29,7.9,6C18.17,15.71,15.17,18,12,18ZM12,8a4,4,0,1,0,4,4A4,4,0,0,0,12,8Zm0,6a2,2,0,1,1,2-2A2,2,0,0,1,12,14Z"/></svg> Ver Todos
+                                                </a>
+                                                <a class="btn btn-primary mr-2" href="{% url 'fc_update' fc.id %}">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+                                                        <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                                                        <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
+                                                    </svg> Editar
+                                                </a>
+                                                <a class="btn btn-primary mr-2" href="{% url 'fc_generate_pdf' fc.id %}">
+                                                    <i class="fas fa-file-pdf"></i> Descargar PDF
+                                                </a>
+                                            </div>
+											<h5 class="mt-4">Actividades Técnicas o Administrativas</h5>
+											<table class="table invoice-detail-table">
+												<thead>
+													<tr class="thead-default" style="background-color: #495057;">
+														<th>Nº Actividad</th>
+														<th>Actividad Técnica o Administrativa</th>
+														<th>¿Cumple?</th>
+														<th>Observaciones</th>
+													</tr>
+												</thead>
+												<tbody>
+													{% for detalle in fc.detalles.all %}
+														<tr>
+															<td>{{ detalle.FCD_NACTIVIDAD }}</td>
+															<td>
+																<p class="m-0">{{ detalle.FCD_CACTIVIDAD }}</p>
+															</td>
+															<td>{{ detalle.FCD_CCUMPLIMIENTO }}</td>
+															<td>{{ detalle.FCD_COBSERVACIONES|truncatechars:150|wordwrap:70|linebreaksbr }}</td>
+														</tr>
+													{% endfor %}
+												</tbody>
+											</table>
+										</div>
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-sm-12">
+										<h6>Observaciones :</h6>
+										<p>{{ fc.FC_OBSERVACIONES }}</p>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="row text-center">
+                            <div class="col-sm-12 invoice-btn-group text-center">
+                                <button type="button" class="btn waves-effect waves-light btn-primary m-b-10" onclick="goBack()">Volver</button>
+                            </div>
+                        </div>
+					</div>
+				</div>
+				<!-- [ Ficha de Cierre ] end -->
+			</div>
+			<!-- [ Main Content ] end -->
+		</div>
+	</section>
+	<!-- [ Main Content ] end -->
+
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}
+
+<script>
+	function closeTab() {
+		window.close();
+	}
+</script>
+<script>
+    function goBack() {
+        if (document.referrer) {
+            // Si hay una página anterior, volvemos a ella
+            window.history.back();
+        } else {
+            // Si no hay página anterior, redirigimos a la lista de fichas de cierre
+            window.location.href = "{% url 'fc_listall' %}";
+        }
+    }
+</script>
+{% endblock javascripts %}

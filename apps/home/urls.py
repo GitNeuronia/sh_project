@@ -10,7 +10,8 @@ from django.contrib.auth.views import login_required
 urlpatterns = [
 
     # La página de inicio
-    path('', views.proyecto_index, name='proyecto_index'),
+    path('', login_required(views.proyecto_index), name='proyecto_index'),
+    path('api/proyectos-edp/', login_required(views.api_proyectos_edp), name='api_proyectos_edp'),
     path('', views.index, name='home'),
     # URLs para la gestión de regiones
     path('reg_listall/', login_required(views.REGION_LISTALL), name='reg_listall'),
@@ -218,6 +219,23 @@ urlpatterns = [
     path('edp_deleteline/<int:pk>', login_required(views.EDP_DELETE_LINE), name='edp_deleteline'),
     path('edp_addline/', login_required(views.EDP_ADD_LINE), name='edp_addline'),
     path('check_edp_numero/', login_required(views.CHECK_EDP_NUMERO), name='check_edp_numero'),
+    
+    #URLs para ficha de cierra
+    path('fc_listall/', login_required(views.FC_LISTALL), name='fc_listall'),
+    path('fc_addone/', login_required(views.FC_ADDONE), name='fc_addone'),
+    path('fc_update/<int:pk>/', login_required(views.FC_UPDATE), name='fc_update'),
+    path('fc_listone/<int:pk>/', login_required(views.FC_LISTONE), name='fc_listone'),
+    path('fc_listone_format/<int:pk>/', login_required(views.FC_LISTONE_FORMAT), name='fc_listone_format'),
+    path('fc_getline/<int:pk>', login_required(views.FC_GET_LINE), name='fc_getline'),
+    path('fc_deleteline/<int:pk>', login_required(views.FC_DELETE_LINE), name='fc_deleteline'),
+    path('fc_add_update_line/', login_required(views.FC_ADD_UPDATE_LINE), name='fc_add_update_line'),
+    path('check_fc_numero/', login_required(views.CHECK_FC_NUMERO), name='check_fc_numero'),
+    path('fc_generate_pdf/<int:pk>/', login_required(views.FC_GENERATE_PDF), name='fc_generate_pdf'),
+    #Urls para Unidad de negocio
+    path('un_listall/', login_required(views.UNIDAD_NEGOCIO_LISTALL), name='un_listall'),
+    path('un_addone/', login_required(views.UNIDAD_NEGOCIO_ADDONE), name='un_addone'),
+    path('un_update/<int:pk>', login_required(views.UNIDAD_NEGOCIO_UPDATE), name='un_update'),
+    
     # Coincide con cualquier archivo html
     re_path(r'^.*\.*', views.pages, name='pages'),
 

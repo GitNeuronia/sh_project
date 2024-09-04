@@ -3,6 +3,7 @@
 Copyright (c) 2019 - present AppSeed.us
 """
 
+import datetime
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import FileExtensionValidator
@@ -691,6 +692,21 @@ class ANEXO(models.Model):
         verbose_name = 'Anexo'
         verbose_name_plural = 'Anexos'
 
+class UNIDAD_NEGOCIO(models.Model):
+    UN_CCODIGO = models.CharField(max_length=20, unique=True, verbose_name='Código de unidad de negocio')
+    UN_CDESCRIPCION = models.CharField(max_length=1024, verbose_name='Descripción de la unidad de negocio')
+    UN_BHABILITADO = models.BooleanField(default=True, verbose_name='Habilitado')
+    UN_CUSUARIO_CREADOR = models.ForeignKey(User, on_delete=models.PROTECT, related_name='unidad_negocio_creador', verbose_name='Usuario creador')
+    UN_FFECHA_CREACION = models.DateTimeField(auto_now_add=True,blank=True, null=True, verbose_name='Fecha de creación')
+    
+    def __str__(self):
+        return f"Proyecto {self.UN_CCODIGO}"
+    
+    class Meta:
+        db_table = 'UNIDAD_NEGOCIO'
+        verbose_name = 'Unidad de Negocio'
+        verbose_name_plural = 'Unidades de Negocio'
+    
 class PROYECTO_CLIENTE(models.Model):
     PC_CCODIGO = models.CharField(max_length=100, unique=True, verbose_name='Código de proyecto')
     PC_CNOMBRE = models.CharField(max_length=255, verbose_name='Nombre del proyecto')
@@ -698,6 +714,7 @@ class PROYECTO_CLIENTE(models.Model):
     PC_CLIENTE = models.ForeignKey('CLIENTE', on_delete=models.CASCADE, related_name='proyectos', verbose_name='Cliente')
     PC_CCATEGORIA = models.ForeignKey('CATEGORIA_PROYECTO', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Categoría del proyecto')
     PC_CTIPO = models.ForeignKey('TIPO_PROYECTO', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Tipo de proyecto')
+    PC_CUNIDAD_NEGOCIO = models.ForeignKey('UNIDAD_NEGOCIO', on_delete=models.CASCADE, null=True, blank=True, related_name='proyectos', verbose_name='Unidad de Negocio')
     PC_FFECHA_INICIO = models.DateField(verbose_name='Fecha de inicio')
     PC_FFECHA_FIN_ESTIMADA = models.DateField(verbose_name='Fecha de fin estimada')
     PC_FFECHA_FIN_REAL = models.DateField(null=True, blank=True, verbose_name='Fecha de fin real')
@@ -801,6 +818,53 @@ class ESTADO_DE_PAGO_DETALLE(models.Model):
         verbose_name = 'Detalle de Estado de Pago'
         verbose_name_plural = 'Detalles de Estados de Pago'
         unique_together = ('EDD_ESTADO_DE_PAGO', 'EDD_PRODUCTO')
+
+class FICHA_CIERRE(models.Model):    
+    FC_JEFE_DE_PROYECTO = models.CharField(max_length=255, null=True, verbose_name='Jefe de Proyecto')
+    FC_NOMBRE_DE_PROYECTO = models.ForeignKey(PROYECTO_CLIENTE, on_delete=models.CASCADE, related_name='fichas_cierre', verbose_name='Nombre de Proyecto')
+    FC_NUMERO_DE_PROYECTO = models.CharField(max_length=100, verbose_name='Número de Proyecto')
+    FC_FECHA_DE_CIERRE = models.DateField(verbose_name='Fecha de Cierre')
+    FC_HH_GASTADAS = models.DecimalField(max_digits=100, decimal_places=2, verbose_name='Horas Hombre Gastadas')
+    FC_HH_COBRADAS = models.DecimalField(max_digits=100, decimal_places=2, verbose_name='Horas Hombre Cobradas')
+    FC_EXCEDENTES = models.DecimalField(max_digits=100, decimal_places=2, verbose_name='Excedentes')
+    FC_PROYECCION_CON_EL_CLIENTE = models.DecimalField(max_digits=100, decimal_places=2, verbose_name='Proyección con el Cliente')
+    FC_OBSERVACIONES = models.TextField(blank=True, null=True, verbose_name='Observaciones')
+
+    def __str__(self):
+        return f"Ficha de Cierre {self.FC_ESTADO_DE_PAGO.EP_CNUMERO} - {self.FC_NOMBRE_DE_PROYECTO}"
+
+    class Meta:
+        db_table = 'FICHA_CIERRE'
+        verbose_name = 'Ficha de Cierre'
+        verbose_name_plural = 'Fichas de Cierre'
+
+from django.db import models
+from django.contrib.auth.models import User
+
+class FICHA_CIERRE_DETALLE(models.Model):
+    OPCION_SI_NO = [
+        ('SI', 'Sí'),
+        ('NO', 'No'),
+    ]
+
+    FCD_FICHA_CIERRE = models.ForeignKey('FICHA_CIERRE', on_delete=models.CASCADE, related_name='detalles', verbose_name='Ficha de Cierre')
+    FCD_FFECHA_CREACION = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de creación')
+    FCD_FFECHA_MODIFICACION = models.DateTimeField(auto_now=True, verbose_name='Fecha de modificación')
+    FCD_CUSUARIO_CREADOR = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='detalles_ficha_cierre_creados', verbose_name='Usuario creador')
+    FCD_CUSUARIO_MODIFICADOR = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='detalles_ficha_cierre_modificados', verbose_name='Usuario modificador')
+    FCD_NACTIVIDAD = models.PositiveIntegerField(verbose_name='Nº Actividad')
+    FCD_CACTIVIDAD = models.TextField(verbose_name='Actividad Técnica o Administrativa')
+    FCD_CCUMPLIMIENTO = models.CharField(max_length=2, choices=OPCION_SI_NO, verbose_name='¿Cumple?')
+    FCD_COBSERVACIONES = models.TextField(blank=True, verbose_name='Observaciones')
+
+    def __str__(self):
+        return f"Detalle de Ficha de Cierre {self.FCD_FICHA_CIERRE.FC_NUMERO_DE_PROYECTO} - Actividad {self.FCD_NACTIVIDAD}"
+
+    class Meta:
+        db_table = 'FICHA_CIERRE_DETALLE'
+        verbose_name = 'Detalle de Ficha de Cierre'
+        verbose_name_plural = 'Detalles de Fichas de Cierre'
+        unique_together = ('FCD_FICHA_CIERRE', 'FCD_NACTIVIDAD')
 
 class TAREA_GENERAL(models.Model):
     TG_CCODIGO = models.CharField(max_length=100, unique=True, verbose_name='Código de tarea general')

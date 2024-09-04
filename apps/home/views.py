@@ -8,19 +8,28 @@ import json
 import mimetypes
 import os
 import re
+import logging
+import base64
+import requests
+import traceback
+from django.conf import settings
 from decimal import Decimal
-
+from xhtml2pdf import pisa
+from io import BytesIO
 # Módulos de Django
 from django import template
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.staticfiles.storage import staticfiles_storage
 from django.core.serializers.json import DjangoJSONEncoder
+from django.core.exceptions import FieldError
 from django.db import connection
+from django.db.utils import DatabaseError
 from django.db.models import (
     Avg, Case, Count, DecimalField, ExpressionWrapper, F, Func,
     IntegerField, Q, Sum, Value, When
 )
-from django.db.models.functions import Coalesce, Least, Cast
+from django.db.models.functions import Coalesce, Least, Cast, Greatest
 from django.http import (
     FileResponse, HttpResponse, HttpResponseBadRequest,
     HttpResponseNotFound, HttpResponseRedirect, JsonResponse
@@ -28,7 +37,7 @@ from django.http import (
 from django.middleware.csrf import get_token
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template import loader
-from django.template.loader import render_to_string
+from django.template.loader import render_to_string, get_template
 from django.urls import reverse
 from django.utils.encoding import smart_str
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -38,6 +47,9 @@ from django.views.decorators.http import require_http_methods
 from apps.home.models import *
 from .forms import *
 from .models import *
+
+logger = logging.getLogger(__name__)
+
 
 @login_required(login_url="/login/")
 def index(request):
@@ -78,6 +90,13 @@ def proyecto_index(request):
         promedio_margen=Coalesce(Avg('PC_NMARGEN'), Decimal('0')),
     )
 
+    # Agregar estadísticas de EdP
+    estadisticas_edp = ESTADO_DE_PAGO.objects.aggregate(
+        total_edp=Coalesce(Sum('EP_NTOTAL'), Decimal('0')),
+        total_pagado=Coalesce(Sum('EP_NMONTO_PAGADO'), Decimal('0')),
+    )
+    estadisticas['total_saldo_edp'] = estadisticas_edp['total_edp'] - estadisticas_edp['total_pagado']
+
     # Preparar datos para el gráfico y la tabla de proyectos
     proyectos_data = proyectos.annotate(
         alerta_fecha=Case(
@@ -115,6 +134,33 @@ def proyecto_index(request):
         'PC_NCOSTO_ESTIMADO', 'PC_FFECHA_INICIO', 'PC_FFECHA_FIN_ESTIMADA', 'PC_FFECHA_FIN_REAL', 
         'alerta_fecha', 'alerta_costo', 'porcentaje_avance', 'alerta_prioridad'
     ).order_by('-alerta_prioridad', 'PC_FFECHA_FIN_ESTIMADA')
+
+    # Preparar datos de EdP por proyecto
+    proyectos_edp = PROYECTO_CLIENTE.objects.annotate(
+        total_edp=Coalesce(Sum('estados_de_pago__EP_NTOTAL'), Decimal('0')),
+        pendiente=Coalesce(Sum(Case(
+            When(estados_de_pago__EP_CESTADO='PENDIENTE', then=F('estados_de_pago__EP_NTOTAL')),
+            default=0,
+            output_field=DecimalField()
+        )), Decimal('0')),
+        aprobado=Coalesce(Sum(Case(
+            When(estados_de_pago__EP_CESTADO='APROBADO', then=F('estados_de_pago__EP_NTOTAL')),
+            default=0,
+            output_field=DecimalField()
+        )), Decimal('0')),
+        rechazado=Coalesce(Sum(Case(
+            When(estados_de_pago__EP_CESTADO='RECHAZADO', then=F('estados_de_pago__EP_NTOTAL')),
+            default=0,
+            output_field=DecimalField()
+        )), Decimal('0')),
+        monto_pagado=Coalesce(Sum('estados_de_pago__EP_NMONTO_PAGADO'), Decimal('0'))
+    ).annotate(
+        porcentaje_pagado=Case(
+            When(total_edp=0, then=0),
+            default=F('monto_pagado') * 100 / F('total_edp'),
+            output_field=DecimalField(max_digits=5, decimal_places=2)
+        )
+    ).values('PC_CNOMBRE', 'total_edp', 'pendiente', 'aprobado', 'rechazado', 'monto_pagado', 'porcentaje_pagado')
 
     # Filtrar y preparar datos de proyectos activos
     proyectos_activos = list(proyectos.filter(~Q(PC_CESTADO__iexact='Cerrado')).annotate(
@@ -156,10 +202,81 @@ def proyecto_index(request):
         'chart_presupuestos': [float(p['PC_NPRESUPUESTO']) for p in proyectos_data],
         'chart_costos_reales': [float(p['PC_NCOSTO_REAL']) for p in proyectos_data],
         'proyectos_activos': json.dumps(proyectos_activos, cls=DecimalEncoder),
+        'proyectos_edp': proyectos_edp,
     }
 
     return render(request, 'home/proyecto_index.html', context)
 
+def api_proyectos_edp(request):
+    try:
+        draw = int(request.GET.get('draw', 1))
+        start = int(request.GET.get('start', 0))
+        length = int(request.GET.get('length', 10))
+        search_value = request.GET.get('search[value]', '')
+
+        queryset = PROYECTO_CLIENTE.objects.annotate(
+            total_edp=Coalesce(Sum('estados_de_pago__EP_NTOTAL'), Value(0, output_field=DecimalField(max_digits=20, decimal_places=2))),
+            pendiente=Coalesce(Sum(Case(
+                When(estados_de_pago__EP_CESTADO='PENDIENTE', 
+                     then=ExpressionWrapper(F('estados_de_pago__EP_NTOTAL'), output_field=DecimalField(max_digits=20, decimal_places=2))),
+                default=Value(0, output_field=DecimalField(max_digits=20, decimal_places=2))
+            )), Value(0, output_field=DecimalField(max_digits=20, decimal_places=2))),
+            aprobado=Coalesce(Sum(Case(
+                When(estados_de_pago__EP_CESTADO='APROBADO', 
+                     then=ExpressionWrapper(F('estados_de_pago__EP_NTOTAL'), output_field=DecimalField(max_digits=20, decimal_places=2))),
+                default=Value(0, output_field=DecimalField(max_digits=20, decimal_places=2))
+            )), Value(0, output_field=DecimalField(max_digits=20, decimal_places=2))),
+            rechazado=Coalesce(Sum(Case(
+                When(estados_de_pago__EP_CESTADO='RECHAZADO', 
+                     then=ExpressionWrapper(F('estados_de_pago__EP_NTOTAL'), output_field=DecimalField(max_digits=20, decimal_places=2))),
+                default=Value(0, output_field=DecimalField(max_digits=20, decimal_places=2))
+            )), Value(0, output_field=DecimalField(max_digits=20, decimal_places=2))),
+            monto_pagado=Coalesce(Sum('estados_de_pago__EP_NMONTO_PAGADO'), Value(0, output_field=DecimalField(max_digits=20, decimal_places=2)))
+        )
+
+        if search_value:
+            queryset = queryset.filter(PC_CNOMBRE__icontains=search_value)
+
+        total_records = queryset.count()
+        queryset = queryset[start:start+length]
+
+        data = []
+        for proyecto in queryset:
+            total_edp = float(proyecto.total_edp)
+            monto_pagado = float(proyecto.monto_pagado)
+            
+            if total_edp > 0:
+                porcentaje_pagado = (monto_pagado / total_edp) * 100
+            else:
+                porcentaje_pagado = 0
+
+            logger.debug(f"Proyecto: {proyecto.PC_CNOMBRE}")
+            logger.debug(f"Total EdP: {total_edp}")
+            logger.debug(f"Monto Pagado: {monto_pagado}")
+            logger.debug(f"Porcentaje Pagado: {porcentaje_pagado:.2f}%")
+            logger.debug("--------------------")
+
+            data.append({
+                'PC_CNOMBRE': proyecto.PC_CNOMBRE,
+                'total_edp': total_edp,
+                'pendiente': float(proyecto.pendiente),
+                'aprobado': float(proyecto.aprobado),
+                'rechazado': float(proyecto.rechazado),
+                'monto_pagado': monto_pagado,
+                'porcentaje_pagado': round(porcentaje_pagado, 2)
+            })
+
+        return JsonResponse({
+            'draw': draw,
+            'recordsTotal': total_records,
+            'recordsFiltered': total_records,
+            'data': data
+        })
+
+    except Exception as e:
+        logger.exception("Error in api_proyectos_edp")
+        return JsonResponse({'error': str(e)}, status=500)
+    
 @login_required(login_url="/login/")
 def pages(request):
     context = {}
@@ -4628,11 +4745,314 @@ def EDP_DELETE_LINE(request, pk):
         print("ERROR:", e)
         return JsonResponse({'error': str(e)}, status=500)
 
-
-
 def CHECK_EDP_NUMERO(request):
     if request.method == 'POST':
         edp_numero = request.POST.get('edp_numero')
         exists = ESTADO_DE_PAGO.objects.filter(EP_CNUMERO=edp_numero).exists()
         return JsonResponse({'exists': exists})
     return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+def UNIDAD_NEGOCIO_LISTALL(request):
+    if not has_auth(request.user, 'VER_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        unidades_negocio = UNIDAD_NEGOCIO.objects.all()
+        ctx = {
+            'unidades_negocio': unidades_negocio
+        }
+        return render(request, 'home/UNIDAD_NEGOCIO/un_listall.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def UNIDAD_NEGOCIO_ADDONE(request):
+    if not has_auth(request.user, 'ADD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        if request.method == 'POST':
+            form = formUNIDAD_NEGOCIO(request.POST)
+            if form.is_valid():
+                unidad_negocio = form.save(commit=False)
+                unidad_negocio.UN_CUSUARIO_CREADOR = request.user
+                unidad_negocio.save()
+                crear_log(request.user, 'Crear Unidad de Negocio', f'Se creó la unidad de negocio: {unidad_negocio.UN_CCODIGO}')
+                messages.success(request, 'Unidad de negocio guardada correctamente')
+                return redirect('/un_listall/')
+        form = formUNIDAD_NEGOCIO()
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/UNIDAD_NEGOCIO/un_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def UNIDAD_NEGOCIO_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPDATE_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        unidad_negocio = UNIDAD_NEGOCIO.objects.get(pk=pk)
+        if request.method == 'POST':
+            form = formUNIDAD_NEGOCIO(request.POST, instance=unidad_negocio)
+            if form.is_valid():
+                form.save()
+                crear_log(request.user, 'Actualizar Unidad de Negocio', f'Se actualizó la unidad de negocio: {unidad_negocio.UN_CCODIGO}')
+                messages.success(request, 'Unidad de negocio actualizada correctamente')
+                return redirect('/un_listall/')
+        else:
+            form = formUNIDAD_NEGOCIO(instance=unidad_negocio)
+        ctx = {
+            'form': form,
+            'unidad_negocio': unidad_negocio
+        }
+        return render(request, 'home/UNIDAD_NEGOCIO/un_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def FC_LISTALL(request):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        object_list = FICHA_CIERRE.objects.all()
+        ctx = {
+            'object_list': object_list
+        }
+        return render(request, 'home/FICHA_CIERRE/fc_listall.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def FC_ADDONE(request):
+    if not has_auth(request.user, 'ADD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        if request.method == 'POST':
+            form = formFICHA_CIERRE(request.POST)
+            if form.is_valid():
+                fc = form.save(commit=False)
+                fc.save()
+                crear_log(request.user, f'Crear Ficha de Cierre', f'Se creó la Ficha de Cierre: {fc.FC_NUMERO_DE_PROYECTO}')
+                messages.success(request, 'Ficha de Cierre guardada correctamente')
+                return redirect('/fc_listall/')
+        form = formFICHA_CIERRE()
+        proyectos = PROYECTO_CLIENTE.objects.all()
+        ctx = {
+            'form': form,
+            'state': 'add',
+            'proyectos': proyectos,
+        }
+        return render(request, 'home/FICHA_CIERRE/fc_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def FC_UPDATE(request, pk):
+    if not has_auth(request.user, 'EDITAR_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        fc = FICHA_CIERRE.objects.get(id=pk)
+        if request.method == 'POST':
+            form = formFICHA_CIERRE(request.POST, instance=fc)
+            if form.is_valid():
+                fc = form.save(commit=False)
+                # Actualizar el número de proyecto si es necesario
+                proyecto = PROYECTO_CLIENTE.objects.get(id=form.cleaned_data['FC_NOMBRE_DE_PROYECTO'].id)
+                fc.FC_NUMERO_DE_PROYECTO = f"FC-{proyecto.PC_CCODIGO}-{fc.FC_FECHA_DE_CIERRE.year}"
+                fc.save()
+                crear_log(request.user, f'Editar Ficha de Cierre', f'Se editó la Ficha de Cierre: {fc.FC_NUMERO_DE_PROYECTO}')
+                messages.success(request, 'Ficha de Cierre actualizada correctamente')
+                return redirect('/fc_listall/')
+        else:
+            form = formFICHA_CIERRE(instance=fc)
+        
+        proyectos = PROYECTO_CLIENTE.objects.all()
+        ctx = {
+            'form': form,
+            'state': 'update',
+            'proyectos': proyectos,
+            'ficha_cierre': fc,
+        }
+        return render(request, 'home/FICHA_CIERRE/fc_update.html', ctx)
+    except FICHA_CIERRE.DoesNotExist:
+        messages.error(request, 'No se encontró la Ficha de Cierre especificada')
+        return redirect('/')
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error: {str(e)}')
+        return redirect('/')
+
+def FC_LISTONE(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        fc = FICHA_CIERRE.objects.get(id=pk)
+        ctx = {
+            'fc': fc,
+        }
+        return render(request, 'home/FICHA_CIERRE/fc_listone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/fc_listall/')
+
+def FC_LISTONE_FORMAT(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        fc = FICHA_CIERRE.objects.get(id=pk)
+        
+        ctx = {
+            'fc': fc,
+        }
+        return render(request, 'home/FICHA_CIERRE/fc_listone_format.html', ctx)
+    except Exception as e:
+        print("ERROR:", e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/fc_listall/')
+    
+def FC_GET_LINE(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        detalle = FICHA_CIERRE_DETALLE.objects.get(id=pk)
+        
+        data = {
+            'id': detalle.id,
+            'nactividad': detalle.FCD_NACTIVIDAD,
+            'cactividad': detalle.FCD_CACTIVIDAD,
+            'ccumplimiento': detalle.FCD_CCUMPLIMIENTO,
+            'cobservaciones': detalle.FCD_COBSERVACIONES
+        }
+        return JsonResponse(data)
+    except FICHA_CIERRE_DETALLE.DoesNotExist:
+        return JsonResponse({'error': 'Detalle de ficha de cierre no encontrado'}, status=404)
+    except Exception as e:
+        print("ERROR:", e)
+        return JsonResponse({'error': str(e)}, status=500)
+
+def FC_ADD_UPDATE_LINE(request):
+    if not has_auth(request.user, 'ADD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        if request.method == 'POST':
+            fc_id = request.POST.get('fc_id')
+            line_id = request.POST.get('lineId')
+            cactividad = request.POST.get('cactividad')
+            ccumplimiento = request.POST.get('ccumplimiento')
+            cobservaciones = request.POST.get('cobservaciones')
+
+            fc = FICHA_CIERRE.objects.get(id=fc_id)
+
+            if line_id:  # Actualizar línea existente
+                detalle = FICHA_CIERRE_DETALLE.objects.get(id=line_id)
+                detalle.FCD_CACTIVIDAD = cactividad
+                detalle.FCD_CCUMPLIMIENTO = ccumplimiento
+                detalle.FCD_COBSERVACIONES = cobservaciones
+                detalle.save()
+                crear_log(request.user, f'Actualizar Detalle de Ficha de Cierre', f'Se actualizó el detalle de ficha de cierre: Actividad {detalle.FCD_NACTIVIDAD}')
+                mensaje = 'Detalle de ficha de cierre actualizado correctamente'
+            else:  # Crear nueva línea
+                # Obtener el último número de actividad para esta ficha de cierre
+                last_detail = FICHA_CIERRE_DETALLE.objects.filter(FCD_FICHA_CIERRE=fc).order_by('-FCD_NACTIVIDAD').first()
+                if last_detail:
+                    nactividad = last_detail.FCD_NACTIVIDAD + 1
+                else:
+                    nactividad = 1
+
+                detalle = FICHA_CIERRE_DETALLE(
+                    FCD_FICHA_CIERRE=fc,
+                    FCD_NACTIVIDAD=nactividad,
+                    FCD_CACTIVIDAD=cactividad,
+                    FCD_CCUMPLIMIENTO=ccumplimiento,
+                    FCD_COBSERVACIONES=cobservaciones,
+                    FCD_CUSUARIO_CREADOR=request.user
+                )
+                detalle.save()
+                crear_log(request.user, f'Crear Detalle de Ficha de Cierre', f'Se creó el detalle de ficha de cierre: Actividad {detalle.FCD_NACTIVIDAD}')
+                mensaje = 'Detalle de ficha de cierre agregado correctamente'
+
+            messages.success(request, mensaje)
+            return JsonResponse({'success': True, 'message': mensaje})
+        
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    except Exception as e:
+        errMsg = f"Error al procesar detalle de ficha de cierre: {str(e)}"
+        print(errMsg)
+        messages.error(request, errMsg)
+        return JsonResponse({'error': str(errMsg)}, status=400)
+
+def FC_DELETE_LINE(request, pk):
+    if not has_auth(request.user, 'UPD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        detalle = FICHA_CIERRE_DETALLE.objects.get(id=pk)
+        fc_id = detalle.FCD_FICHA_CIERRE.id
+        crear_log(request.user, f'Eliminar Detalle de Ficha de Cierre', f'Se eliminó el detalle de ficha de cierre: Actividad {detalle.FCD_NACTIVIDAD}')
+        detalle.delete()
+        return JsonResponse({'success': 'Detalle de ficha de cierre eliminado correctamente', 'fc_id': fc_id})
+    except FICHA_CIERRE_DETALLE.DoesNotExist:
+        return JsonResponse({'error': 'Detalle de ficha de cierre no encontrado'}, status=404)
+    except Exception as e:
+        print("ERROR:", e)
+        return JsonResponse({'error': str(e)}, status=500)
+
+def CHECK_FC_NUMERO(request):
+    if request.method == 'POST':
+        fc_numero = request.POST.get('fc_numero')
+        exists = FICHA_CIERRE.objects.filter(FC_NUMERO_DE_PROYECTO=fc_numero).exists()
+        return JsonResponse({'exists': exists})
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+def FC_GENERATE_PDF(request, pk):
+    try:
+        fc = FICHA_CIERRE.objects.get(id=pk)
+        template = get_template('home/FICHA_CIERRE/fc_pdf_template.html')
+        
+        # Obtener la URL del logo
+        logo_url = request.build_absolute_uri(staticfiles_storage.url('assets/images/logo_png_sin_fondo.png'))
+        
+        # Descargar la imagen
+        response = requests.get(logo_url)
+        if response.status_code == 200:
+            encoded_string = base64.b64encode(response.content).decode()
+        else:
+            # Si no se puede obtener la imagen, usa una cadena vacía
+            encoded_string = ""
+        
+        context = {
+            'fc': fc,
+            'logo_base64': encoded_string,
+        }
+        
+        html = template.render(context)
+        result = BytesIO()
+        
+        pdf = pisa.pisaDocument(BytesIO(html.encode("UTF-8")), result)
+        
+        if not pdf.err:
+            response = HttpResponse(result.getvalue(), content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="Ficha_de_Cierre_{fc.FC_NUMERO_DE_PROYECTO}.pdf"'
+            return response
+        else:
+            return HttpResponse(f'Error al generar el PDF: {pdf.err}', status=400)
+    
+    except Exception as e:
+        error_message = f"Error: {str(e)}\n\nTraceback:\n{traceback.format_exc()}"
+        return HttpResponse(error_message, content_type="text/plain", status=500)
