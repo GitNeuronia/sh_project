@@ -219,6 +219,12 @@ urlpatterns = [
     path('edp_deleteline/<int:pk>', login_required(views.EDP_DELETE_LINE), name='edp_deleteline'),
     path('edp_addline/', login_required(views.EDP_ADD_LINE), name='edp_addline'),
     path('check_edp_numero/', login_required(views.CHECK_EDP_NUMERO), name='check_edp_numero'),
+    
+    #Urls para Unidad de negocio
+    path('un_listall/', login_required(views.UNIDAD_NEGOCIO_LISTALL), name='un_listall'),
+    path('un_addone/', login_required(views.UNIDAD_NEGOCIO_ADDONE), name='un_addone'),
+    path('un_update/<int:pk>', login_required(views.UNIDAD_NEGOCIO_UPDATE), name='un_update'),
+    
     # Coincide con cualquier archivo html
     re_path(r'^.*\.*', views.pages, name='pages'),
 

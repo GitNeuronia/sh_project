@@ -834,7 +834,7 @@ class formPROYECTO_CLIENTE(forms.ModelForm):
         model = PROYECTO_CLIENTE
         fields = [
             'PC_CCODIGO', 'PC_CNOMBRE', 'PC_CDESCRIPCION', 'PC_CLIENTE', 'PC_CCATEGORIA',
-            'PC_CTIPO', 'PC_FFECHA_INICIO', 'PC_FFECHA_FIN_ESTIMADA', 'PC_FFECHA_FIN_REAL',
+            'PC_CTIPO', 'PC_CUNIDAD_NEGOCIO','PC_FFECHA_INICIO', 'PC_FFECHA_FIN_ESTIMADA', 'PC_FFECHA_FIN_REAL',
             'PC_CESTADO', 'PC_NPRESUPUESTO', 'PC_COBSERVACIONES', 'PC_CONTACTO_CLIENTE',
             'PC_DIRECCION_CLIENTE', 'PC_NVALOR_HORA', 'PC_NHORAS_ESTIMADAS', 'PC_NCOSTO_ESTIMADO',
             'PC_NHORAS_REALES', 'PC_NCOSTO_REAL', 'PC_NMARGEN'
@@ -846,6 +846,7 @@ class formPROYECTO_CLIENTE(forms.ModelForm):
             'PC_CLIENTE': forms.Select(attrs={'class': 'form-control'}),
             'PC_CCATEGORIA': forms.Select(attrs={'class': 'form-control'}),
             'PC_CTIPO': forms.Select(attrs={'class': 'form-control'}),
+            'PC_CUNIDAD_NEGOCIO': forms.Select(attrs={'class': 'form-control'}),
             'PC_FFECHA_INICIO': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'PC_FFECHA_FIN_ESTIMADA': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'PC_FFECHA_FIN_REAL': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
@@ -1692,3 +1693,27 @@ class formEDP_DETALLE(forms.ModelForm):
                 raise forms.ValidationError("El total no coincide con el subtotal menos el descuento.")
 
         return cleaned_data
+    
+# Form for UNIDAD_NEGOCIO model
+class formUNIDAD_NEGOCIO(forms.ModelForm):
+    class Meta:
+        model = UNIDAD_NEGOCIO
+        fields = [
+            'UN_CCODIGO', 'UN_CDESCRIPCION', 'UN_BHABILITADO',
+        ]
+        labels = {
+            'UN_CCODIGO': 'Código',
+            'UN_CDESCRIPCION': 'Descripción',
+            'UN_BHABILITADO': 'Habilitado',
+        }
+        widgets = {
+            'UN_CCODIGO': forms.TextInput(attrs={'class': 'form-control'}),
+            'UN_CDESCRIPCION': forms.Textarea(attrs={'class': 'form-control'}),
+            'UN_BHABILITADO': forms.CheckboxInput(attrs={'class': 'form-check-input','style': 'margin-left: 5px;'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super(formUNIDAD_NEGOCIO, self).__init__(*args, **kwargs)
+        for field in ['UN_FFECHA_CREACION']:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()

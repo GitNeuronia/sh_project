@@ -4739,11 +4739,73 @@ def EDP_DELETE_LINE(request, pk):
         print("ERROR:", e)
         return JsonResponse({'error': str(e)}, status=500)
 
-
-
 def CHECK_EDP_NUMERO(request):
     if request.method == 'POST':
         edp_numero = request.POST.get('edp_numero')
         exists = ESTADO_DE_PAGO.objects.filter(EP_CNUMERO=edp_numero).exists()
         return JsonResponse({'exists': exists})
     return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+def UNIDAD_NEGOCIO_LISTALL(request):
+    if not has_auth(request.user, 'VER_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        unidades_negocio = UNIDAD_NEGOCIO.objects.all()
+        ctx = {
+            'unidades_negocio': unidades_negocio
+        }
+        return render(request, 'home/UNIDAD_NEGOCIO/un_listall.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def UNIDAD_NEGOCIO_ADDONE(request):
+    if not has_auth(request.user, 'ADD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        if request.method == 'POST':
+            form = formUNIDAD_NEGOCIO(request.POST)
+            if form.is_valid():
+                unidad_negocio = form.save(commit=False)
+                unidad_negocio.UN_CUSUARIO_CREADOR = request.user
+                unidad_negocio.save()
+                crear_log(request.user, 'Crear Unidad de Negocio', f'Se creó la unidad de negocio: {unidad_negocio.UN_CCODIGO}')
+                messages.success(request, 'Unidad de negocio guardada correctamente')
+                return redirect('/un_listall/')
+        form = formUNIDAD_NEGOCIO()
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/UNIDAD_NEGOCIO/un_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def UNIDAD_NEGOCIO_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPDATE_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        unidad_negocio = UNIDAD_NEGOCIO.objects.get(pk=pk)
+        if request.method == 'POST':
+            form = formUNIDAD_NEGOCIO(request.POST, instance=unidad_negocio)
+            if form.is_valid():
+                form.save()
+                crear_log(request.user, 'Actualizar Unidad de Negocio', f'Se actualizó la unidad de negocio: {unidad_negocio.UN_CCODIGO}')
+                messages.success(request, 'Unidad de negocio actualizada correctamente')
+                return redirect('/un_listall/')
+        else:
+            form = formUNIDAD_NEGOCIO(instance=unidad_negocio)
+        ctx = {
+            'form': form,
+            'unidad_negocio': unidad_negocio
+        }
+        return render(request, 'home/UNIDAD_NEGOCIO/un_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')

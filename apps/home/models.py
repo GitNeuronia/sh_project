@@ -3,6 +3,7 @@
 Copyright (c) 2019 - present AppSeed.us
 """
 
+import datetime
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import FileExtensionValidator
@@ -691,6 +692,21 @@ class ANEXO(models.Model):
         verbose_name = 'Anexo'
         verbose_name_plural = 'Anexos'
 
+class UNIDAD_NEGOCIO(models.Model):
+    UN_CCODIGO = models.CharField(max_length=20, unique=True, verbose_name='Código de unidad de negocio')
+    UN_CDESCRIPCION = models.CharField(max_length=1024, verbose_name='Descripción de la unidad de negocio')
+    UN_BHABILITADO = models.BooleanField(default=True, verbose_name='Habilitado')
+    UN_CUSUARIO_CREADOR = models.ForeignKey(User, on_delete=models.PROTECT, related_name='unidad_negocio_creador', verbose_name='Usuario creador')
+    UN_FFECHA_CREACION = models.DateTimeField(auto_now_add=True,blank=True, null=True, verbose_name='Fecha de creación')
+    
+    def __str__(self):
+        return f"Proyecto {self.UN_CCODIGO}"
+    
+    class Meta:
+        db_table = 'UNIDAD_NEGOCIO'
+        verbose_name = 'Unidad de Negocio'
+        verbose_name_plural = 'Unidades de Negocio'
+    
 class PROYECTO_CLIENTE(models.Model):
     PC_CCODIGO = models.CharField(max_length=100, unique=True, verbose_name='Código de proyecto')
     PC_CNOMBRE = models.CharField(max_length=255, verbose_name='Nombre del proyecto')
@@ -698,6 +714,7 @@ class PROYECTO_CLIENTE(models.Model):
     PC_CLIENTE = models.ForeignKey('CLIENTE', on_delete=models.CASCADE, related_name='proyectos', verbose_name='Cliente')
     PC_CCATEGORIA = models.ForeignKey('CATEGORIA_PROYECTO', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Categoría del proyecto')
     PC_CTIPO = models.ForeignKey('TIPO_PROYECTO', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Tipo de proyecto')
+    PC_CUNIDAD_NEGOCIO = models.ForeignKey('UNIDAD_NEGOCIO', on_delete=models.CASCADE, null=True, blank=True, related_name='proyectos', verbose_name='Unidad de Negocio')
     PC_FFECHA_INICIO = models.DateField(verbose_name='Fecha de inicio')
     PC_FFECHA_FIN_ESTIMADA = models.DateField(verbose_name='Fecha de fin estimada')
     PC_FFECHA_FIN_REAL = models.DateField(null=True, blank=True, verbose_name='Fecha de fin real')
