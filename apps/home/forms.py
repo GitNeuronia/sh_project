@@ -1717,3 +1717,87 @@ class formUNIDAD_NEGOCIO(forms.ModelForm):
         for field in ['UN_FFECHA_CREACION']:
             if field in self.fields:
                 self.fields[field].widget = forms.HiddenInput()
+                
+class formFICHA_CIERRE(forms.ModelForm):
+    class Meta:
+        model = FICHA_CIERRE
+        fields = [
+            'FC_JEFE_DE_PROYECTO', 'FC_NOMBRE_DE_PROYECTO', 'FC_NUMERO_DE_PROYECTO',
+            'FC_FECHA_DE_CIERRE', 'FC_HH_GASTADAS', 'FC_HH_COBRADAS',
+            'FC_EXCEDENTES', 'FC_PROYECCION_CON_EL_CLIENTE', 'FC_OBSERVACIONES'
+        ]
+        labels = {
+            'FC_JEFE_DE_PROYECTO': 'Jefe de Proyecto',
+            'FC_NOMBRE_DE_PROYECTO': 'Nombre de Proyecto',
+            'FC_NUMERO_DE_PROYECTO': 'Número de Proyecto',
+            'FC_FECHA_DE_CIERRE': 'Fecha de Cierre',
+            'FC_HH_GASTADAS': 'Horas Hombre Gastadas',
+            'FC_HH_COBRADAS': 'Horas Hombre Cobradas',
+            'FC_EXCEDENTES': 'Excedentes',
+            'FC_PROYECCION_CON_EL_CLIENTE': 'Proyección con el Cliente',
+            'FC_OBSERVACIONES': 'Observaciones'
+        }
+        widgets = {
+            'FC_JEFE_DE_PROYECTO': forms.TextInput(attrs={'class': 'form-control'}),
+            'FC_NOMBRE_DE_PROYECTO': forms.Select(attrs={'class': 'form-control'}),
+            'FC_NUMERO_DE_PROYECTO': forms.TextInput(attrs={'class': 'form-control'}),
+            'FC_FECHA_DE_CIERRE': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'FC_HH_GASTADAS': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'FC_HH_COBRADAS': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'FC_EXCEDENTES': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'FC_PROYECCION_CON_EL_CLIENTE': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'FC_OBSERVACIONES': forms.Textarea(attrs={'class': 'form-control', 'rows': 4})
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        hh_gastadas = cleaned_data.get('FC_HH_GASTADAS')
+        hh_cobradas = cleaned_data.get('FC_HH_COBRADAS')
+
+        if hh_gastadas and hh_cobradas:
+            if hh_cobradas > hh_gastadas:
+                raise forms.ValidationError("Las horas hombre cobradas no pueden ser mayores que las gastadas.")
+
+        return cleaned_data
+
+class formFICHA_CIERRE_DETALLE(forms.ModelForm):
+    class Meta:
+        model = FICHA_CIERRE_DETALLE
+        fields = [
+            'FCD_FICHA_CIERRE', 'FCD_CACTIVIDAD',
+            'FCD_CCUMPLIMIENTO', 'FCD_COBSERVACIONES'
+        ]
+        labels = {
+            'FCD_FICHA_CIERRE': 'Ficha de Cierre',
+            'FCD_CACTIVIDAD': 'Actividad Técnica o Administrativa',
+            'FCD_CCUMPLIMIENTO': '¿Cumple?',
+            'FCD_COBSERVACIONES': 'Observaciones'
+        }
+        widgets = {
+            'FCD_FICHA_CIERRE': forms.Select(attrs={'class': 'form-control'}),
+            'FCD_CACTIVIDAD': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'FCD_CCUMPLIMIENTO': forms.Select(attrs={'class': 'form-control'}),
+            'FCD_COBSERVACIONES': forms.Textarea(attrs={'class': 'form-control', 'rows': 4})
+        }
+
+    def __init__(self, *args, **kwargs):
+        super(formFICHA_CIERRE_DETALLE, self).__init__(*args, **kwargs)
+        for field in ['FCD_FFECHA_CREACION', 'FCD_FFECHA_MODIFICACION', 'FCD_CUSUARIO_CREADOR', 'FCD_CUSUARIO_MODIFICADOR']:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        ficha_cierre = cleaned_data.get('FCD_FICHA_CIERRE')
+        nactividad = cleaned_data.get('FCD_NACTIVIDAD')
+
+        if ficha_cierre and nactividad:
+            existing_detail = FICHA_CIERRE_DETALLE.objects.filter(
+                FCD_FICHA_CIERRE=ficha_cierre, 
+                FCD_NACTIVIDAD=nactividad
+            ).exclude(pk=self.instance.pk if self.instance else None).first()
+
+            if existing_detail:
+                raise forms.ValidationError("Ya existe un detalle con este número de actividad para esta ficha de cierre.")
+
+        return cleaned_data            
