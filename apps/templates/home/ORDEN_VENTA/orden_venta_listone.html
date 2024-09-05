@@ -1,5 +1,5 @@
 {% extends "layouts/base.html" %}
-
+{% load custom_filters %}
 {% block title %} {{ orden_venta.OV_CNUMERO }} {% endblock %} 
 
 <!-- Specific CSS goes HERE -->
@@ -85,7 +85,13 @@
                                   </tr>
                                   <tr>
                                     <th>Total:</th>
-                                    <td>{{orden_venta.OV_NTOTAL}}</td>
+                                    <td>
+                                        {% if orden_venta.OV_TIPO_CAMBIO %}
+                                            {{ orden_venta.OV_TIPO_CAMBIO.TC_CMONEDA }} : {{ orden_venta.OV_NTOTAL_MONEDA_EXTRANJERA|floatformat:2 }}
+                                        {% else %}
+                                            CLP : {{ orden_venta.OV_NTOTAL|floatformat:2 }}
+                                        {% endif %}
+                                    </td>
                                   </tr>
                                   <tr>
                                     <th>Observaciones:</th>
@@ -128,10 +134,34 @@
                                         </td>
                                         <td>{{ detalle.OVD_PRODUCTO }}</td>
                                         <td>{{ detalle.OVD_NCANTIDAD }}</td>
-                                        <td>{{ detalle.OVD_NPRECIO_UNITARIO }}</td>
-                                        <td>{{ detalle.OVD_NSUBTOTAL }}</td>
-                                        <td>{{ detalle.OVD_NDESCUENTO }}</td>
-                                        <td>{{ detalle.OVD_NTOTAL }}</td>
+                                        <td>
+                                            {% if orden_venta.OV_TIPO_CAMBIO %}
+                                                {{ orden_venta.OV_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.OVD_NPRECIO_UNITARIO|div:orden_venta.OV_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
+                                            {% else %}
+                                                CLP {{ detalle.OVD_NPRECIO_UNITARIO|floatformat:2 }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if orden_venta.OV_TIPO_CAMBIO %}
+                                                {{ orden_venta.OV_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.OVD_NSUBTOTAL|div:orden_venta.OV_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
+                                            {% else %}
+                                                CLP {{ detalle.OVD_NSUBTOTAL|floatformat:2 }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if orden_venta.OV_TIPO_CAMBIO %}
+                                                {{ orden_venta.OV_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.OVD_NDESCUENTO|div:orden_venta.OV_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
+                                            {% else %}
+                                                CLP {{ detalle.OVD_NDESCUENTO|floatformat:2 }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if orden_venta.OV_TIPO_CAMBIO %}
+                                                {{ orden_venta.OV_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.OVD_NTOTAL|div:orden_venta.OV_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
+                                            {% else %}
+                                                CLP {{ detalle.OVD_NTOTAL|floatformat:2 }}
+                                            {% endif %}
+                                        </td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -171,7 +201,7 @@
                             <input type="number" class="form-control" id="cantidad" name="cantidad" required>
                         </div>
                         <div class="form-group">
-                            <label for="precioUnitario">Precio Unitario</label>
+                            <label for="precioUnitario">Precio Unitario <span id="currency"></span></label>
                             <input type="number" step="0.01" class="form-control" id="precioUnitario" name="precioUnitario" required>
                         </div>
                         <div class="form-group">
@@ -195,7 +225,7 @@
     <!-- datatable Js -->
     <script src="/static/assets/js/plugins/jquery.dataTables.min.js"></script>
     <script src="/static/assets/js/plugins/dataTables.bootstrap4.min.js"></script>
-    <script src="/static/assets/js/plugins/buttons.colVis.min.js"></script>
+    <script src="/staticassets/js/plugins/buttons.colVis.min.js"></script>
     <script src="/static/assets/js/plugins/buttons.print.min.js"></script>
     <script src="/static/assets/js/plugins/pdfmake.min.js"></script>
     <script src="/static/assets/js/plugins/jszip.min.js"></script>
@@ -207,13 +237,24 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
     $(document).ready(function() {
-        var table = $('#orden-venta-lines').DataTable();
+        var table = $('#orden-venta-lines').DataTable({
+            "columnDefs": [
+                { "orderable": false, "targets": 0 }
+            ],
+            "order": [[1, 'asc']]
+        });
 
-        
+        // Function to set the currency
+        function setCurrency() {
+            var currency = "{% if orden_venta.OV_TIPO_CAMBIO %}{{ orden_venta.OV_TIPO_CAMBIO.TC_CMONEDA }}{% else %}CLP{% endif %}";
+            $('#currency').text('(' + currency + ')');
+        }
+
         // Add line
         $('#addLineModal, #addLineModal2').on('click', function() {
             $('#lineForm')[0].reset();
             $('#lineId').val('');
+            setCurrency();
             $('#lineModal').modal('show');
         });
 
@@ -228,8 +269,14 @@
                     $('#lineId').val(data.id);
                     $('#producto').val(data.producto);
                     $('#cantidad').val(data.cantidad);
-                    $('#precioUnitario').val(data.precioUnitario);
-                    $('#descuento').val(data.descuento);
+                    {% if orden_venta.OV_TIPO_CAMBIO %}
+                        $('#precioUnitario').val((data.precioUnitario / {{ orden_venta.OV_TIPO_CAMBIO.TC_NTASA }}).toFixed(2));
+                        $('#descuento').val((data.descuento / {{ orden_venta.OV_TIPO_CAMBIO.TC_NTASA }}).toFixed(2));
+                    {% else %}
+                        $('#precioUnitario').val(data.precioUnitario);
+                        $('#descuento').val(data.descuento);
+                    {% endif %}
+                    setCurrency();
                     $('#lineModal').modal('show');
                 },
                 error: function(xhr, status, error) {
@@ -260,7 +307,7 @@
                 error: function(xhr, status, error) {
                     console.error("Error saving line:", error);
                     $('#lineModal').modal('hide');
-                    var errorMessage = xhr.responseJSON && xhr.responseJSON.error ? xhr.responseJSON.error : 'Error desconocido al agregar la línea de cotización.';
+                    var errorMessage = xhr.responseJSON && xhr.responseJSON.error ? xhr.responseJSON.error : 'Error desconocido al agregar la línea de orden de venta.';
                     Swal.fire({
                         icon: 'error',
                         title: 'Error',
@@ -275,7 +322,7 @@
             var lineId = $(this).data('id');
             Swal.fire({
                 title: '¿Está seguro?',
-                text: "¿Desea eliminar esta línea de la cotización?",
+                text: "¿Desea eliminar esta línea de la orden de venta?",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#3085d6',
@@ -285,7 +332,7 @@
             }).then((result) => {
                 if (result.isConfirmed) {
                     $.ajax({
-                        url: "{% url 'cotizacion_deleteline' 0 %}".replace('0', lineId),
+                        url: "{% url 'orden_venta_deleteline' 0 %}".replace('0', lineId),
                         method: 'POST',
                         data: {
                             csrfmiddlewaretoken: '{{ csrf_token }}'

@@ -87,34 +87,71 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-$(document).ready(function() {
-    $('#id_OV_COTIZACION').change(function() {
-        var cotizacionId = $(this).val();
-        if (cotizacionId) {
+    $(document).ready(function() {
+        $('#id_OV_COTIZACION').change(function() {
+            var cotizacionId = $(this).val();
+            if (cotizacionId) {
+                $.ajax({
+                    url: "{% url 'cotizacion_getdata' 0 %}".replace('0', cotizacionId),
+                    type: 'GET',
+                    dataType: 'json',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    success: function(data) {
+                        console.log('Cotización data:', data);
+                        $('#id_OV_CCLIENTE').val(data.cotizacion.CO_CCLIENTE.id);
+                        $('#id_OV_NTOTAL').val(data.cotizacion.CO_NTOTAL);
+                        $('#id_OV_COBSERVACIONES').val(data.cotizacion.CO_COBSERVACIONES);
+                        $('#id_OV_CCOMENTARIO').val(data.cotizacion.CO_CCOMENTARIO);
+                        $('#id_OV_FFECHA').val(data.cotizacion.CO_FFECHA);
+                        
+                        // Manejar el tipo de cambio
+                        if (data.cotizacion.CO_TIPO_CAMBIO && data.cotizacion.CO_TIPO_CAMBIO.id) {
+                            console.log('Tipo de cambio:', data.cotizacion.CO_TIPO_CAMBIO);
+                            $('#id_OV_TIPO_CAMBIO').val(data.cotizacion.CO_TIPO_CAMBIO.id);
+                        } else {
+                            console.log('No hay tipo de cambio');
+                            $('#id_OV_TIPO_CAMBIO').val('');
+                        }
+    
+                        // Actualizar el queryset de OV_TIPO_CAMBIO basado en la fecha
+                        updateTipoCambioOptions(data.cotizacion.CO_FFECHA);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error fetching cotizacion data:', error);
+                    }
+                }); 
+            } else {
+                // Clear fields if no cotizacion is selected
+                $('#id_OV_CCLIENTE, #id_OV_NTOTAL, #id_OV_COBSERVACIONES, #id_OV_CCOMENTARIO, #id_OV_TIPO_CAMBIO, #id_OV_FFECHA').val('');
+            }
+        });
+    
+        function updateTipoCambioOptions(fecha) {
             $.ajax({
-                url: "{% url 'cotizacion_getdata' 0 %}".replace('0', cotizacionId),
+                url: "{% url 'get_tipo_cambio_options' %}",
                 type: 'GET',
+                data: { 'fecha': fecha },
                 dataType: 'json',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
                 success: function(data) {
-                    console.log('data',data);
-                    $('#id_OV_CCLIENTE').val(data.cotizacion.CO_CCLIENTE.id);
-                    $('#id_OV_NTOTAL').val(data.cotizacion.CO_NTOTAL);
-                    $('#id_OV_COBSERVACIONES').val(data.cotizacion.CO_COBSERVACIONES);
-                    $('#id_OV_CCOMENTARIO').val(data.cotizacion.CO_CCOMENTARIO);
+                    var select = $('#id_OV_TIPO_CAMBIO');
+                    select.empty();
+                    $.each(data, function(index, item) {
+                        select.append($('<option></option>').attr('value', item.id).text(item.text));
+                    });
                 },
                 error: function(xhr, status, error) {
-                    console.error('Error fetching cotizacion data:', error);
+                    console.error('Error updating tipo cambio options:', error);
                 }
-            }); 
-        } else {
-            // Clear fields if no cotizacion is selected
-            $('#id_OV_CCLIENTE, #id_OV_NTOTAL, #id_OV_COBSERVACIONES, #id_OV_CCOMENTARIO').val('');
+            });
         }
+    
+        // Actualizar opciones de tipo de cambio cuando cambia la fecha
+        $('#id_OV_FFECHA').change(function() {
+            updateTipoCambioOptions($(this).val());
+        });
     });
-});
 </script>
 <script>
 $(document).ready(function() {

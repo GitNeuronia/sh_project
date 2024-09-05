@@ -6,7 +6,7 @@ from django.core.validators import FileExtensionValidator
 from django.core.exceptions import ValidationError
 from django.forms import ModelMultipleChoiceField
 from collections import OrderedDict
-
+from decimal import Decimal, InvalidOperation
 def validate_file_size(value):
     filesize = value.file.size
     if filesize > 5242880:  # 5MB limit
@@ -417,13 +417,37 @@ class formPRODUCTO(forms.ModelForm):
             if field in self.fields:
                 self.fields[field].widget = forms.HiddenInput()
 
+class formTIPO_CAMBIO(forms.ModelForm):
+    class Meta:
+        model = TIPO_CAMBIO
+        fields = [
+            'TC_CMONEDA', 'TC_FFECHA', 'TC_NTASA'
+        ]
+        labels = {
+            'TC_CMONEDA': 'Moneda',
+            'TC_FFECHA': 'Fecha de Tipo de Cambio',
+            'TC_NTASA': 'Tasa de Cambio'
+        }
+        widgets = {
+            'TC_CMONEDA': forms.TextInput(attrs={'class': 'form-control'}),
+            'TC_FFECHA': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'TC_NTASA': forms.NumberInput(attrs={'class': 'form-control'})
+        }
+
+    def __init__(self, *args, **kwargs):
+        super(formTIPO_CAMBIO, self).__init__(*args, **kwargs)
+        for field in ['FECHA_CREACION']:
+            if field in self.fields:
+                self.fields[field].widget = forms.HiddenInput()
+
 # Form for COTIZACION model
 class formCOTIZACION(forms.ModelForm):
     class Meta:
         model = COTIZACION
         fields = [
             'CO_CLIENTE', 'CO_CNUMERO', 'CO_FFECHA', 'CO_CVALIDO_HASTA',
-            'CO_CESTADO', 'CO_NTOTAL', 'CO_COBSERVACIONES', 'CO_CCOMENTARIO'
+            'CO_CESTADO', 'CO_NTOTAL', 'CO_COBSERVACIONES', 'CO_CCOMENTARIO',
+            'CO_TIPO_CAMBIO'
         ]
         labels = {
             'CO_CLIENTE': 'Cliente',
@@ -431,9 +455,10 @@ class formCOTIZACION(forms.ModelForm):
             'CO_FFECHA': 'Fecha de cotización',
             'CO_CVALIDO_HASTA': 'Válido hasta',
             'CO_CESTADO': 'Estado',
-            'CO_NTOTAL': 'Total',
+            'CO_NTOTAL': 'Total (Moneda Local)',
             'CO_COBSERVACIONES': 'Observaciones',
-            'CO_CCOMENTARIO': 'Comentarios generales'
+            'CO_CCOMENTARIO': 'Comentarios generales',
+            'CO_TIPO_CAMBIO': 'Tipo de Cambio (Opcional)'
         }
         widgets = {
             'CO_CLIENTE': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
@@ -443,14 +468,40 @@ class formCOTIZACION(forms.ModelForm):
             'CO_CESTADO': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
             'CO_NTOTAL': forms.NumberInput(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
             'CO_COBSERVACIONES': forms.Textarea(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
-            'CO_CCOMENTARIO': forms.Textarea(attrs={'class': 'form-control', 'style': 'width: 480px;'})
+            'CO_CCOMENTARIO': forms.Textarea(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'CO_TIPO_CAMBIO': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'})
         }
 
     def __init__(self, *args, **kwargs):
         super(formCOTIZACION, self).__init__(*args, **kwargs)
+        
+        # Hacer CO_TIPO_CAMBIO opcional
+        self.fields['CO_TIPO_CAMBIO'].required = False
+        
         for field in ['CO_FFECHA_CREACION', 'CO_FFECHA_MODIFICACION', 'CO_CUSUARIO_CREADOR', 'CO_CUSUARIO_MODIFICADOR']:
             if field in self.fields:
                 self.fields[field].widget = forms.HiddenInput()
+
+        # Filtrar tipos de cambio por fecha
+        if self.is_bound and 'CO_FFECHA' in self.data:
+            try:
+                fecha_str = self.data['CO_FFECHA']
+                fecha = datetime.datetime.strptime(fecha_str, '%Y-%m-%d').date()
+                self.fields['CO_TIPO_CAMBIO'].queryset = TIPO_CAMBIO.objects.filter(TC_FFECHA=fecha)
+            except (ValueError, TypeError):
+                self.fields['CO_TIPO_CAMBIO'].queryset = TIPO_CAMBIO.objects.all()
+        elif self.instance.pk and self.instance.CO_FFECHA:
+            self.fields['CO_TIPO_CAMBIO'].queryset = TIPO_CAMBIO.objects.filter(TC_FFECHA=self.instance.CO_FFECHA)
+        else:
+            today = datetime.datetime.now().date()
+            self.fields['CO_TIPO_CAMBIO'].queryset = TIPO_CAMBIO.objects.filter(TC_FFECHA=today)
+
+        # Agregar opción vacía al campo CO_TIPO_CAMBIO
+        self.fields['CO_TIPO_CAMBIO'].empty_label = "No aplicar tipo de cambio"
+
+    def clean(self):
+        cleaned_data = super().clean()
+        return cleaned_data
 
 # Form for COTIZACION_DETALLE model
 class formCOTIZACION_DETALLE(forms.ModelForm):
@@ -490,10 +541,9 @@ class formORDEN_VENTA(forms.ModelForm):
     class Meta:
         model = ORDEN_VENTA
         fields = [
-            'OV_COTIZACION',
-            'OV_CCLIENTE', 'OV_CNUMERO', 'OV_FFECHA', 'OV_FFECHA_ENTREGA',
-            'OV_CESTADO', 'OV_NTOTAL', 'OV_COBSERVACIONES', 'OV_CCOMENTARIO'
-            
+            'OV_COTIZACION', 'OV_CCLIENTE', 'OV_CNUMERO', 'OV_FFECHA', 'OV_FFECHA_ENTREGA',
+            'OV_CESTADO', 'OV_NTOTAL', 'OV_COBSERVACIONES', 'OV_CCOMENTARIO',
+            'OV_TIPO_CAMBIO'
         ]
         labels = {
             'OV_COTIZACION': 'Cotización',
@@ -502,10 +552,10 @@ class formORDEN_VENTA(forms.ModelForm):
             'OV_FFECHA': 'Fecha de orden',
             'OV_FFECHA_ENTREGA': 'Fecha de entrega',
             'OV_CESTADO': 'Estado',
-            'OV_NTOTAL': 'Total',
+            'OV_NTOTAL': 'Total (Moneda Local)',
             'OV_COBSERVACIONES': 'Observaciones',
             'OV_CCOMENTARIO': 'Comentarios generales',
-            
+            'OV_TIPO_CAMBIO': 'Tipo de Cambio',
         }
         widgets = {
             'OV_COTIZACION': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
@@ -516,15 +566,57 @@ class formORDEN_VENTA(forms.ModelForm):
             'OV_CESTADO': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
             'OV_NTOTAL': forms.NumberInput(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
             'OV_COBSERVACIONES': forms.Textarea(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
-            'OV_CCOMENTARIO': forms.Textarea(attrs={'class': 'form-control', 'style': 'width: 480px;'})
-            
+            'OV_CCOMENTARIO': forms.Textarea(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'OV_TIPO_CAMBIO': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
         }
 
     def __init__(self, *args, **kwargs):
         super(formORDEN_VENTA, self).__init__(*args, **kwargs)
-        for field in ['OV_FFECHA_CREACION', 'OV_FFECHA_MODIFICACION', 'OV_CUSUARIO_CREADOR', 'OV_CUSUARIO_MODIFICADOR']:
-            if field in self.fields:
-                self.fields[field].widget = forms.HiddenInput()
+        
+        # Filtrar tipos de cambio por fecha
+        if 'OV_FFECHA' in self.data:
+            try:
+                fecha = self.data['OV_FFECHA']
+                self.fields['OV_TIPO_CAMBIO'].queryset = TIPO_CAMBIO.objects.filter(TC_FFECHA=fecha)
+            except (ValueError, TypeError):
+                pass
+        elif self.instance.pk and self.instance.OV_FFECHA:
+            self.fields['OV_TIPO_CAMBIO'].queryset = TIPO_CAMBIO.objects.filter(TC_FFECHA=self.instance.OV_FFECHA)
+        else:
+            # Si no hay fecha seleccionada, mostrar todos los tipos de cambio o ninguno
+            self.fields['OV_TIPO_CAMBIO'].queryset = TIPO_CAMBIO.objects.none()
+
+        # Manejar la carga inicial de datos desde la cotización
+        if self.instance.pk is None and 'OV_COTIZACION' in self.data:
+            try:
+                cotizacion_id = int(self.data.get('OV_COTIZACION'))
+                cotizacion = COTIZACION.objects.get(id=cotizacion_id)
+                self.fields['OV_CCLIENTE'].initial = cotizacion.CO_CLIENTE
+                self.fields['OV_NTOTAL'].initial = cotizacion.CO_NTOTAL
+                self.fields['OV_TIPO_CAMBIO'].initial = cotizacion.CO_TIPO_CAMBIO
+                self.fields['OV_FFECHA'].initial = cotizacion.CO_FFECHA
+                self.fields['OV_COBSERVACIONES'].initial = cotizacion.CO_COBSERVACIONES
+            except (ValueError, COTIZACION.DoesNotExist):
+                pass
+
+    def clean(self):
+        cleaned_data = super().clean()
+        cotizacion = cleaned_data.get('OV_COTIZACION')
+        
+        if cotizacion:
+            # Verificar que el cliente coincida con el de la cotización
+            if cleaned_data.get('OV_CCLIENTE') != cotizacion.CO_CLIENTE:
+                raise ValidationError("El cliente debe coincidir con el de la cotización seleccionada.")
+            
+            # Verificar que el total coincida con el de la cotización
+            if cleaned_data.get('OV_NTOTAL') != cotizacion.CO_NTOTAL:
+                raise ValidationError("El total debe coincidir con el de la cotización seleccionada.")
+            
+            # Si la cotización tiene tipo de cambio, usarlo
+            if cotizacion.CO_TIPO_CAMBIO and not cleaned_data.get('OV_TIPO_CAMBIO'):
+                cleaned_data['OV_TIPO_CAMBIO'] = cotizacion.CO_TIPO_CAMBIO
+
+        return cleaned_data
 
 # Form for ORDEN_VENTA_DETALLE model
 class formORDEN_VENTA_DETALLE(forms.ModelForm):
@@ -566,7 +658,8 @@ class formFACTURA(forms.ModelForm):
         fields = [
             'FA_CORDEN_VENTA', 'FA_CNUMERO', 'FA_FFECHA', 'FA_FFECHA_VENCIMIENTO',
             'FA_CESTADO', 'FA_NTOTAL', 'FA_COBSERVACIONES', 'FA_CESTADO_PAGO',
-            'FA_NMONTO_PAGADO', 'FA_FFECHA_ULTIMO_PAGO'
+            'FA_NMONTO_PAGADO', 'FA_FFECHA_ULTIMO_PAGO', 'FA_TIPO_CAMBIO',
+            'FA_NTOTAL_MONEDA_EXTRANJERA', 'FA_NMONTO_PAGADO_MONEDA_EXTRANJERA'
         ]
         labels = {
             'FA_CORDEN_VENTA': 'Orden de Venta',
@@ -574,23 +667,29 @@ class formFACTURA(forms.ModelForm):
             'FA_FFECHA': 'Fecha de factura',
             'FA_FFECHA_VENCIMIENTO': 'Fecha de vencimiento',
             'FA_CESTADO': 'Estado',
-            'FA_NTOTAL': 'Total',
+            'FA_NTOTAL': 'Total (Moneda Local)',
             'FA_COBSERVACIONES': 'Observaciones',
             'FA_CESTADO_PAGO': 'Estado de pago',
-            'FA_NMONTO_PAGADO': 'Monto pagado',
-            'FA_FFECHA_ULTIMO_PAGO': 'Fecha del último pago'
+            'FA_NMONTO_PAGADO': 'Monto pagado (Moneda Local)',
+            'FA_FFECHA_ULTIMO_PAGO': 'Fecha del último pago',
+            'FA_TIPO_CAMBIO': 'Tipo de Cambio',
+            'FA_NTOTAL_MONEDA_EXTRANJERA': 'Total (Moneda Extranjera)',
+            'FA_NMONTO_PAGADO_MONEDA_EXTRANJERA': 'Monto pagado (Moneda Extranjera)'
         }
         widgets = {
-            'FA_CORDEN_VENTA': forms.Select(attrs={'class': 'form-control'}),
-            'FA_CNUMERO': forms.TextInput(attrs={'class': 'form-control'}),
-            'FA_FFECHA': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'FA_FFECHA_VENCIMIENTO': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'FA_CESTADO': forms.Select(attrs={'class': 'form-control'}),
-            'FA_NTOTAL': forms.NumberInput(attrs={'class': 'form-control'}),
-            'FA_COBSERVACIONES': forms.Textarea(attrs={'class': 'form-control'}),
-            'FA_CESTADO_PAGO': forms.Select(attrs={'class': 'form-control'}),
-            'FA_NMONTO_PAGADO': forms.NumberInput(attrs={'class': 'form-control'}),
-            'FA_FFECHA_ULTIMO_PAGO': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+            'FA_CORDEN_VENTA': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'FA_CNUMERO': forms.TextInput(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'FA_FFECHA': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'style': 'width: 480px;'}),
+            'FA_FFECHA_VENCIMIENTO': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'style': 'width: 480px;'}),
+            'FA_CESTADO': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'FA_NTOTAL': forms.NumberInput(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'FA_COBSERVACIONES': forms.Textarea(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'FA_CESTADO_PAGO': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'FA_NMONTO_PAGADO': forms.NumberInput(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'FA_FFECHA_ULTIMO_PAGO': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'style': 'width: 480px;'}),
+            'FA_TIPO_CAMBIO': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'FA_NTOTAL_MONEDA_EXTRANJERA': forms.NumberInput(attrs={'class': 'form-control', 'style': 'width: 480px;', 'readonly': 'readonly'}),
+            'FA_NMONTO_PAGADO_MONEDA_EXTRANJERA': forms.NumberInput(attrs={'class': 'form-control', 'style': 'width: 480px;', 'readonly': 'readonly'})
         }
 
     def __init__(self, *args, **kwargs):
@@ -598,6 +697,30 @@ class formFACTURA(forms.ModelForm):
         for field in ['FA_FFECHA_CREACION', 'FA_FFECHA_MODIFICACION', 'FA_CUSUARIO_CREADOR', 'FA_CUSUARIO_MODIFICADOR']:
             if field in self.fields:
                 self.fields[field].widget = forms.HiddenInput()
+
+        # Filtrar tipos de cambio por fecha
+        if 'FA_FFECHA' in self.data:
+            try:
+                fecha = self.data['FA_FFECHA']
+                self.fields['FA_TIPO_CAMBIO'].queryset = TIPO_CAMBIO.objects.filter(TC_FFECHA__date=fecha)
+            except (ValueError, TypeError):
+                pass
+        elif self.instance.pk:
+            self.fields['FA_TIPO_CAMBIO'].queryset = TIPO_CAMBIO.objects.filter(TC_FFECHA__date=self.instance.FA_FFECHA)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        fa_ntotal = cleaned_data.get('FA_NTOTAL')
+        fa_nmonto_pagado = cleaned_data.get('FA_NMONTO_PAGADO')
+        fa_tipo_cambio = cleaned_data.get('FA_TIPO_CAMBIO')
+
+        if fa_ntotal and fa_tipo_cambio:
+            cleaned_data['FA_NTOTAL_MONEDA_EXTRANJERA'] = fa_ntotal / fa_tipo_cambio.TC_NTASA
+        
+        if fa_nmonto_pagado and fa_tipo_cambio:
+            cleaned_data['FA_NMONTO_PAGADO_MONEDA_EXTRANJERA'] = fa_nmonto_pagado / fa_tipo_cambio.TC_NTASA
+
+        return cleaned_data
 
 # Form for FACTURA_DETALLE model
 class formFACTURA_DETALLE(forms.ModelForm):

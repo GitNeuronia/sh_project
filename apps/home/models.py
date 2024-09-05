@@ -69,6 +69,21 @@ class PARAMETRO(models.Model):
         verbose_name = 'Parametro'
         verbose_name_plural = 'Parametros'
 
+class TIPO_CAMBIO(models.Model):
+    TC_CMONEDA = models.CharField(max_length=10,verbose_name="Moneda")
+    TC_FFECHA = models.DateField(verbose_name="Fecha de Tipo de Cambio")
+    TC_NTASA = models.DecimalField(max_digits=10,decimal_places=2,verbose_name="Tasa de Cambio")
+    FECHA_CREACION = models.DateTimeField(auto_now_add=True,verbose_name="Fecha de Creación")
+
+    def __str__(self):
+        return f"{self.TC_CMONEDA} - {self.TC_FFECHA}"
+
+    class Meta:
+        db_table = 'TIPO_CAMBIO'
+        verbose_name = "Tipo de Cambio"
+        verbose_name_plural = "Tipos de Cambio"
+        unique_together = ['TC_CMONEDA', 'TC_FFECHA']
+
 class ALERTA(models.Model):
     AL_USUARIO_ORIGEN = models.ForeignKey(User, verbose_name='Usuario origen', on_delete=models.PROTECT, related_name='alertas_enviadas')
     AL_USUARIO_DESTINO = models.ForeignKey(User, verbose_name='Usuario destino', on_delete=models.PROTECT, related_name='alertas_recibidas')
@@ -302,6 +317,16 @@ class COTIZACION(models.Model):
     CO_CUSUARIO_CREADOR = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='cotizaciones_creadas', verbose_name='Usuario creador')
     CO_CUSUARIO_MODIFICADOR = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='cotizaciones_modificadas', verbose_name='Usuario modificador')
     CO_CCOMENTARIO = models.TextField(blank=True, null=True, verbose_name='Comentarios generales')
+    CO_TIPO_CAMBIO = models.ForeignKey(TIPO_CAMBIO, on_delete=models.SET_NULL, null=True, blank=True, related_name='cotizaciones', verbose_name='Tipo de Cambio')
+    CO_NTOTAL_MONEDA_EXTRANJERA = models.DecimalField(max_digits=15, decimal_places=4,blank=True, null=True, verbose_name='Total en Moneda Extranjera')
+
+    def save(self, *args, **kwargs):
+        if self.CO_TIPO_CAMBIO and self.CO_NTOTAL:
+            self.CO_NTOTAL_MONEDA_EXTRANJERA = self.CO_NTOTAL / self.CO_TIPO_CAMBIO.TC_NTASA
+        else:
+            self.CO_NTOTAL_MONEDA_EXTRANJERA = None
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"Cotización {self.CO_CNUMERO} - {self.CO_CLIENTE}"
 
@@ -351,7 +376,15 @@ class ORDEN_VENTA(models.Model):
     OV_CUSUARIO_MODIFICADOR = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='ordenes_venta_modificadas', verbose_name='Usuario modificador')
     OV_CCOMENTARIO = models.TextField(blank=True, null=True, verbose_name='Comentarios generales')
     OV_COTIZACION = models.ForeignKey(COTIZACION, on_delete=models.SET_NULL, null=True, blank=True, related_name='ordenes_venta', verbose_name='Cotización')
+    OV_TIPO_CAMBIO = models.ForeignKey(TIPO_CAMBIO, on_delete=models.SET_NULL, blank=True, null=True, related_name='ordenes_venta', verbose_name='Tipo de Cambio')
+    OV_NTOTAL_MONEDA_EXTRANJERA = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True, verbose_name='Total en Moneda Extranjera')
 
+    def save(self, *args, **kwargs):
+        if self.OV_TIPO_CAMBIO and self.OV_NTOTAL:
+            self.OV_NTOTAL_MONEDA_EXTRANJERA = self.OV_NTOTAL / self.OV_TIPO_CAMBIO.TC_NTASA
+        else:
+            self.OV_NTOTAL_MONEDA_EXTRANJERA = None
+        super().save(*args, **kwargs)
     def __str__(self):
         return f"Orden de Venta {self.OV_CNUMERO} - {self.OV_CCLIENTE}"
 
@@ -405,6 +438,15 @@ class FACTURA(models.Model):
     ], default='PENDIENTE')
     FA_NMONTO_PAGADO = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name='Monto pagado')
     FA_FFECHA_ULTIMO_PAGO = models.DateField(null=True, blank=True, verbose_name='Fecha del último pago')
+    FA_TIPO_CAMBIO = models.ForeignKey(TIPO_CAMBIO, on_delete=models.SET_NULL, null=True, related_name='facturas', verbose_name='Tipo de Cambio')
+    FA_NTOTAL_MONEDA_EXTRANJERA = models.DecimalField(max_digits=15, decimal_places=2,blank=True, null=True, verbose_name='Total en Moneda Extranjera')
+    FA_NMONTO_PAGADO_MONEDA_EXTRANJERA = models.DecimalField(max_digits=15, decimal_places=2, default=0, blank=True, null=True, verbose_name='Monto Pagado en Moneda Extranjera')
+
+    def save(self, *args, **kwargs):
+        if self.FA_TIPO_CAMBIO:
+            self.FA_NTOTAL_MONEDA_EXTRANJERA = self.FA_NTOTAL / self.FA_TIPO_CAMBIO.TC_NTASA
+            self.FA_NMONTO_PAGADO_MONEDA_EXTRANJERA = self.FA_NMONTO_PAGADO / self.FA_TIPO_CAMBIO.TC_NTASA
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Factura {self.FA_CNUMERO} - {self.FA_CORDEN_VENTA.OV_CNUMERO}"
@@ -837,9 +879,6 @@ class FICHA_CIERRE(models.Model):
         db_table = 'FICHA_CIERRE'
         verbose_name = 'Ficha de Cierre'
         verbose_name_plural = 'Fichas de Cierre'
-
-from django.db import models
-from django.contrib.auth.models import User
 
 class FICHA_CIERRE_DETALLE(models.Model):
     OPCION_SI_NO = [

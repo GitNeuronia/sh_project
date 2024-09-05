@@ -38,6 +38,11 @@ urlpatterns = [
     path('rol_addone/', login_required(views.ROL_ADDONE), name='rol_addone'),
     path('rol_update/<int:pk>/', login_required(views.ROL_UPDATE), name='rol_update'),
 
+    # URLs para la gestión de tipos de cambio
+    path('tc_listall/', login_required(views.TC_LISTALL), name='tc_listall'),
+    path('tc_addone/', login_required(views.TC_ADDONE), name='tc_addone'),
+    path('tc_update/<int:pk>/', login_required(views.TC_UPDATE), name='tc_update'),
+
     # URLs para la gestión de categorías de proyecto
     path('catproy_listall/', login_required(views.CATEGORIA_PROYECTO_LISTALL), name='catproy_listall'),
     path('catproy_addone/', login_required(views.CATEGORIA_PROYECTO_ADDONE), name='catproy_addone'),
@@ -178,6 +183,8 @@ urlpatterns = [
     path('cotizacion_deleteline/<int:pk>', login_required(views.COTIZACION_DELETE_LINE), name='cotizacion_deleteline'),
     path('cotizacion_addline/', login_required(views.COTIZACION_ADD_LINE), name='cotizacion_addline'),
     path('check_co_numero/', login_required(views.CHECK_CO_NUMERO), name='check_co_numero'),
+
+    path('get_tipo_cambio_options/', login_required(views.get_tipo_cambio_options), name='get_tipo_cambio_options'),
 
     path('orden_venta_listall/', login_required(views.ORDEN_VENTA_LISTALL), name='orden_venta_listall'),
     path('orden_venta_addone/', login_required(views.ORDEN_VENTA_ADDONE), name='orden_venta_addone'),

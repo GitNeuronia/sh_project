@@ -3199,25 +3199,42 @@ def COTIZACION_ADDONE(request):
     if not has_auth(request.user, 'ADD_DOCUMENTOS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
         return redirect('/')
+    
     try:
         if request.method == 'POST':
             form = formCOTIZACION(request.POST)
+            print(form.instance.CO_NTOTAL_MONEDA_EXTRANJERA)
             if form.is_valid():
                 cotizacion = form.save(commit=False)
                 cotizacion.CO_CUSUARIO_CREADOR = request.user
+                
+                # Calcular CO_NTOTAL_MONEDA_EXTRANJERA si es necesario
+                if cotizacion.CO_TIPO_CAMBIO and cotizacion.CO_NTOTAL:
+                    cotizacion.CO_NTOTAL_MONEDA_EXTRANJERA = Decimal(cotizacion.CO_NTOTAL) / Decimal(cotizacion.CO_TIPO_CAMBIO.TC_NTASA)
+                else:
+                    cotizacion.CO_NTOTAL_MONEDA_EXTRANJERA = None
+                
                 cotizacion.save()
                 crear_log(request.user, f'Crear Cotización', f'Se creó la cotización: {cotizacion.CO_CNUMERO}')
                 messages.success(request, 'Cotización guardada correctamente')
                 return redirect('/cotizacion_listall/')
-        form = formCOTIZACION()
+            else:
+                # Si el formulario no es válido, imprimir los errores para depuración
+                print(form.errors)
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        messages.error(request, f'Error en el campo {field}: {error}')
+        else:
+            form = formCOTIZACION()
+        
         ctx = {
             'form': form,
             'state': 'add'
         }
         return render(request, 'home/COTIZACION/cotizacion_addone.html', ctx)
     except Exception as e:
-        print(e)
-        messages.error(request, f'Error, {str(e)}')
+        print(f"Error detallado: {str(e)}")
+        messages.error(request, f'Error al procesar la solicitud: {str(e)}')
         return redirect('/')
 
 def COTIZACION_ADD_LINE(request):
@@ -3226,53 +3243,66 @@ def COTIZACION_ADD_LINE(request):
         return redirect('/')
     try:
         if request.method == 'POST':
-
             cotizacion_id = request.POST.get('cotizacion_id')
             producto_id = request.POST.get('producto')
             cantidad = request.POST.get('cantidad')
             precio_unitario = request.POST.get('precioUnitario')
             descuento = request.POST.get('descuento')
 
+            cotizacion = COTIZACION.objects.get(id=cotizacion_id)
+            producto = PRODUCTO.objects.get(id=producto_id)
+
             # Ensure cantidad and precio_unitario are at least 1
             cantidad = max(1, int(cantidad or 0))
             precio_unitario = max(Decimal('1'), Decimal(precio_unitario or '0'))
 
-            # Recalculate subtotal
-            subtotal = Decimal(cantidad) * precio_unitario
+            # Check if there's a foreign currency exchange rate
+            if cotizacion.CO_TIPO_CAMBIO:
+                # If there's a foreign currency, we assume the input is in the foreign currency
+                exchange_rate = cotizacion.CO_TIPO_CAMBIO.TC_NTASA
+                # Convert to local currency for storage
+                precio_unitario_local = precio_unitario * exchange_rate
+                descuento_local = Decimal(descuento or '0') * exchange_rate
+            else:
+                # If there's no foreign currency, use the input values directly
+                precio_unitario_local = precio_unitario
+                descuento_local = Decimal(descuento or '0')
+
+            # Recalculate subtotal in local currency
+            subtotal_local = Decimal(cantidad) * precio_unitario_local
 
             # Ensure descuento is non-negative and not greater than subtotal
-            descuento = max(Decimal('0'), min(Decimal(descuento or '0'), subtotal))
+            descuento_local = max(Decimal('0'), min(descuento_local, subtotal_local))
 
-            cotizacion = COTIZACION.objects.get(id=cotizacion_id)
-            producto = PRODUCTO.objects.get(id=producto_id)
-
-            subtotal = Decimal(cantidad) * Decimal(precio_unitario)
-            total = subtotal - Decimal(descuento)
+            # Recalculate total in local currency
+            total_local = subtotal_local - descuento_local
 
             # Verificar si la combinación de cotización y producto ya existe
             existing_detail = COTIZACION_DETALLE.objects.filter(CD_COTIZACION=cotizacion, CD_PRODUCTO=producto).first()
             if existing_detail:
                 existing_detail.delete()
 
-            # Recalculate total
-            total = subtotal - descuento
-
             detalle = COTIZACION_DETALLE(
                 CD_COTIZACION=cotizacion,
                 CD_PRODUCTO=producto,
                 CD_NCANTIDAD=cantidad,
-                CD_NPRECIO_UNITARIO=precio_unitario,
-                CD_NSUBTOTAL=subtotal,
-                CD_NDESCUENTO=descuento,
-                CD_NTOTAL=total,
+                CD_NPRECIO_UNITARIO=precio_unitario_local,
+                CD_NSUBTOTAL=subtotal_local,
+                CD_NDESCUENTO=descuento_local,
+                CD_NTOTAL=total_local,
                 CD_CUSUARIO_CREADOR=request.user
             )
             crear_log(request.user, f'Crear Línea de Cotización', f'Se creó la línea de cotización: {detalle.CD_PRODUCTO}')
             detalle.save()
 
             # Recalculate COTIZACION.CO_NTOTAL
-            total_cotizacion = COTIZACION_DETALLE.objects.filter(CD_COTIZACION=cotizacion).aggregate(Sum('CD_NTOTAL'))['CD_NTOTAL__sum'] or 0
-            cotizacion.CO_NTOTAL = total_cotizacion
+            total_cotizacion_local = COTIZACION_DETALLE.objects.filter(CD_COTIZACION=cotizacion).aggregate(Sum('CD_NTOTAL'))['CD_NTOTAL__sum'] or 0
+            cotizacion.CO_NTOTAL = total_cotizacion_local
+
+            # If there's a foreign currency, calculate and store the foreign currency total
+            if cotizacion.CO_TIPO_CAMBIO:
+                cotizacion.CO_NTOTAL_MONEDA_EXTRANJERA = total_cotizacion_local / exchange_rate
+
             crear_log(request.user, f'Actualizar Cotización', f'Se actualizó la cotización: {cotizacion.CO_CNUMERO}')
             cotizacion.save()
 
@@ -3281,7 +3311,8 @@ def COTIZACION_ADD_LINE(request):
         
         return redirect('/cotizacion_listall/')
     except Exception as e:
-        errMsg=print(f"Error al agregar línea de cotización: {str(e)}")
+        errMsg = f"Error al agregar línea de cotización: {str(e)}"
+        print(errMsg)
         messages.error(request, errMsg)
         return JsonResponse({'error': str(errMsg)}, status=400)
 
@@ -3348,7 +3379,11 @@ def COTIZACION_GET_DATA(request, pk):
                 'CO_CESTADO': cotizacion.CO_CESTADO,
                 'CO_NTOTAL': str(cotizacion.CO_NTOTAL),
                 'CO_COBSERVACIONES': cotizacion.CO_COBSERVACIONES,
-                'CO_CCOMENTARIO': cotizacion.CO_CCOMENTARIO
+                'CO_CCOMENTARIO': cotizacion.CO_CCOMENTARIO,
+                'CO_TIPO_CAMBIO': {
+                    'id': cotizacion.CO_TIPO_CAMBIO.id if cotizacion.CO_TIPO_CAMBIO else None,
+                    'tasa': str(cotizacion.CO_TIPO_CAMBIO.TC_NTASA) if cotizacion.CO_TIPO_CAMBIO else None
+                }
             }
         }
         return JsonResponse(data)
@@ -3357,7 +3392,7 @@ def COTIZACION_GET_DATA(request, pk):
     except Exception as e:
         print("ERROR:", e)
         return JsonResponse({'error': str(e)}, status=500)
-
+    
 def COTIZACION_LISTONE_FORMAT(request, pk):
     if not has_auth(request.user, 'VER_DOCUMENTOS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
@@ -3450,14 +3485,17 @@ def ORDEN_VENTA_ADDONE(request):
         if request.method == 'POST':
             form = formORDEN_VENTA(request.POST)
             if form.is_valid():
-                print("form is valid")
                 orden_venta = form.save(commit=False)
                 orden_venta.OV_CUSUARIO_CREADOR = request.user
+                
+                # Si hay una cotización relacionada, copiar el tipo de cambio si no se ha especificado uno nuevo
+                if orden_venta.OV_COTIZACION and not orden_venta.OV_TIPO_CAMBIO:
+                    orden_venta.OV_TIPO_CAMBIO = orden_venta.OV_COTIZACION.CO_TIPO_CAMBIO
+                
                 orden_venta.save()
-                print("orden_venta saved")
-                # If there's a related cotización, copy its details
+                
+                # Copiar detalles de la cotización si existe
                 if orden_venta.OV_COTIZACION:
-                    print("orden_venta.OV_COTIZACION:", orden_venta.OV_COTIZACION)
                     try:
                         cotizacion_detalles = COTIZACION_DETALLE.objects.filter(CD_COTIZACION=orden_venta.OV_COTIZACION)
                         for cotizacion_detalle in cotizacion_detalles:
@@ -3471,54 +3509,76 @@ def ORDEN_VENTA_ADDONE(request):
                                 OVD_NTOTAL=cotizacion_detalle.CD_NTOTAL,
                                 OVD_CUSUARIO_CREADOR=request.user
                             )
-                            crear_log(request.user, f'Crear Línea de Orden de Venta', f'Se creó la línea de orden de venta: {cotizacion_detalle.CD_COTIZACION}')
                     except Exception as e:
                         print(f"Error al copiar detalles de cotización: {str(e)}")
 
                 messages.success(request, 'Orden de venta guardada correctamente')
                 return redirect('/orden_venta_listall/')
             else:
-                print("Form is not valid. Errors:", form.errors)
-                return HttpResponse(form.errors.as_text())
-        form = formORDEN_VENTA()
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        messages.error(request, f'Error en el campo {field}: {error}')
+        else:
+            form = formORDEN_VENTA()        
         ctx = {
             'form': form,
             'state': 'add'
         }
         return render(request, 'home/ORDEN_VENTA/orden_venta_addone.html', ctx)
     except Exception as e:
-        print(e)
-        messages.error(request, f'Error, {str(e)}')
+        print(f"Error detallado: {str(e)}")
+        messages.error(request, f'Error al procesar la solicitud: {str(e)}')
         return redirect('/')
+
+def get_tipo_cambio_options(request):
+    fecha = request.GET.get('fecha')
+    if fecha:
+        tipos_cambio = TIPO_CAMBIO.objects.filter(TC_FFECHA=fecha)
+    else:
+        tipos_cambio = TIPO_CAMBIO.objects.none()
     
+    options = [{'id': tc.id, 'text': f"{tc.TC_NTASA} - {tc.TC_CMONEDA}"} for tc in tipos_cambio]
+    return JsonResponse(options, safe=False)
+
 def ORDEN_VENTA_ADD_LINE(request):
     if not has_auth(request.user, 'ADD_DOCUMENTOS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
         return redirect('/')
     try:
         if request.method == 'POST':
-
             orden_venta_id = request.POST.get('orden_venta_id')
             producto_id = request.POST.get('producto')
             cantidad = request.POST.get('cantidad')
             precio_unitario = request.POST.get('precioUnitario')
             descuento = request.POST.get('descuento')
 
+            orden_venta = ORDEN_VENTA.objects.get(id=orden_venta_id)
+            producto = PRODUCTO.objects.get(id=producto_id)
+
             # Ensure cantidad and precio_unitario are at least 1
             cantidad = max(1, int(cantidad or 0))
             precio_unitario = max(Decimal('1'), Decimal(precio_unitario or '0'))
 
-            # Recalculate subtotal
-            subtotal = Decimal(cantidad) * precio_unitario
+            # Check if there's a foreign currency exchange rate
+            if orden_venta.OV_TIPO_CAMBIO:
+                # If there's a foreign currency, we assume the input is in the foreign currency
+                exchange_rate = orden_venta.OV_TIPO_CAMBIO.TC_NTASA
+                # Convert to local currency for storage
+                precio_unitario_local = precio_unitario * exchange_rate
+                descuento_local = Decimal(descuento or '0') * exchange_rate
+            else:
+                # If there's no foreign currency, use the input values directly
+                precio_unitario_local = precio_unitario
+                descuento_local = Decimal(descuento or '0')
+
+            # Recalculate subtotal in local currency
+            subtotal_local = Decimal(cantidad) * precio_unitario_local
 
             # Ensure descuento is non-negative and not greater than subtotal
-            descuento = max(Decimal('0'), min(Decimal(descuento or '0'), subtotal))
+            descuento_local = max(Decimal('0'), min(descuento_local, subtotal_local))
 
-            orden_venta = ORDEN_VENTA.objects.get(id=orden_venta_id)
-            producto = PRODUCTO.objects.get(id=producto_id)
-
-            subtotal = Decimal(cantidad) * Decimal(precio_unitario)
-            total = subtotal - Decimal(descuento)
+            # Recalculate total in local currency
+            total_local = subtotal_local - descuento_local
 
             # Verificar si la combinación de orden de venta y producto ya existe
             existing_detail = ORDEN_VENTA_DETALLE.objects.filter(OVD_ORDEN_VENTA=orden_venta, OVD_PRODUCTO=producto).first()
@@ -3526,37 +3586,40 @@ def ORDEN_VENTA_ADD_LINE(request):
                 existing_detail.delete()
                 crear_log(request.user, f'Eliminar Línea de Orden de Venta', f'Se eliminó la línea de orden de venta: {orden_venta}')
 
-            # Recalculate total
-            total = subtotal - descuento
-
             detalle = ORDEN_VENTA_DETALLE(
                 OVD_ORDEN_VENTA=orden_venta,
                 OVD_PRODUCTO=producto,
                 OVD_NCANTIDAD=cantidad,
-                OVD_NPRECIO_UNITARIO=precio_unitario,
-                OVD_NSUBTOTAL=subtotal,
-                OVD_NDESCUENTO=descuento,
-                OVD_NTOTAL=total,
+                OVD_NPRECIO_UNITARIO=precio_unitario_local,
+                OVD_NSUBTOTAL=subtotal_local,
+                OVD_NDESCUENTO=descuento_local,
+                OVD_NTOTAL=total_local,
                 OVD_CUSUARIO_CREADOR=request.user
             )
+            crear_log(request.user, f'Crear Línea de Orden de Venta', f'Se creó la línea de orden de venta: {detalle.OVD_PRODUCTO}')
             detalle.save()
-            crear_log(request.user, f'Crear Línea de Orden de Venta', f'Se creó la línea de orden de venta: {orden_venta}')
 
             # Recalculate ORDEN_VENTA.OV_NTOTAL
-            total_orden_venta = ORDEN_VENTA_DETALLE.objects.filter(OVD_ORDEN_VENTA=orden_venta).aggregate(Sum('OVD_NTOTAL'))['OVD_NTOTAL__sum'] or 0
-            orden_venta.OV_NTOTAL = total_orden_venta
-            orden_venta.save()
+            total_orden_venta_local = ORDEN_VENTA_DETALLE.objects.filter(OVD_ORDEN_VENTA=orden_venta).aggregate(Sum('OVD_NTOTAL'))['OVD_NTOTAL__sum'] or 0
+            orden_venta.OV_NTOTAL = total_orden_venta_local
+
+            # If there's a foreign currency, calculate and store the foreign currency total
+            if orden_venta.OV_TIPO_CAMBIO:
+                orden_venta.OV_NTOTAL_MONEDA_EXTRANJERA = total_orden_venta_local / exchange_rate
+
             crear_log(request.user, f'Actualizar Orden de Venta', f'Se actualizó la orden de venta: {orden_venta.OV_CNUMERO}')
+            orden_venta.save()
 
             messages.success(request, 'Línea de orden de venta agregada correctamente')
             return redirect(f'/orden_venta_listone/{orden_venta_id}')
         
         return redirect('/orden_venta_listall/')
     except Exception as e:
-        errMsg=print(f"Error al agregar línea de orden de venta: {str(e)}")
+        errMsg = f"Error al agregar línea de orden de venta: {str(e)}"
+        print(errMsg)
         messages.error(request, errMsg)
         return JsonResponse({'error': str(errMsg)}, status=400)
-
+    
 def ORDEN_VENTA_UPDATE(request, pk):
     if not has_auth(request.user, 'UPD_DOCUMENTOS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
@@ -4841,7 +4904,54 @@ def FC_ADDONE(request):
             if form.is_valid():
                 fc = form.save(commit=False)
                 fc.save()
-                crear_log(request.user, f'Crear Ficha de Cierre', f'Se creó la Ficha de Cierre: {fc.FC_NUMERO_DE_PROYECTO}')
+                crear_log(request.user, f'Crear Ficha de Cierre', f'Se creó la Ficha de Cierre: {fc.FC_NUMERO_DE_PROYECTO}')                
+
+                detalle = FICHA_CIERRE_DETALLE(
+                    FCD_FICHA_CIERRE=fc,
+                    FCD_NACTIVIDAD=1,
+                    FCD_CACTIVIDAD='Todos los entregables comprometidos fueron enviados a cliente.',
+                    FCD_CCUMPLIMIENTO='SI',
+                    FCD_COBSERVACIONES='',
+                    FCD_CUSUARIO_CREADOR=request.user
+                )
+                detalle.save()
+                detalle = FICHA_CIERRE_DETALLE(
+                    FCD_FICHA_CIERRE=fc,
+                    FCD_NACTIVIDAD=2,
+                    FCD_CACTIVIDAD='Todos los entregables comprometidos están en rev 0 o su equivalente.',
+                    FCD_CCUMPLIMIENTO='SI',
+                    FCD_COBSERVACIONES='',
+                    FCD_CUSUARIO_CREADOR=request.user
+                )
+                detalle.save()
+                detalle = FICHA_CIERRE_DETALLE(
+                    FCD_FICHA_CIERRE=fc,
+                    FCD_NACTIVIDAD=3,
+                    FCD_CACTIVIDAD='Se realizó la reunión de cierre con el cliente (presentación de resultados).',
+                    FCD_CCUMPLIMIENTO='SI',
+                    FCD_COBSERVACIONES='',
+                    FCD_CUSUARIO_CREADOR=request.user
+                )
+                detalle.save()
+                detalle = FICHA_CIERRE_DETALLE(
+                    FCD_FICHA_CIERRE=fc,
+                    FCD_NACTIVIDAD=4,
+                    FCD_CACTIVIDAD='Se emitió el último estado de pago (EDP) pactado por el cliente.',
+                    FCD_CCUMPLIMIENTO='SI',
+                    FCD_COBSERVACIONES='',
+                    FCD_CUSUARIO_CREADOR=request.user
+                )
+                detalle.save()
+                detalle = FICHA_CIERRE_DETALLE(
+                    FCD_FICHA_CIERRE=fc,
+                    FCD_NACTIVIDAD=5,
+                    FCD_CACTIVIDAD='Satisfacción al cliente.',
+                    FCD_CCUMPLIMIENTO='SI',
+                    FCD_COBSERVACIONES='',
+                    FCD_CUSUARIO_CREADOR=request.user
+                )
+                detalle.save()
+                
                 messages.success(request, 'Ficha de Cierre guardada correctamente')
                 return redirect('/fc_listall/')
         form = formFICHA_CIERRE()
@@ -5056,3 +5166,63 @@ def FC_GENERATE_PDF(request, pk):
     except Exception as e:
         error_message = f"Error: {str(e)}\n\nTraceback:\n{traceback.format_exc()}"
         return HttpResponse(error_message, content_type="text/plain", status=500)
+    
+def TC_LISTALL(request):
+    if not has_auth(request.user, 'VER_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        object_list = TIPO_CAMBIO.objects.all()
+        ctx = {
+            'object_list': object_list
+        }
+        return render(request, 'home/TIPO_CAMBIO/tc_listall.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def TC_ADDONE(request):
+    if not has_auth(request.user, 'ADD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        if request.method =='POST':
+            form = formTIPO_CAMBIO(request.POST)
+            if form.is_valid():
+                form.save()
+                crear_log(request.user, 'Crear Tipo de Cambio', f'Se creó el tipo de cambio: {form.instance.TC_CMONEDA}')
+                messages.success(request, 'Tipo de cambio guardado correctamente')
+                return redirect('/tc_listall/')
+        form = formTIPO_CAMBIO()
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/TIPO_CAMBIO/tc_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def TC_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        tipo_cambio = TIPO_CAMBIO.objects.get(id=pk)
+        if request.method == 'POST':
+            form = formTIPO_CAMBIO(request.POST, instance=tipo_cambio)
+            if form.is_valid():
+                form.save()
+                crear_log(request.user, 'Actualizar Tipo de Cambio', f'Se actualizó el tipo de cambio: {form.instance.TC_CMONEDA}')
+                messages.success(request, 'Tipo de cambio actualizado correctamente')
+                return redirect('/tc_listall/')
+        form = formTIPO_CAMBIO(instance=tipo_cambio)
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/TIPO_CAMBIO/tc_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
