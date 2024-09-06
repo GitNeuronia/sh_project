@@ -2,11 +2,18 @@
 
 {% block title %} Estado de Pago {% endblock %}
 
-<!-- Specific CSS goes HERE -->
-{% block stylesheets %}{% endblock stylesheets %}
+{% block stylesheets %}
+<style>
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    .input-group-append {
+        margin-top: 0.5rem;
+    }
+</style>
+{% endblock stylesheets %}
 
 {% block content %}
-    <!-- [ Main Content ] start -->
     <section class="pcoded-main-container">
         <div class="pcoded-content">
             <!-- [ breadcrumb ] start -->
@@ -29,7 +36,6 @@
             <!-- [ breadcrumb ] end -->
             <!-- [ Main Content ] start -->
             <div class="row">
-                <!-- [ form-element ] start -->
                 <div class="col-sm-12">
                     <div class="card">
                         <div class="card-header">
@@ -43,19 +49,65 @@
                                     <form method="POST" id="validation-form123" enctype="multipart/form-data">
                                     {% csrf_token %}
                                         {{ form.non_field_errors }}
-                                        {% for field in form %}
-                                            <div class="fieldWrapper">
-                                                {{ field.errors }}
-                                                <label class="my-1 me-2" for="{{ field.id_for_label }}">{{ field.label }}:</label>
-                                                {% if field.name == 'EP_FFECHA' or field.name == 'EP_FFECHA_VENCIMIENTO' %}
-                                                    <input type="date" name="{{ field.name }}" id="{{ field.id_for_label }}" class="form-control" style="width: 480px;" value="{{ field.value|date:'Y-m-d' }}" required>
-                                                {% else %}
-                                                    {{ field }}
-                                                {% endif %}
+                                        
+                                        <div class="row">
+                                            <!-- Información básica -->
+                                            <div class="col-md-6">
+                                                <h6 class="mt-3">Información Básica</h6>
+                                                <div class="form-group">
+                                                    <label for="{{ form.EP_PROYECTO.id_for_label }}">{{ form.EP_PROYECTO.label }}:</label>
+                                                    {{ form.EP_PROYECTO }}
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="{{ form.EP_CNUMERO.id_for_label }}">{{ form.EP_CNUMERO.label }}:</label>
+                                                    {{ form.EP_CNUMERO }}
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="{{ form.EP_FFECHA.id_for_label }}">{{ form.EP_FFECHA.label }}:</label>
+                                                    {{ form.EP_FFECHA }}
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="{{ form.EP_CESTADO.id_for_label }}">{{ form.EP_CESTADO.label }}:</label>
+                                                    {{ form.EP_CESTADO }}
+                                                </div>
                                             </div>
-                                        {% endfor %}
+                                            
+                                            <!-- Detalles financieros -->
+                                            <div class="col-md-6">
+                                                <h6 class="mt-3">Detalles Financieros</h6>
+                                                <div class="form-group">
+                                                    <label for="{{ form.EP_NTOTAL.id_for_label }}">{{ form.EP_NTOTAL.label }}:</label>
+                                                    {{ form.EP_NTOTAL }}
+                                                    <div class="input-group-append">
+                                                        <span class="input-group-text" id="tipo-cambio-info">Tipo de cambio: N/A</span>
+                                                    </div>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="{{ form.EP_CESTADO_PAGO.id_for_label }}">{{ form.EP_CESTADO_PAGO.label }}:</label>
+                                                    {{ form.EP_CESTADO_PAGO }}
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="{{ form.EP_NMONTO_PAGADO.id_for_label }}">{{ form.EP_NMONTO_PAGADO.label }}:</label>
+                                                    {{ form.EP_NMONTO_PAGADO }}
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="{{ form.EP_FFECHA_ULTIMO_PAGO.id_for_label }}">{{ form.EP_FFECHA_ULTIMO_PAGO.label }}:</label>
+                                                    {{ form.EP_FFECHA_ULTIMO_PAGO }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <h6 class="mt-3">Observaciones</h6>
+                                                <div class="form-group">
+                                                    <label for="{{ form.EP_COBSERVACIONES.id_for_label }}" hidden>{{ form.EP_COBSERVACIONES.label }}:</label>
+                                                    {{ form.EP_COBSERVACIONES }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
                                         {{ form.errors }}
-                                        <br>
                                         <div class="form-group nav justify-content-end">
                                             <button class="btn btn-success mr-4" type="submit">Guardar</button>
                                             <a class="btn btn-danger mr-1" onclick="window.history.go(-1); return false;">Volver</a>
@@ -66,12 +118,9 @@
                         </div>
                     </div>
                 </div>
-                <!-- [ form-element ] end -->
             </div>
-            <!-- [ Main Content ] end -->
         </div>
     </section>
-    <!-- [ Main Content ] end -->
 {% endblock content %}
 
 <!-- Specific Page JS goes HERE  -->
@@ -172,5 +221,22 @@ $(document).ready(function() {
         });
     });
 });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const proyectoSelect = document.getElementById('{{ form.EP_PROYECTO.id_for_label }}');
+        const tipoCambioInfo = document.getElementById('tipo-cambio-info');
+        const tiposCambio = {{ tipos_cambio|safe }};
+
+        proyectoSelect.addEventListener('change', function() {
+            const proyectoId = this.value;
+            if (tiposCambio[proyectoId]) {
+                const tipoCambio = tiposCambio[proyectoId];
+                tipoCambioInfo.textContent = `Tipo de cambio: ${tipoCambio.moneda} - ${tipoCambio.valor} (${tipoCambio.fecha})`;
+            } else {
+                tipoCambioInfo.textContent = 'Tipo de cambio: No disponible';
+            }
+        });
+    });
 </script>
 {% endblock javascripts %}

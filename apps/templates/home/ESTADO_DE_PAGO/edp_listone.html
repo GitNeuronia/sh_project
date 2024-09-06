@@ -9,6 +9,7 @@
     {% load humanize %}
     {% load i18n %}
     {% load l10n %}
+    {% load custom_filters %}
 {% endblock stylesheets %}
 
 {% block content %}	
@@ -81,7 +82,13 @@
                                   </tr>
                                   <tr>
                                     <th>Total:</th>
-                                    <td>{{edp.EP_NTOTAL}}</td>
+                                    <td>
+                                        {% if edp.EP_PROYECTO.PC_TIPO_CAMBIO %}
+                                            {{ edp.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ edp.EP_NTOTAL|floatformat:2 }}
+                                        {% else %}
+                                            CLP ${{ edp.EP_NTOTAL|floatformat:2 }}
+                                        {% endif %}
+                                    </td>
                                   </tr>
                                   <tr>
                                     <th>Observaciones:</th>
@@ -120,10 +127,34 @@
                                         </td>
                                         <td>{{ detalle.EDD_PRODUCTO }}</td>
                                         <td>{{ detalle.EDD_NCANTIDAD }}</td>
-                                        <td>{{ detalle.EDD_NPRECIO_UNITARIO }}</td>
-                                        <td>{{ detalle.EDD_NSUBTOTAL }}</td>
-                                        <td>{{ detalle.EDD_NDESCUENTO }}</td>
-                                        <td>{{ detalle.EDD_NTOTAL }}</td>
+                                        <td>
+                                            {% if edp.EP_PROYECTO.PC_TIPO_CAMBIO %}
+                                                {{ edp.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.EDD_NPRECIO_UNITARIO|floatformat:2 }}
+                                            {% else %}
+                                                CLP ${{ detalle.EDD_NPRECIO_UNITARIO|floatformat:2 }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if edp.EP_PROYECTO.PC_TIPO_CAMBIO %}
+                                                {{ edp.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.EDD_NSUBTOTAL|floatformat:2 }}
+                                            {% else %}
+                                                CLP ${{ detalle.EDD_NSUBTOTAL|floatformat:2 }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if edp.EP_PROYECTO.PC_TIPO_CAMBIO %}
+                                                {{ edp.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.EDD_NDESCUENTO|floatformat:2 }}
+                                            {% else %}
+                                                CLP ${{ detalle.EDD_NDESCUENTO|floatformat:2 }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if edp.EP_PROYECTO.PC_TIPO_CAMBIO %}
+                                                {{ edp.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.EDD_NTOTAL|floatformat:2 }}
+                                            {% else %}
+                                                CLP ${{ detalle.EDD_NTOTAL|floatformat:2 }}
+                                            {% endif %}
+                                        </td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -198,67 +229,77 @@
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-    $(document).ready(function() {
-        var table = $('#edp-lines').DataTable();
-
-        // Add line
-        $('#addLineModal, #addLineModal2').on('click', function() {
-            $('#lineForm')[0].reset();
-            $('#lineId').val('');
-            $('#lineModal').modal('show');
-        });
-
-        // Edit line
-        $('.edit-line').on('click', function() {
-            var lineId = $(this).data('id');
-            // Fetch line data and populate form
-            $.ajax({
-                url: "{% url 'edp_getline' 0 %}".replace('0', lineId),
-                method: 'GET',
-                success: function(data) {
-                    $('#lineId').val(data.id);
-                    $('#producto').val(data.producto);
-                    $('#cantidad').val(data.cantidad);
-                    $('#precioUnitario').val(data.precioUnitario);
-                    $('#descuento').val(data.descuento);
-                    $('#lineModal').modal('show');
-                },
-                error: function(xhr, status, error) {
-                    console.error("Error fetching line data:", error);
-                    var errorMessage = xhr.responseJSON && xhr.responseJSON.error ? xhr.responseJSON.error : 'Error desconocido al obtener los datos de la línea.';
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: errorMessage,
-                    });
-                }
+        $(document).ready(function() {
+            var table = $('#edp-lines').DataTable({
+                "columnDefs": [
+                    { "orderable": false, "targets": 0 }
+                ],
+                "order": [[1, 'asc']]
             });
-        });
+        
+            function setCurrency() {
+                var currency = "{% if edp.EP_PROYECTO.PC_TIPO_CAMBIO %}{{ edp.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }}{% else %}CLP{% endif %}";
+                $('#currency').text('(' + currency + ')');
+            }
 
-        // Save line
-        $('#saveLine').on('click', function() {
-            var formData = $('#lineForm').serialize();
-            formData += '&edp_id={{ edp.id }}';  // Add the edp id to the form data
-            $.ajax({
-                url: '/edp_addline/',
-                method: 'POST',
-                data: formData,
-                success: function(response) {
-                    $('#lineModal').modal('hide');
-                    // Refresh table or update row
-                    location.reload();
-                },
-                error: function(xhr, status, error) {
-                    console.error("Error saving line:", error);
-                    $('#lineModal').modal('hide');
-                    var errorMessage = xhr.responseJSON && xhr.responseJSON.error ? xhr.responseJSON.error : 'Error desconocido al agregar la línea del estado de pago.';
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: errorMessage,});
+            $('#addLineModal, #addLineModal2').on('click', function() {
+                $('#lineForm')[0].reset();
+                $('#lineId').val('');
+                setCurrency();
+                $('#lineModal').modal('show');
+            });
+
+            // Edit line
+            $('.edit-line').on('click', function() {
+                var lineId = $(this).data('id');
+                // Fetch line data and populate form
+                $.ajax({
+                    url: "{% url 'edp_getline' 0 %}".replace('0', lineId),
+                    method: 'GET',
+                    success: function(data) {
+                        $('#lineId').val(data.id);
+                        $('#producto').val(data.producto);
+                        $('#cantidad').val(data.cantidad);
+                        $('#precioUnitario').val(data.precioUnitario);
+                        $('#descuento').val(data.descuento);
+                        $('#lineModal').modal('show');
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error fetching line data:", error);
+                        var errorMessage = xhr.responseJSON && xhr.responseJSON.error ? xhr.responseJSON.error : 'Error desconocido al obtener los datos de la línea.';
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: errorMessage,
+                        });
                     }
                 });
             });
+
+            // Save line
+            $('#saveLine').on('click', function() {
+                var formData = $('#lineForm').serialize();
+                formData += '&edp_id={{ edp.id }}';  // Add the edp id to the form data
+                $.ajax({
+                    url: '/edp_addline/',
+                    method: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        $('#lineModal').modal('hide');
+                        // Refresh table or update row
+                        location.reload();
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error saving line:", error);
+                        $('#lineModal').modal('hide');
+                        var errorMessage = xhr.responseJSON && xhr.responseJSON.error ? xhr.responseJSON.error : 'Error desconocido al agregar la línea del estado de pago.';
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: errorMessage,});
+                        }
+                    });
+                });
     
             // Delete line
             $('.delete-line').on('click', function() {
@@ -310,5 +351,5 @@
                 });
             });
         });
-        </script>
-    {% endblock javascripts %}
+    </script>
+{% endblock javascripts %}

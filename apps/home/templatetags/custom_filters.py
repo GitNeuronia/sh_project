@@ -16,3 +16,4 @@ def div(value, arg):
         return Decimal(value) / Decimal(arg)
     except (ValueError, ZeroDivisionError):
         return None
+    
