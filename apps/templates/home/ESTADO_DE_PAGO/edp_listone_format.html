@@ -1,6 +1,7 @@
 {% extends "layouts/base.html" %}
 {% load humanize %}
 {% load l10n %}
+{% load custom_filters %}
 {% block title %} Estado de Pago {% endblock %} 
 
 <!-- Specific CSS goes HERE -->
@@ -120,8 +121,12 @@
 												</tr>
 												<tr>
 													<th>Total:</th>
-													<td>
-														<span>$ {{ edp.EP_NTOTAL|floatformat:0|intcomma }}</span>
+													<td>												
+														{% if edp.EP_PROYECTO.PC_TIPO_CAMBIO %}
+															<span>{{ edp.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ edp.EP_NTOTAL|floatformat:2|intcomma }}</span>
+														{% else %}
+															<span>CLP ${{ edp.EP_NTOTAL|floatformat:0|intcomma }}</span>
+														{% endif %}
 													</td>
 												</tr>
 											</tbody>
@@ -160,9 +165,27 @@
                                                                 <p class="m-0"><small>{{ detalle.EDD_PRODUCTO.PR_CDESCRIPCION|truncatechars:150|wordwrap:70|linebreaksbr }}</small></p>
 															</td>
 															<td style="text-align: right;">{{ detalle.EDD_NCANTIDAD|floatformat:0|intcomma }}</td>
-															<td style="text-align: right;">{{ detalle.EDD_NPRECIO_UNITARIO|floatformat:0|intcomma }}</td>
-															<td style="text-align: right;">{{ detalle.EDD_NDESCUENTO|floatformat:0|intcomma }}</td>
-															<td style="text-align: right;">{{ detalle.EDD_NTOTAL|floatformat:0|intcomma }}</td>
+															<td style="text-align: right;">
+																{% if edp.EP_PROYECTO.PC_TIPO_CAMBIO %}
+																	{{ edp.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.EDD_NPRECIO_UNITARIO|floatformat:2|intcomma }}
+																{% else %}
+																	CLP ${{ detalle.EDD_NPRECIO_UNITARIO|floatformat:0|intcomma }}
+																{% endif %}
+															</td>
+															<td style="text-align: right;">
+																{% if edp.EP_PROYECTO.PC_TIPO_CAMBIO %}
+																	{{ edp.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.EDD_NDESCUENTO|floatformat:2|intcomma }}
+																{% else %}
+																	CLP ${{ detalle.EDD_NDESCUENTO|floatformat:0|intcomma }}
+																{% endif %}
+															</td>
+															<td style="text-align: right;">
+																{% if edp.EP_PROYECTO.PC_TIPO_CAMBIO %}
+																	{{ edp.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.EDD_NTOTAL|floatformat:2|intcomma }}
+																{% else %}
+																	CLP ${{ detalle.EDD_NTOTAL|floatformat:0|intcomma }}
+																{% endif %}
+															</td>
 														</tr>
 													{% endfor %}
 												</tbody>
@@ -176,7 +199,13 @@
 											<tbody>
 												<tr>
 													<th>Sub Total :</th>
-													<td style="text-align: right;">{{ edp.EP_NTOTAL|floatformat:0|intcomma }}</td>
+													<td style="text-align: right;">
+														{% if edp.EP_PROYECTO.PC_TIPO_CAMBIO %}
+															{{ edp.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ edp.EP_NTOTAL|floatformat:2|intcomma }}
+														{% else %}
+															CLP ${{ edp.EP_NTOTAL|floatformat:0|intcomma }}
+														{% endif %}
+													</td>
 												</tr>
 												<tr class="text-info">
 													<td>
@@ -185,7 +214,13 @@
 													</td>
 													<td style="text-align: right;">
 														<hr />
-														<h5 class="text-primary">{{ edp.EP_NTOTAL|floatformat:0|intcomma }}</h5>
+														<h5 class="text-primary">
+															{% if edp.EP_PROYECTO.PC_TIPO_CAMBIO %}
+																{{ edp.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ edp.EP_NTOTAL|floatformat:2|intcomma }}
+															{% else %}
+																CLP ${{ edp.EP_NTOTAL|floatformat:0|intcomma }}
+															{% endif %}
+														</h5>
 													</td>
 												</tr>
 											</tbody>

@@ -2,11 +2,18 @@
 
 {% block title %} Boleta de Garantía {% endblock %} 
 
-<!-- Specific CSS goes HERE -->
-{% block stylesheets %}{% endblock stylesheets %}
+{% block stylesheets %}
+<style>
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    .input-group-append {
+        margin-top: 0.5rem;
+    }
+</style>
+{% endblock stylesheets %}
 
 {% block content %}		
-    <!-- [ Main Content ] start -->
     <section class="pcoded-main-container">
         <div class="pcoded-content">
             <!-- [ breadcrumb ] start -->
@@ -29,33 +36,78 @@
             <!-- [ breadcrumb ] end -->
             <!-- [ Main Content ] start -->
             <div class="row">
-                <!-- [ form-element ] start -->
                 <div class="col-sm-12">
                     <div class="card">
                         <div class="card-header">
                             <h5>Boleta de Garantía</h5>
                         </div>
                         <div class="card-body">
-                            <h5>Ingrese datos</h5>
+                            <h5>Ingrese datos de la Boleta de Garantía</h5>
                             <hr>
                             <div class="row">
                                 <div class="col-md-12">
                                     <form method="POST" id="validation-form123" enctype="multipart/form-data">
                                     {% csrf_token %}
                                         {{ form.non_field_errors }}
-                                        {% for field in form %}
-                                            <div class="fieldWrapper">
-                                                {{ field.errors }}
-                                                <label class="my-1 me-2" for="{{ field.id_for_label }}">{{ field.label }}:</label>
-                                                {% if field.name == 'BG_FFECHA_EMISION' or field.name == 'BG_FFECHA_VENCIMIENTO' %}
-                                                    <input type="date" name="{{ field.name }}" id="{{ field.id_for_label }}" class="form-control" style="width: 480px;" value="{{ field.value|date:'Y-m-d' }}" required>
-                                                {% else %}
-                                                    {{ field }}
-                                                {% endif %}
+                                        
+                                        <div class="row">
+                                            <!-- Información básica -->
+                                            <div class="col-md-6">
+                                                <h6 class="mt-3">Información Básica</h6>
+                                                <div class="form-group">
+                                                    <label for="{{ form.BG_PROYECTO.id_for_label }}">{{ form.BG_PROYECTO.label }}:</label>
+                                                    {{ form.BG_PROYECTO }}
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="{{ form.BG_CNUMERO.id_for_label }}">{{ form.BG_CNUMERO.label }}:</label>
+                                                    {{ form.BG_CNUMERO }}
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="{{ form.BG_CMONTO.id_for_label }}">{{ form.BG_CMONTO.label }}:</label>
+                                                    {{ form.BG_CMONTO }}
+                                                    <div class="input-group-append">
+                                                        <span class="input-group-text" id="tipo-cambio-info">Tipo de cambio: N/A</span>
+                                                    </div>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="{{ form.BG_CENTIDAD_EMISORA.id_for_label }}">{{ form.BG_CENTIDAD_EMISORA.label }}:</label>
+                                                    {{ form.BG_CENTIDAD_EMISORA }}
+                                                </div>
                                             </div>
-                                        {% endfor %}
+                                            
+                                            <!-- Fechas y estado -->
+                                            <div class="col-md-6">
+                                                <h6 class="mt-3">Fechas y Estado</h6>
+                                                <div class="form-group">
+                                                    <label for="{{ form.BG_FFECHA_EMISION.id_for_label }}">{{ form.BG_FFECHA_EMISION.label }}:</label>
+                                                    {{ form.BG_FFECHA_EMISION }}
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="{{ form.BG_FFECHA_VENCIMIENTO.id_for_label }}">{{ form.BG_FFECHA_VENCIMIENTO.label }}:</label>
+                                                    {{ form.BG_FFECHA_VENCIMIENTO }}
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="{{ form.BG_CESTADO.id_for_label }}">{{ form.BG_CESTADO.label }}:</label>
+                                                    {{ form.BG_CESTADO }}
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="{{ form.BG_CARCHIVO.id_for_label }}">{{ form.BG_CARCHIVO.label }}:</label>
+                                                    {{ form.BG_CARCHIVO }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <h6 class="mt-3">Observaciones</h6>
+                                                <div class="form-group">
+                                                    <label for="{{ form.BG_COBSERVACIONES.id_for_label }}">{{ form.BG_COBSERVACIONES.label }}:</label>
+                                                    {{ form.BG_COBSERVACIONES }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
                                         {{ form.errors }}
-                                        <br>
                                         <div class="form-group nav justify-content-end">
                                             <button class="btn btn-success mr-4" type="submit">Guardar</button>
                                             <a class="btn btn-danger mr-1" onclick="window.history.go(-1); return false;">Volver</a>
@@ -66,15 +118,11 @@
                         </div>
                     </div>
                 </div>
-                <!-- [ form-element ] end -->
             </div>
-            <!-- [ Main Content ] end -->
         </div>
     </section>
-    <!-- [ Main Content ] end -->
 {% endblock content %}
 
-<!-- Specific Page JS goes HERE  -->
 {% block javascripts %}
     <!-- bootstrap-tagsinput-latest Js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/typeahead.js/0.11.1/typeahead.bundle.min.js"></script>
@@ -84,4 +132,21 @@
     <!-- form-advance custom js -->
     <script src="/static/assets/js/pages/form-advance-custom.js"></script>
     
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const proyectoSelect = document.getElementById('{{ form.BG_PROYECTO.id_for_label }}');
+            const tipoCambioInfo = document.getElementById('tipo-cambio-info');
+            const tiposCambio = {{ tipos_cambio|safe }};
+
+            proyectoSelect.addEventListener('change', function() {
+                const proyectoId = this.value;
+                if (tiposCambio[proyectoId]) {
+                    const tipoCambio = tiposCambio[proyectoId];
+                    tipoCambioInfo.textContent = `Tipo de cambio: ${tipoCambio.moneda} - ${tipoCambio.valor} (${tipoCambio.fecha})`;
+                } else {
+                    tipoCambioInfo.textContent = 'Tipo de cambio: No disponible';
+                }
+            });
+        });
+    </script>
 {% endblock javascripts %}

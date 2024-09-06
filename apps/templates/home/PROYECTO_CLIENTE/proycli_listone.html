@@ -188,9 +188,9 @@
                                                     <i class="fas fa-exclamation-triangle"></i>
                                                     Exceso: 
                                                     {% if proyecto.PC_TIPO_CAMBIO %}
-                                                        {{ proyecto.PC_TIPO_CAMBIO.TC_CMONEDA }} {{ proyecto.PC_NCOSTO_REAL|subtract:proyecto.PC_NCOSTO_ESTIMADO|floatformat:2|intcomma }}
+                                                        {{ proyecto.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ proyecto.PC_NCOSTO_REAL|subtract:proyecto.PC_NCOSTO_ESTIMADO|floatformat:2|intcomma }}
                                                     {% else %}
-                                                        CLP {{ proyecto.PC_NCOSTO_REAL|subtract:proyecto.PC_NCOSTO_ESTIMADO|floatformat:2|intcomma }}
+                                                        CLP ${{ proyecto.PC_NCOSTO_REAL|subtract:proyecto.PC_NCOSTO_ESTIMADO|floatformat:2|intcomma }}
                                                     {% endif %}
                                                 </span>
                                             {% endif %}
@@ -202,9 +202,9 @@
                                         <div class="mb-2">
                                             <strong>Costo Estimado:</strong>
                                             {% if proyecto.PC_TIPO_CAMBIO %}
-                                                {{ proyecto.PC_TIPO_CAMBIO.TC_CMONEDA }} {{ proyecto.PC_NCOSTO_ESTIMADO|floatformat:2|intcomma }}
+                                                {{ proyecto.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ proyecto.PC_NCOSTO_ESTIMADO|floatformat:2|intcomma }}
                                             {% else %}
-                                                CLP {{ proyecto.PC_NCOSTO_ESTIMADO|floatformat:2|intcomma }}
+                                                CLP ${{ proyecto.PC_NCOSTO_ESTIMADO|floatformat:2|intcomma }}
                                             {% endif %}
                                         </div>
                                         <div class="progress mb-3" style="height: 20px;">

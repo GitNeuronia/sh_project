@@ -137,30 +137,30 @@
                                         <td>{{ detalle.CD_NCANTIDAD }}</td>
                                         <td>
                                             {% if cotizacion.CO_TIPO_CAMBIO %}
-                                                {{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.CD_NPRECIO_UNITARIO|div:cotizacion.CO_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
+                                                {{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.CD_NPRECIO_UNITARIO|div:cotizacion.CO_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
                                             {% else %}
-                                                CLP {{ detalle.CD_NPRECIO_UNITARIO|floatformat:2 }}
+                                                CLP ${{ detalle.CD_NPRECIO_UNITARIO|floatformat:2 }}
                                             {% endif %}
                                         </td>
                                         <td>
                                             {% if cotizacion.CO_TIPO_CAMBIO %}
-                                                {{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.CD_NSUBTOTAL|div:cotizacion.CO_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
+                                                {{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.CD_NSUBTOTAL|div:cotizacion.CO_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
                                             {% else %}
-                                                CLP {{ detalle.CD_NSUBTOTAL|floatformat:2 }}
+                                                CLP ${{ detalle.CD_NSUBTOTAL|floatformat:2 }}
                                             {% endif %}
                                         </td>
                                         <td>
                                             {% if cotizacion.CO_TIPO_CAMBIO %}
-                                                {{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.CD_NDESCUENTO|div:cotizacion.CO_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
+                                                {{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.CD_NDESCUENTO|div:cotizacion.CO_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
                                             {% else %}
-                                                CLP {{ detalle.CD_NDESCUENTO|floatformat:2 }}
+                                                CLP ${{ detalle.CD_NDESCUENTO|floatformat:2 }}
                                             {% endif %}
                                         </td>
                                         <td>
                                             {% if cotizacion.CO_TIPO_CAMBIO %}
-                                                {{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.CD_NTOTAL|div:cotizacion.CO_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
+                                                {{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.CD_NTOTAL|div:cotizacion.CO_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
                                             {% else %}
-                                                CLP {{ detalle.CD_NTOTAL|floatformat:2 }}
+                                                CLP ${{ detalle.CD_NTOTAL|floatformat:2 }}
                                             {% endif %}
                                         </td>
                                     </tr>
