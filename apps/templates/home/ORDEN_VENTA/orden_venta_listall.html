@@ -82,10 +82,16 @@
                                             </td>
                                             <td>{{object.OV_CCLIENTE|default_if_none:""}}</td>
                                             <td>{{object.OV_CNUMERO|default_if_none:""}}</td>
-                                            <td>{{object.OV_FFECHA|default_if_none:""}}</td>
-                                            <td>{{object.OV_FFECHA_ENTREGA|default_if_none:""}}</td>
+                                            <td>{{object.OV_FFECHA|date:"d/m/Y"|default_if_none:""}}</td>
+                                            <td>{{object.OV_FFECHA_ENTREGA|date:"d/m/Y"|default_if_none:""}}</td>
                                             <td>{{object.OV_CESTADO|default_if_none:""}}</td>
-                                            <td>{{object.OV_NTOTAL|default_if_none:""|floatformat:2}}</td>
+                                            <td>
+                                                {% if object.OV_TIPO_CAMBIO %}
+                                                    {{object.OV_TIPO_CAMBIO.TC_CMONEDA}} : {{object.OV_NTOTAL_MONEDA_EXTRANJERA|floatformat:2}}
+                                                {% else %}                                                
+                                                    CLP : {{object.OV_NTOTAL|floatformat:2}}                                                    
+                                                {% endif %}
+                                            </td>
                                             <td>{{object.OV_COBSERVACIONES|default_if_none:""}}</td>
                                         </tr>
                                         {% endfor %}

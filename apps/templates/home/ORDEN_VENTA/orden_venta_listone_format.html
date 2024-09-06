@@ -1,4 +1,5 @@
 {% extends "layouts/base.html" %}
+{% load custom_filters %}
 {% load humanize %}
 {% load l10n %}
 {% block title %} Orden de Venta {% endblock %} 
@@ -125,7 +126,11 @@
 												<tr>
 													<th>Total:</th>
 													<td>
-														<span>$ {{ orden_venta.OV_NTOTAL|floatformat:0|intcomma }}</span>
+														{% if orden_venta.OV_TIPO_CAMBIO %}
+															<span>{{ orden_venta.OV_TIPO_CAMBIO.TC_CMONEDA }} {{ orden_venta.OV_NTOTAL_MONEDA_EXTRANJERA|floatformat:2|intcomma }}</span>
+														{% else %}
+															<span>CLP {{ orden_venta.OV_NTOTAL|floatformat:0|intcomma }}</span>
+														{% endif %}
 													</td>
 												</tr>
 											</tbody>
@@ -164,9 +169,27 @@
                                                                 <p class="m-0"><small>{{ detalle.OVD_PRODUCTO.PR_CDESCRIPCION|truncatechars:150|wordwrap:70|linebreaksbr }}</small></p>
 															</td>
 															<td style="text-align: right;">{{ detalle.OVD_NCANTIDAD|floatformat:0|intcomma }}</td>
-															<td style="text-align: right;">{{ detalle.OVD_NPRECIO_UNITARIO|floatformat:0|intcomma }}</td>
-															<td style="text-align: right;">{{ detalle.OVD_NDESCUENTO|floatformat:0|intcomma }}</td>
-															<td style="text-align: right;">{{ detalle.OVD_NTOTAL|floatformat:0|intcomma }}</td>
+															<td style="text-align: right;">
+																{% if orden_venta.OV_TIPO_CAMBIO %}
+																	{{ orden_venta.OV_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.OVD_NPRECIO_UNITARIO|div:orden_venta.OV_TIPO_CAMBIO.TC_NTASA|floatformat:2|intcomma }}
+																{% else %}
+																	CLP {{ detalle.OVD_NPRECIO_UNITARIO|floatformat:0|intcomma }}
+																{% endif %}
+															</td>
+															<td style="text-align: right;">
+																{% if orden_venta.OV_TIPO_CAMBIO %}
+																	{{ orden_venta.OV_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.OVD_NDESCUENTO|div:orden_venta.OV_TIPO_CAMBIO.TC_NTASA|floatformat:2|intcomma }}
+																{% else %}
+																	CLP {{ detalle.OVD_NDESCUENTO|floatformat:0|intcomma }}
+																{% endif %}
+															</td>
+															<td style="text-align: right;">
+																{% if orden_venta.OV_TIPO_CAMBIO %}
+																	{{ orden_venta.OV_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.OVD_NTOTAL|div:orden_venta.OV_TIPO_CAMBIO.TC_NTASA|floatformat:2|intcomma }}
+																{% else %}
+																	CLP {{ detalle.OVD_NTOTAL|floatformat:0|intcomma }}
+																{% endif %}
+															</td>
 														</tr>
 													{% endfor %}
 												</tbody>
@@ -180,7 +203,13 @@
 											<tbody>
 												<tr>
 													<th>Sub Total :</th>
-													<td style="text-align: right;">{{ orden_venta.OV_NTOTAL|floatformat:0|intcomma }}</td>
+													<td style="text-align: right;">
+														{% if orden_venta.OV_TIPO_CAMBIO %}
+															{{ orden_venta.OV_TIPO_CAMBIO.TC_CMONEDA }} {{ orden_venta.OV_NTOTAL_MONEDA_EXTRANJERA|floatformat:2|intcomma }}
+														{% else %}
+															CLP {{ orden_venta.OV_NTOTAL|floatformat:0|intcomma }}
+														{% endif %}
+													</td>
 												</tr>
 												<tr class="text-info">
 													<td>
@@ -189,7 +218,13 @@
 													</td>
 													<td style="text-align: right;">
 														<hr />
-														<h5 class="text-primary">{{ orden_venta.OV_NTOTAL|floatformat:0|intcomma }}</h5>
+														<h5 class="text-primary">
+															{% if orden_venta.OV_TIPO_CAMBIO %}
+																{{ orden_venta.OV_TIPO_CAMBIO.TC_CMONEDA }} {{ orden_venta.OV_NTOTAL_MONEDA_EXTRANJERA|floatformat:2|intcomma }}
+															{% else %}
+																CLP {{ orden_venta.OV_NTOTAL|floatformat:0|intcomma }}
+															{% endif %}
+														</h5>
 													</td>
 												</tr>
 											</tbody>
@@ -212,7 +247,7 @@
 						</div>
 						<div class="row text-center">
 							<div class="col-sm-12 invoice-btn-group text-center">
-								<button type="button" class="btn waves-effect waves-light btn-primary m-b-10" onclick="closeTab()">Cerrar Ventana</button>
+								<button type="button" class="btn waves-effect waves-light btn-primary m-b-10" onclick="goBack()">Volver</button>
 							</div>
 						</div>
 					</div>
@@ -230,9 +265,15 @@
 {% block javascripts %}
 
 <script>
-	function closeTab() {
-		window.close();
-	}
+    function goBack() {
+        if (document.referrer) {
+            // Si hay una página anterior, volvemos a ella
+            window.history.back();
+        } else {
+            // Si no hay página anterior, redirigimos a la lista de órdenes de venta
+            window.location.href = "{% url 'orden_venta_listall' %}";
+        }
+    }
 </script>
 
 <script>

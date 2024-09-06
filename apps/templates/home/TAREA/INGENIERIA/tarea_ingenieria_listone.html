@@ -141,7 +141,11 @@
                                 <h5 class="mb-3">Detalles de Ingeniería</h5>
                                 <div class="detail-item">
                                     <span class="detail-label">Presupuesto:</span>
-                                    <span class="detail-value">{{ tarea.TI_NPRESUPUESTO|floatformat:0 }}</span>
+                                    {% if tarea.TI_PROYECTO_CLIENTE.PC_TIPO_CAMBIO %}
+                                        <span class="detail-value">{{ tarea.TI_PROYECTO_CLIENTE.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ tarea.TI_NPRESUPUESTO|floatformat:0 }}</span>
+                                    {% else %}
+                                        <span class="detail-value">CLP ${{ tarea.TI_NPRESUPUESTO|floatformat:0 }}</span>
+                                    {% endif %}
                                 </div>
                                 <div class="detail-item">
                                     <span class="detail-label">Tipo de Ingeniería:</span>

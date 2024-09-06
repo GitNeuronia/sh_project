@@ -89,7 +89,13 @@
                                             <td>{{object.PC_FFECHA_INICIO|date:"d/m/Y"|default_if_none:""}}</td>
                                             <td>{{object.PC_FFECHA_FIN_ESTIMADA|date:"d/m/Y"|default_if_none:""}}</td>
                                             <td>{{object.PC_CESTADO|default_if_none:""}}</td>
-                                            <td>{{object.PC_NPRESUPUESTO|floatformat:2|intcomma|default_if_none:""}}</td>
+                                            <td>
+                                                {% if object.PC_TIPO_CAMBIO %}
+                                                    {{object.PC_TIPO_CAMBIO.TC_CMONEDA}} : {{object.PC_NPRESUPUESTO|floatformat:2|intcomma}}  
+                                                {% else %}                                                
+                                                    CLP : {{object.PC_NPRESUPUESTO|floatformat:2|intcomma}}                                                    
+                                                {% endif %}
+                                            </td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
