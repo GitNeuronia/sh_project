@@ -3785,14 +3785,17 @@ def FACTURA_ADDONE(request):
         if request.method == 'POST':
             form = formFACTURA(request.POST)
             if form.is_valid():
-                print("form is valid")
                 factura = form.save(commit=False)
                 factura.FA_CUSUARIO_CREADOR = request.user
+                
+                # Si hay una orden de venta relacionada, copiar el tipo de cambio si no se ha especificado uno nuevo
+                if factura.FA_CORDEN_VENTA and not factura.FA_TIPO_CAMBIO:
+                    factura.FA_TIPO_CAMBIO = factura.FA_CORDEN_VENTA.OV_TIPO_CAMBIO
+                
                 factura.save()
-                print("factura saved")
-                # If there's a related orden_venta, copy its details
+                
+                # Copiar detalles de la orden de venta si existe
                 if factura.FA_CORDEN_VENTA:
-                    print("factura.FA_CORDEN_VENTA:", factura.FA_CORDEN_VENTA)
                     try:
                         orden_venta_detalles = ORDEN_VENTA_DETALLE.objects.filter(OVD_ORDEN_VENTA=factura.FA_CORDEN_VENTA)
                         for orden_venta_detalle in orden_venta_detalles:
@@ -3806,54 +3809,67 @@ def FACTURA_ADDONE(request):
                                 FAD_NTOTAL=orden_venta_detalle.OVD_NTOTAL,
                                 FAD_CUSUARIO_CREADOR=request.user
                             )
-                            crear_log(request.user, f'Crear Línea de Factura', f'Se creó la línea de factura: {orden_venta_detalle.OVD_ORDEN_VENTA}')
+                        crear_log(request.user, f'Crear Líneas de Factura', f'Se crearon las líneas de factura para: {factura.FA_CNUMERO}')
                     except Exception as e:
                         print(f"Error al copiar detalles de orden de venta: {str(e)}")
 
                 messages.success(request, 'Factura guardada correctamente')
                 return redirect('/factura_listall/')
             else:
-                print("Form is not valid. Errors:", form.errors)
-                return HttpResponse(form.errors.as_text())
-        form = formFACTURA()
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        messages.error(request, f'Error en el campo {field}: {error}')
+        else:
+            form = formFACTURA()
         ctx = {
             'form': form,
             'state': 'add'
         }
         return render(request, 'home/FACTURA/factura_addone.html', ctx)
     except Exception as e:
-        print(e)
-        messages.error(request, f'Error, {str(e)}')
+        print(f"Error detallado: {str(e)}")
+        messages.error(request, f'Error al procesar la solicitud: {str(e)}')
         return redirect('/')
-
+    
 def FACTURA_ADD_LINE(request):
     if not has_auth(request.user, 'ADD_DOCUMENTOS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
         return redirect('/')
     try:
         if request.method == 'POST':
-
             factura_id = request.POST.get('factura_id')
             producto_id = request.POST.get('producto')
             cantidad = request.POST.get('cantidad')
             precio_unitario = request.POST.get('precioUnitario')
             descuento = request.POST.get('descuento')
 
+            factura = FACTURA.objects.get(id=factura_id)
+            producto = PRODUCTO.objects.get(id=producto_id)
+
             # Ensure cantidad and precio_unitario are at least 1
             cantidad = max(1, int(cantidad or 0))
             precio_unitario = max(Decimal('1'), Decimal(precio_unitario or '0'))
 
-            # Recalculate subtotal
-            subtotal = Decimal(cantidad) * precio_unitario
+            # Check if there's a foreign currency exchange rate
+            if factura.FA_TIPO_CAMBIO:
+                # If there's a foreign currency, we assume the input is in the foreign currency
+                exchange_rate = factura.FA_TIPO_CAMBIO.TC_NTASA
+                # Convert to local currency for storage
+                precio_unitario_local = precio_unitario * exchange_rate
+                descuento_local = Decimal(descuento or '0') * exchange_rate
+            else:
+                # If there's no foreign currency, use the input values directly
+                precio_unitario_local = precio_unitario
+                descuento_local = Decimal(descuento or '0')
+
+            # Recalculate subtotal in local currency
+            subtotal_local = Decimal(cantidad) * precio_unitario_local
 
             # Ensure descuento is non-negative and not greater than subtotal
-            descuento = max(Decimal('0'), min(Decimal(descuento or '0'), subtotal))
+            descuento_local = max(Decimal('0'), min(descuento_local, subtotal_local))
 
-            factura = FACTURA.objects.get(id=factura_id)
-            producto = PRODUCTO.objects.get(id=producto_id)
-
-            subtotal = Decimal(cantidad) * Decimal(precio_unitario)
-            total = subtotal - Decimal(descuento)
+            # Recalculate total in local currency
+            total_local = subtotal_local - descuento_local
 
             # Verificar si la combinación de factura y producto ya existe
             existing_detail = FACTURA_DETALLE.objects.filter(FAD_FACTURA=factura, FAD_PRODUCTO=producto).first()
@@ -3861,37 +3877,40 @@ def FACTURA_ADD_LINE(request):
                 existing_detail.delete()
                 crear_log(request.user, f'Eliminar Línea de Factura', f'Se eliminó la línea de factura: {factura}')
 
-            # Recalculate total
-            total = subtotal - descuento
-
             detalle = FACTURA_DETALLE(
                 FAD_FACTURA=factura,
                 FAD_PRODUCTO=producto,
                 FAD_NCANTIDAD=cantidad,
-                FAD_NPRECIO_UNITARIO=precio_unitario,
-                FAD_NSUBTOTAL=subtotal,
-                FAD_NDESCUENTO=descuento,
-                FAD_NTOTAL=total,
+                FAD_NPRECIO_UNITARIO=precio_unitario_local,
+                FAD_NSUBTOTAL=subtotal_local,
+                FAD_NDESCUENTO=descuento_local,
+                FAD_NTOTAL=total_local,
                 FAD_CUSUARIO_CREADOR=request.user
             )
+            crear_log(request.user, f'Crear Línea de Factura', f'Se creó la línea de factura: {detalle.FAD_PRODUCTO}')
             detalle.save()
-            crear_log(request.user, f'Crear Línea de Factura', f'Se creó la línea de factura: {factura}')
 
             # Recalculate FACTURA.FA_NTOTAL
-            total_factura = FACTURA_DETALLE.objects.filter(FAD_FACTURA=factura).aggregate(Sum('FAD_NTOTAL'))['FAD_NTOTAL__sum'] or 0
-            factura.FA_NTOTAL = total_factura
-            factura.save()
+            total_factura_local = FACTURA_DETALLE.objects.filter(FAD_FACTURA=factura).aggregate(Sum('FAD_NTOTAL'))['FAD_NTOTAL__sum'] or 0
+            factura.FA_NTOTAL = total_factura_local
+
+            # If there's a foreign currency, calculate and store the foreign currency total
+            if factura.FA_TIPO_CAMBIO:
+                factura.FA_NTOTAL_MONEDA_EXTRANJERA = total_factura_local / exchange_rate
+
             crear_log(request.user, f'Actualizar Factura', f'Se actualizó la factura: {factura.FA_CNUMERO}')
+            factura.save()
 
             messages.success(request, 'Línea de factura agregada correctamente')
             return redirect(f'/factura_listone/{factura_id}')
         
         return redirect('/factura_listall/')
     except Exception as e:
-        errMsg=print(f"Error al agregar línea de factura: {str(e)}")
+        errMsg = f"Error al agregar línea de factura: {str(e)}"
+        print(errMsg)
         messages.error(request, errMsg)
         return JsonResponse({'error': str(errMsg)}, status=400)
-
+    
 def FACTURA_UPDATE(request, pk):
     if not has_auth(request.user, 'UPD_DOCUMENTOS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')

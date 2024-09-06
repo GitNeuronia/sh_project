@@ -658,8 +658,7 @@ class formFACTURA(forms.ModelForm):
         fields = [
             'FA_CORDEN_VENTA', 'FA_CNUMERO', 'FA_FFECHA', 'FA_FFECHA_VENCIMIENTO',
             'FA_CESTADO', 'FA_NTOTAL', 'FA_COBSERVACIONES', 'FA_CESTADO_PAGO',
-            'FA_NMONTO_PAGADO', 'FA_FFECHA_ULTIMO_PAGO', 'FA_TIPO_CAMBIO',
-            'FA_NTOTAL_MONEDA_EXTRANJERA', 'FA_NMONTO_PAGADO_MONEDA_EXTRANJERA'
+            'FA_NMONTO_PAGADO', 'FA_FFECHA_ULTIMO_PAGO', 'FA_TIPO_CAMBIO'
         ]
         labels = {
             'FA_CORDEN_VENTA': 'Orden de Venta',
@@ -667,14 +666,12 @@ class formFACTURA(forms.ModelForm):
             'FA_FFECHA': 'Fecha de factura',
             'FA_FFECHA_VENCIMIENTO': 'Fecha de vencimiento',
             'FA_CESTADO': 'Estado',
-            'FA_NTOTAL': 'Total (Moneda Local)',
+            'FA_NTOTAL': 'Total',
             'FA_COBSERVACIONES': 'Observaciones',
             'FA_CESTADO_PAGO': 'Estado de pago',
-            'FA_NMONTO_PAGADO': 'Monto pagado (Moneda Local)',
+            'FA_NMONTO_PAGADO': 'Monto pagado',
             'FA_FFECHA_ULTIMO_PAGO': 'Fecha del último pago',
-            'FA_TIPO_CAMBIO': 'Tipo de Cambio',
-            'FA_NTOTAL_MONEDA_EXTRANJERA': 'Total (Moneda Extranjera)',
-            'FA_NMONTO_PAGADO_MONEDA_EXTRANJERA': 'Monto pagado (Moneda Extranjera)'
+            'FA_TIPO_CAMBIO': 'Tipo de Cambio'
         }
         widgets = {
             'FA_CORDEN_VENTA': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
@@ -687,41 +684,52 @@ class formFACTURA(forms.ModelForm):
             'FA_CESTADO_PAGO': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
             'FA_NMONTO_PAGADO': forms.NumberInput(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
             'FA_FFECHA_ULTIMO_PAGO': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'style': 'width: 480px;'}),
-            'FA_TIPO_CAMBIO': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
-            'FA_NTOTAL_MONEDA_EXTRANJERA': forms.NumberInput(attrs={'class': 'form-control', 'style': 'width: 480px;', 'readonly': 'readonly'}),
-            'FA_NMONTO_PAGADO_MONEDA_EXTRANJERA': forms.NumberInput(attrs={'class': 'form-control', 'style': 'width: 480px;', 'readonly': 'readonly'})
+            'FA_TIPO_CAMBIO': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'})
         }
 
     def __init__(self, *args, **kwargs):
         super(formFACTURA, self).__init__(*args, **kwargs)
-        for field in ['FA_FFECHA_CREACION', 'FA_FFECHA_MODIFICACION', 'FA_CUSUARIO_CREADOR', 'FA_CUSUARIO_MODIFICADOR']:
-            if field in self.fields:
-                self.fields[field].widget = forms.HiddenInput()
-
+        
         # Filtrar tipos de cambio por fecha
         if 'FA_FFECHA' in self.data:
             try:
                 fecha = self.data['FA_FFECHA']
-                self.fields['FA_TIPO_CAMBIO'].queryset = TIPO_CAMBIO.objects.filter(TC_FFECHA__date=fecha)
+                self.fields['FA_TIPO_CAMBIO'].queryset = TIPO_CAMBIO.objects.filter(TC_FFECHA=fecha)
             except (ValueError, TypeError):
                 pass
-        elif self.instance.pk:
-            self.fields['FA_TIPO_CAMBIO'].queryset = TIPO_CAMBIO.objects.filter(TC_FFECHA__date=self.instance.FA_FFECHA)
+        elif self.instance.pk and self.instance.FA_FFECHA:
+            self.fields['FA_TIPO_CAMBIO'].queryset = TIPO_CAMBIO.objects.filter(TC_FFECHA=self.instance.FA_FFECHA)
+        else:
+            # Si no hay fecha seleccionada, mostrar todos los tipos de cambio o ninguno
+            self.fields['FA_TIPO_CAMBIO'].queryset = TIPO_CAMBIO.objects.none()
+
+        # Manejar la carga inicial de datos desde la orden de venta
+        if self.instance.pk is None and 'FA_CORDEN_VENTA' in self.data:
+            try:
+                orden_venta_id = int(self.data.get('FA_CORDEN_VENTA'))
+                orden_venta = ORDEN_VENTA.objects.get(id=orden_venta_id)
+                self.fields['FA_NTOTAL'].initial = orden_venta.OV_NTOTAL
+                self.fields['FA_TIPO_CAMBIO'].initial = orden_venta.OV_TIPO_CAMBIO
+                self.fields['FA_FFECHA'].initial = orden_venta.OV_FFECHA
+                self.fields['FA_COBSERVACIONES'].initial = orden_venta.OV_COBSERVACIONES
+            except (ValueError, ORDEN_VENTA.DoesNotExist):
+                pass
 
     def clean(self):
         cleaned_data = super().clean()
-        fa_ntotal = cleaned_data.get('FA_NTOTAL')
-        fa_nmonto_pagado = cleaned_data.get('FA_NMONTO_PAGADO')
-        fa_tipo_cambio = cleaned_data.get('FA_TIPO_CAMBIO')
-
-        if fa_ntotal and fa_tipo_cambio:
-            cleaned_data['FA_NTOTAL_MONEDA_EXTRANJERA'] = fa_ntotal / fa_tipo_cambio.TC_NTASA
+        orden_venta = cleaned_data.get('FA_CORDEN_VENTA')
         
-        if fa_nmonto_pagado and fa_tipo_cambio:
-            cleaned_data['FA_NMONTO_PAGADO_MONEDA_EXTRANJERA'] = fa_nmonto_pagado / fa_tipo_cambio.TC_NTASA
+        if orden_venta:
+            # Verificar que el total coincida con el de la orden de venta
+            if cleaned_data.get('FA_NTOTAL') != orden_venta.OV_NTOTAL:
+                raise ValidationError("El total debe coincidir con el de la orden de venta seleccionada.")
+            
+            # Si la orden de venta tiene tipo de cambio, usarlo
+            if orden_venta.OV_TIPO_CAMBIO and not cleaned_data.get('FA_TIPO_CAMBIO'):
+                cleaned_data['FA_TIPO_CAMBIO'] = orden_venta.OV_TIPO_CAMBIO
 
         return cleaned_data
-
+    
 # Form for FACTURA_DETALLE model
 class formFACTURA_DETALLE(forms.ModelForm):
     class Meta:
