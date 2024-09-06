@@ -1533,26 +1533,37 @@ def PROYECTO_CLIENTE_ADDONE(request):
     if not has_auth(request.user, 'ADD_PROYECTOS_CLIENTES'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
         return redirect('/')
+    
     try:
         if request.method == 'POST':
             form = formPROYECTO_CLIENTE(request.POST)
+            print(form.instance.PC_NPRESUPUESTO_MONEDA_EXTRANJERA)
             if form.is_valid():
                 proyecto = form.save(commit=False)
                 proyecto.PC_CUSUARIO_CREADOR = request.user
+                            
                 proyecto.save()
-                crear_log(request.user, 'Crear Proyecto de Cliente', f'Se creó el proyecto de cliente: {form.instance.PC_CNOMBRE}')
+                crear_log(request.user, 'Crear Proyecto de Cliente', f'Se creó el proyecto de cliente: {proyecto.PC_CNOMBRE}')
                 messages.success(request, 'Proyecto de cliente guardado correctamente')
                 return redirect('/proycli_listall/')
-        form = formPROYECTO_CLIENTE()
+            else:
+                # Si el formulario no es válido, imprimir los errores para depuración
+                print(form.errors)
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        messages.error(request, f'Error en el campo {field}: {error}')
+        else:
+            form = formPROYECTO_CLIENTE()
+        
         ctx = {
-            'form': form
+            'form': form,
+            'state': 'add'
         }
         return render(request, 'home/PROYECTO_CLIENTE/proycli_addone.html', ctx)
     except Exception as e:
-        print(e)
-        messages.error(request, f'Error, {str(e)}')
+        print(f"Error detallado: {str(e)}")
+        messages.error(request, f'Error al procesar la solicitud: {str(e)}')
         return redirect('/')
-
 def PROYECTO_CLIENTE_UPDATE(request, pk, page):
     if not has_auth(request.user, 'UPD_PROYECTOS_CLIENTES'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
@@ -1628,84 +1639,58 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
 
         for tarea in tareas_general:
             tarea.TG_NPROGRESO = int(round(float(tarea.TG_NPROGRESO)))
+            print(tarea.TG_NPROGRESO)
             tarea.tiene_asignacion_cero = tiene_asignacion_cero(
                 tarea, asignacion_empleado_general, asignacion_recurso_general, asignacion_contratista_general
             )
             if tarea.TG_NPROGRESO == 100 and tarea.TG_NDURACION_REAL is not None and tarea.TG_NDURACION_REAL > 0:                
-                    horas_reales_proyecto += tarea.TG_NDURACION_REAL    
+                horas_reales_proyecto += tarea.TG_NDURACION_REAL    
 
-                    if not asignacion_empleado_general.filter(AE_TAREA=tarea).exists():
-                        costo_real_proyecto +=  tarea.TG_NPRESUPUESTO
-                    else:
-                        for asignacion in asignacion_empleado_general:
-                            if asignacion.AE_TAREA == tarea:                            
-                                costo_real_proyecto +=  asignacion.AE_COSTO_TOTAL
-                    if not asignacion_recurso_general.filter(ART_TAREA=tarea).exists():
-                        costo_real_proyecto +=  tarea.TG_NPRESUPUESTO
-                    else:
-                        for asignacion in asignacion_recurso_general:
-                            if asignacion.ART_TAREA == tarea:                            
-                                costo_real_proyecto +=  asignacion.ART_COSTO_TOTAL
-                    if not asignacion_contratista_general.filter(AEC_TAREA=tarea).exists():
-                        costo_real_proyecto +=  tarea.TG_NPRESUPUESTO
-                    else:
-                        for asignacion in asignacion_contratista_general:
-                            if asignacion.AEC_TAREA == tarea:                            
-                                costo_real_proyecto +=  asignacion.AEC_COSTO_TOTAL
+                if asignacion_empleado_general.filter(AE_TAREA=tarea).exists():
+                    for asignacion in asignacion_empleado_general.filter(AE_TAREA=tarea):
+                        costo_real_proyecto += asignacion.AE_COSTO_TOTAL
+                if asignacion_recurso_general.filter(ART_TAREA=tarea).exists():
+                    for asignacion in asignacion_recurso_general.filter(ART_TAREA=tarea):
+                        costo_real_proyecto += asignacion.ART_COSTO_REAL
+                if asignacion_contratista_general.filter(AEC_TAREA=tarea).exists():
+                    for asignacion in asignacion_contratista_general.filter(AEC_TAREA=tarea):
+                        costo_real_proyecto += asignacion.AEC_COSTO_TOTAL
+
         for tarea in tareas_ingenieria:
             tarea.TI_NPROGRESO = int(round(float(tarea.TI_NPROGRESO)))
             tarea.tiene_asignacion_cero = tiene_asignacion_cero(
                 tarea, asignacion_empleado_ingenieria, asignacion_recurso_ingenieria, asignacion_contratista_ingenieria
             )
             if tarea.TI_NPROGRESO == 100 and tarea.TI_NDURACION_REAL is not None and tarea.TI_NDURACION_REAL > 0:
-                    
-                    horas_reales_proyecto += tarea.TI_NDURACION_REAL
-                    
-                    if not asignacion_empleado_ingenieria.filter(AE_TAREA=tarea).exists():
-                        costo_real_proyecto +=  tarea.TI_NPRESUPUESTO
-                    else:
-                        for asignacion in asignacion_empleado_ingenieria:
-                            if asignacion.AE_TAREA == tarea:                            
-                                costo_real_proyecto +=  asignacion.AE_COSTO_TOTAL
-                    if not asignacion_recurso_ingenieria.filter(ART_TAREA=tarea).exists():
-                        costo_real_proyecto +=  tarea.TI_NPRESUPUESTO
-                    else:
-                        for asignacion in asignacion_recurso_ingenieria:
-                            if asignacion.ART_TAREA == tarea:                            
-                                costo_real_proyecto +=  asignacion.ART_COSTO_TOTAL
-                    if not asignacion_contratista_ingenieria.filter(AEC_TAREA=tarea).exists():
-                        costo_real_proyecto +=  tarea.TI_NPRESUPUESTO
-                    else:
-                        for asignacion in asignacion_contratista_ingenieria:
-                            if asignacion.AEC_TAREA == tarea:                            
-                                costo_real_proyecto +=  asignacion.AEC_COSTO_TOTAL
+                horas_reales_proyecto += tarea.TI_NDURACION_REAL
+                
+                if asignacion_empleado_ingenieria.filter(AE_TAREA=tarea).exists():
+                    for asignacion in asignacion_empleado_ingenieria.filter(AE_TAREA=tarea):
+                        costo_real_proyecto += asignacion.AE_COSTO_TOTAL
+                if asignacion_recurso_ingenieria.filter(ART_TAREA=tarea).exists():
+                    for asignacion in asignacion_recurso_ingenieria.filter(ART_TAREA=tarea):
+                        costo_real_proyecto += asignacion.ART_COSTO_REAL
+                if asignacion_contratista_ingenieria.filter(AEC_TAREA=tarea).exists():
+                    for asignacion in asignacion_contratista_ingenieria.filter(AEC_TAREA=tarea):
+                        costo_real_proyecto += asignacion.AEC_COSTO_TOTAL
+
         for tarea in tareas_financiera:
             tarea.TF_NPROGRESO = int(round(float(tarea.TF_NPROGRESO)))
             tarea.tiene_asignacion_cero = tiene_asignacion_cero(
                 tarea, asignacion_empleado_financiera, asignacion_recurso_financiera, asignacion_contratista_financiera
             )
             if tarea.TF_NPROGRESO == 100 and tarea.TF_NDURACION_REAL is not None and tarea.TF_NDURACION_REAL > 0:
-                    
-                    horas_reales_proyecto += tarea.TF_NDURACION_REAL
-                    # Si la tarea no tiene asignaciones, se suma este valor
-                    if not asignacion_empleado_financiera.filter(AE_TAREA=tarea).exists():                            
-                        costo_real_proyecto +=  tarea.TF_NMONTO                    
-                    else:
-                        for asignacion in asignacion_empleado_financiera:
-                            if asignacion.AE_TAREA == tarea:                            
-                                costo_real_proyecto +=  asignacion.AE_COSTO_TOTAL
-                    if not asignacion_recurso_financiera.filter(ART_TAREA=tarea).exists():
-                        costo_real_proyecto +=  tarea.TF_NMONTO
-                    else:
-                        for asignacion in asignacion_recurso_financiera:
-                            if asignacion.ART_TAREA == tarea:                            
-                                costo_real_proyecto +=  asignacion.ART_COSTO_TOTAL
-                    if not asignacion_contratista_financiera.filter(AEC_TAREA=tarea).exists():
-                        costo_real_proyecto +=  tarea.TF_NMONTO
-                    else:
-                        for asignacion in asignacion_contratista_financiera:
-                            if asignacion.AEC_TAREA == tarea:                            
-                                costo_real_proyecto +=  asignacion.AEC_COSTO_TOTAL
+                horas_reales_proyecto += tarea.TF_NDURACION_REAL
+                
+                if asignacion_empleado_financiera.filter(AE_TAREA=tarea).exists():
+                    for asignacion in asignacion_empleado_financiera.filter(AE_TAREA=tarea):
+                        costo_real_proyecto += asignacion.AE_COSTO_TOTAL
+                if asignacion_recurso_financiera.filter(ART_TAREA=tarea).exists():
+                    for asignacion in asignacion_recurso_financiera.filter(ART_TAREA=tarea):
+                        costo_real_proyecto += asignacion.ART_COSTO_REAL
+                if asignacion_contratista_financiera.filter(AEC_TAREA=tarea).exists():
+                    for asignacion in asignacion_contratista_financiera.filter(AEC_TAREA=tarea):
+                        costo_real_proyecto += asignacion.AEC_COSTO_TOTAL
         if horas_reales_proyecto != proyecto.PC_NHORAS_REALES:
             print('horas_reales_proyecto', horas_reales_proyecto)
             print('proyecto.PC_NHORAS_REALES', proyecto.PC_NHORAS_REALES)
@@ -1713,7 +1698,7 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
             proyecto.save()
         if costo_real_proyecto != proyecto.PC_NCOSTO_REAL:
             print('costo_real_proyecto', costo_real_proyecto)
-            print('proyecto.PC_NCOSTO_REAL', proyecto.PC_NCOSTO_REAL)
+            print('proyecto.PC_NCOSTO_REAL', proyecto.PC_NCOSTO_REAL)            
             proyecto.PC_NCOSTO_REAL = costo_real_proyecto
             proyecto.save()
         max_costo = max(proyecto.PC_NCOSTO_REAL, proyecto.PC_NCOSTO_ESTIMADO)
@@ -1957,7 +1942,7 @@ def TAREA_GENERAL_ADDONE(request, page):
                         AEC_FFECHA_FINALIZACION=tarea.TG_FFECHA_FIN_ESTIMADA,
                         AEC_CUSUARIO_CREADOR=request.user
                     )
-                    crear_log(request.user, 'Crear Asignación de Contratista a Tarea General', f'Se creó la asignación de contratista a tarea general: {tarea.TG_CNOMBRE} para el contratista: {id_emp.EM_CNOMBRE}')
+                    crear_log(request.user, 'Crear Asignación de Contratista a Tarea General', f'Se creó la asignación de contratista a tarea general: {tarea.TG_CNOMBRE} para el contratista: {id_emp.EC_CNOMBRE}')
                     asignacion.save()
 
                 # Procesar recursos                
@@ -1985,11 +1970,25 @@ def TAREA_GENERAL_ADDONE(request, page):
             else:
                 messages.error(request, 'Por favor, corrija los errores en el formulario.')
         
+        # Obtener todos los proyectos y sus tipos de cambio
+        proyectos = PROYECTO_CLIENTE.objects.all()
+        tipos_cambio = {}
+        for proyecto in proyectos:
+            if proyecto.PC_TIPO_CAMBIO:
+                tipos_cambio[proyecto.id] = {
+                    'moneda': proyecto.PC_TIPO_CAMBIO.TC_CMONEDA,
+                    'fecha': proyecto.PC_TIPO_CAMBIO.TC_FFECHA.strftime('%Y-%m-%d'),
+                    'valor': float(proyecto.PC_TIPO_CAMBIO.TC_NTASA)
+                }
+            else:
+                tipos_cambio[proyecto.id] = None
+
         ctx = {
             'form': form,
             'form_asignacion_empleado': form_asignacion_empleado,
             'form_asignacion_contratista': form_asignacion_contratista,
-            'form_asignacion_recurso': form_asignacion_recurso
+            'form_asignacion_recurso': form_asignacion_recurso,
+            'tipos_cambio': json.dumps(tipos_cambio, cls=DjangoJSONEncoder)
         }
         return render(request, 'home/TAREA/GENERAL/tarea_general_addone.html', ctx)
     except Exception as e:
@@ -2040,6 +2039,8 @@ def TAREA_GENERAL_UPDATE_ASIGNACIONES(request, pk, page):
         return redirect('/')
     try:
         tarea = TAREA_GENERAL.objects.get(id=pk)
+        idproyecto = tarea.TG_PROYECTO_CLIENTE.id
+        proyecto = PROYECTO_CLIENTE.objects.get(id=idproyecto)
         form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_GENERAL()
         form_asignacion_contratista = formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL()
         form_asignacion_recurso = formASIGNACION_RECURSO_TAREA_GENERAL()
@@ -2131,7 +2132,8 @@ def TAREA_GENERAL_UPDATE_ASIGNACIONES(request, pk, page):
             'empleados_asignados_ids': empleados_asignados_ids,
             'contratistas_asignados_ids': contratistas_asignados_ids,
             'recursos_asignados_data': json.dumps(recursos_asignados_data),
-            'page': page
+            'page': page,
+            'proyecto':proyecto
         }
         return render(request, 'home/TAREA/GENERAL/tarea_general_update_asignaciones.html', ctx)
     except Exception as e:
@@ -2290,12 +2292,26 @@ def TAREA_INGENIERIA_ADDONE(request, page):
             else:
                 messages.error(request, 'Por favor, corrija los errores en el formulario.')
         
+        # Obtener todos los proyectos y sus tipos de cambio
+        proyectos = PROYECTO_CLIENTE.objects.all()
+        tipos_cambio = {}
+        for proyecto in proyectos:
+            if proyecto.PC_TIPO_CAMBIO:
+                tipos_cambio[proyecto.id] = {
+                    'moneda': proyecto.PC_TIPO_CAMBIO.TC_CMONEDA,
+                    'fecha': proyecto.PC_TIPO_CAMBIO.TC_FFECHA.strftime('%Y-%m-%d'),
+                    'valor': float(proyecto.PC_TIPO_CAMBIO.TC_NTASA)
+                }
+            else:
+                tipos_cambio[proyecto.id] = None
+        
         ctx = {
             'form': form,
             'form_asignacion_empleado': form_asignacion_empleado,
             'form_asignacion_contratista': form_asignacion_contratista,
             'form_asignacion_recurso': form_asignacion_recurso,
-            'page': page
+            'page': page,
+            'tipos_cambio': json.dumps(tipos_cambio, cls=DjangoJSONEncoder),
         }
         return render(request, 'home/TAREA/INGENIERIA/tarea_ingenieria_addone.html', ctx)
     except Exception as e:
@@ -2603,12 +2619,26 @@ def TAREA_FINANCIERA_ADDONE(request, page):
             else:
                 messages.error(request, 'Por favor, corrija los errores en el formulario.')
         
+        # Obtener todos los proyectos y sus tipos de cambio
+        proyectos = PROYECTO_CLIENTE.objects.all()
+        tipos_cambio = {}
+        for proyecto in proyectos:
+            if proyecto.PC_TIPO_CAMBIO:
+                tipos_cambio[proyecto.id] = {
+                    'moneda': proyecto.PC_TIPO_CAMBIO.TC_CMONEDA,
+                    'fecha': proyecto.PC_TIPO_CAMBIO.TC_FFECHA.strftime('%Y-%m-%d'),
+                    'valor': float(proyecto.PC_TIPO_CAMBIO.TC_NTASA)
+                }
+            else:
+                tipos_cambio[proyecto.id] = None
+        
         ctx = {
             'form': form,
             'form_asignacion_empleado': form_asignacion_empleado,
             'form_asignacion_contratista': form_asignacion_contratista,
             'form_asignacion_recurso': form_asignacion_recurso,            
-            'page': page
+            'page': page,
+            'tipos_cambio': json.dumps(tipos_cambio, cls=DjangoJSONEncoder),
         }
         return render(request, 'home/TAREA/FINANCIERA/tarea_financiera_addone.html', ctx)
     except Exception as e:
@@ -2829,6 +2859,12 @@ def TAREA_FINANCIERA_DEPENDENCIA_ADDONE(request, pk):
         return redirect('/')
 
 # ----------TAREA UPDATE DATA--------------
+
+def format_decimal(value):
+    if value is None:
+        return '0.00'
+    return str(Decimal(value).quantize(Decimal('0.01')))
+
 def tarea_update_data(request, tipo_tarea, pk):
     if not has_auth(request.user, 'UPD_TAREAS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
@@ -2838,23 +2874,63 @@ def tarea_update_data(request, tipo_tarea, pk):
         AsignacionEmpleado = ASIGNACION_EMPLEADO_TAREA_GENERAL
         AsignacionContratista = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL
         AsignacionRecurso = ASIGNACION_RECURSO_TAREA_GENERAL
+        progreso_field = 'TG_NPROGRESO'
+        duracion_real_field = 'TG_NDURACION_REAL'
+        proyecto_field = 'TG_PROYECTO_CLIENTE'
     elif tipo_tarea == 'ingenieria':
         Tarea = TAREA_INGENIERIA
         AsignacionEmpleado = ASIGNACION_EMPLEADO_TAREA_INGENIERIA
         AsignacionContratista = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA
         AsignacionRecurso = ASIGNACION_RECURSO_TAREA_INGENIERIA
+        progreso_field = 'TI_NPROGRESO'
+        duracion_real_field = 'TI_NDURACION_REAL'
+        proyecto_field = 'TI_PROYECTO_CLIENTE'
     elif tipo_tarea == 'financiera':
         Tarea = TAREA_FINANCIERA
         AsignacionEmpleado = ASIGNACION_EMPLEADO_TAREA_FINANCIERA
         AsignacionContratista = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_FINANCIERA
         AsignacionRecurso = ASIGNACION_RECURSO_TAREA_FINANCIERA
+        progreso_field = 'TF_NPROGRESO'
+        duracion_real_field = 'TF_NDURACION_REAL'
+        proyecto_field = 'TF_PROYECTO_CLIENTE'
     else:
         return HttpResponseBadRequest("Tipo de tarea no válido")
 
     tarea = get_object_or_404(Tarea, id=pk)
+    proyecto = getattr(tarea, proyecto_field)
+    tipo_cambio = proyecto.PC_TIPO_CAMBIO if proyecto.PC_TIPO_CAMBIO else None
+    
     empleados_asignados = AsignacionEmpleado.objects.filter(AE_TAREA=tarea)
     contratistas_asignados = AsignacionContratista.objects.filter(AEC_TAREA=tarea)
     recursos_asignados = AsignacionRecurso.objects.filter(ART_TAREA=tarea)
+
+    empleados_formateados = []
+    for empleado in empleados_asignados:
+        empleados_formateados.append({
+            'id': empleado.id,
+            'AE_EMPLEADO': empleado.AE_EMPLEADO,
+            'AE_COSTO_REAL': format_decimal(empleado.AE_COSTO_REAL),
+            'AE_HORAS_REALES': format_decimal(empleado.AE_HORAS_REALES),
+        })
+
+    contratistas_formateados = []
+    for contratista in contratistas_asignados:
+        contratistas_formateados.append({
+            'id': contratista.id,
+            'AEC_EMPLEADO': contratista.AEC_EMPLEADO,
+            'AEC_COSTO_REAL': format_decimal(contratista.AEC_COSTO_REAL),
+            'AEC_HORAS_REALES': format_decimal(contratista.AEC_HORAS_REALES),
+        })
+
+    recursos_formateados = []
+    for recurso in recursos_asignados:
+        recursos_formateados.append({
+            'id': recurso.id,
+            'ART_PRODUCTO': recurso.ART_PRODUCTO,
+            'ART_CANTIDAD': format_decimal(recurso.ART_CANTIDAD),
+            'ART_COSTO_UNITARIO': format_decimal(recurso.ART_COSTO_UNITARIO),
+            'ART_HORAS_REALES': format_decimal(recurso.ART_HORAS_REALES),
+        })
 
     if request.method == 'POST':
         try:
@@ -2927,10 +3003,13 @@ def tarea_update_data(request, tipo_tarea, pk):
 
     ctx = {
         'tarea': tarea,
-        'empleados_asignados': empleados_asignados,
-        'contratistas_asignados': contratistas_asignados,
-        'recursos_asignados': recursos_asignados,
-        'tipo_tarea': tipo_tarea
+        'empleados_asignados': empleados_formateados,
+        'contratistas_asignados': contratistas_formateados,
+        'recursos_asignados': recursos_formateados,
+        'porcentaje_avance': format_decimal(getattr(tarea, progreso_field)),
+        'horas_tarea': format_decimal(getattr(tarea, duracion_real_field)),
+        'tipo_tarea': tipo_tarea,
+        'tipo_cambio': tipo_cambio
     }
     return render(request, 'home/TAREA/tarea_update_data.html', ctx)
 # ----------TAREA UPDATE DATA--------------

@@ -141,7 +141,11 @@
                                 <h5 class="mb-3">Detalles Generales</h5>
                                 <div class="detail-item">
                                     <span class="detail-label">Presupuesto:</span>
-                                    <span class="detail-value">{{ tarea.TG_NPRESUPUESTO|floatformat:0 }}</span>
+                                    {% if tarea.TG_PROYECTO_CLIENTE.PC_TIPO_CAMBIO %}
+                                        <span class="detail-value">{{tarea.TG_PROYECTO_CLIENTE.PC_TIPO_CAMBIO.TC_CMONEDA}} ${{ tarea.TG_NPRESUPUESTO|floatformat:0 }}</span>
+                                    {% else %}
+                                        <span class="detail-value">CLP ${{ tarea.TG_NPRESUPUESTO|floatformat:0 }}</span>
+                                    {% endif %}
                                 </div>
                             </div>
                             <div class="col-md-6">

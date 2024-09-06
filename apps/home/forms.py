@@ -960,46 +960,115 @@ class formANEXO(forms.ModelForm):
         self.fields['AN_CUSUARIO_MODIFICADOR'].widget = forms.HiddenInput()
 
 # Form for PROYECTO_CLIENTE model
+
 class formPROYECTO_CLIENTE(forms.ModelForm):
     class Meta:
         model = PROYECTO_CLIENTE
         fields = [
-            'PC_CCODIGO', 'PC_CNOMBRE', 'PC_CDESCRIPCION', 'PC_CLIENTE', 'PC_CCATEGORIA',
-            'PC_CTIPO', 'PC_CUNIDAD_NEGOCIO','PC_FFECHA_INICIO', 'PC_FFECHA_FIN_ESTIMADA', 'PC_FFECHA_FIN_REAL',
-            'PC_CESTADO', 'PC_NPRESUPUESTO', 'PC_COBSERVACIONES', 'PC_CONTACTO_CLIENTE',
-            'PC_DIRECCION_CLIENTE', 'PC_NVALOR_HORA', 'PC_NHORAS_ESTIMADAS', 'PC_NCOSTO_ESTIMADO',
-            'PC_NHORAS_REALES', 'PC_NCOSTO_REAL', 'PC_NMARGEN'
+            # Basic Project Information
+            'PC_CCODIGO', 'PC_CNOMBRE', 'PC_CDESCRIPCION',
+            'PC_CCATEGORIA', 'PC_CTIPO', 'PC_CUNIDAD_NEGOCIO',
+            
+            # Client Information
+            'PC_CLIENTE', 'PC_CONTACTO_CLIENTE', 'PC_DIRECCION_CLIENTE',
+            
+            # Project Dates
+            'PC_FFECHA_INICIO', 'PC_FFECHA_FIN_ESTIMADA', 'PC_FFECHA_FIN_REAL',
+            
+            # Project Status and Observations
+            'PC_CESTADO', 'PC_COBSERVACIONES',
+            
+            # Financial Information
+            'PC_NPRESUPUESTO', 'PC_TIPO_CAMBIO',
+            
+            # Time and Cost Estimates
+            'PC_NVALOR_HORA', 'PC_NHORAS_ESTIMADAS', 'PC_NCOSTO_ESTIMADO',
+            
+            # Actual Time and Cost (can be filled later)
+            'PC_NHORAS_REALES', 'PC_NCOSTO_REAL',
+            
+            # Profit Margin
+            'PC_NMARGEN'
         ]
+        labels = {
+            'PC_CCODIGO': 'Código de proyecto',
+            'PC_CNOMBRE': 'Nombre del proyecto',
+            'PC_CDESCRIPCION': 'Descripción del proyecto',
+            'PC_CCATEGORIA': 'Categoría del proyecto',
+            'PC_CTIPO': 'Tipo de proyecto',
+            'PC_CUNIDAD_NEGOCIO': 'Unidad de Negocio',
+            'PC_CLIENTE': 'Cliente',
+            'PC_CONTACTO_CLIENTE': 'Contacto del cliente',
+            'PC_DIRECCION_CLIENTE': 'Dirección del cliente',
+            'PC_FFECHA_INICIO': 'Fecha de inicio',
+            'PC_FFECHA_FIN_ESTIMADA': 'Fecha de fin estimada',
+            'PC_FFECHA_FIN_REAL': 'Fecha de fin real',
+            'PC_CESTADO': 'Estado del proyecto',
+            'PC_COBSERVACIONES': 'Observaciones',
+            'PC_NPRESUPUESTO': 'Presupuesto',
+            'PC_TIPO_CAMBIO': 'Tipo de Cambio (Opcional)',
+            'PC_NVALOR_HORA': 'Valor por hora',
+            'PC_NHORAS_ESTIMADAS': 'Horas estimadas',
+            'PC_NCOSTO_ESTIMADO': 'Costo estimado',
+            'PC_NHORAS_REALES': 'Horas reales',
+            'PC_NCOSTO_REAL': 'Costo real',
+            'PC_NMARGEN': 'Margen (%)'
+        }
         widgets = {
-            'PC_CCODIGO': forms.TextInput(attrs={'class': 'form-control'}),
-            'PC_CNOMBRE': forms.TextInput(attrs={'class': 'form-control'}),
-            'PC_CDESCRIPCION': forms.Textarea(attrs={'class': 'form-control'}),
-            'PC_CLIENTE': forms.Select(attrs={'class': 'form-control'}),
-            'PC_CCATEGORIA': forms.Select(attrs={'class': 'form-control'}),
-            'PC_CTIPO': forms.Select(attrs={'class': 'form-control'}),
-            'PC_CUNIDAD_NEGOCIO': forms.Select(attrs={'class': 'form-control'}),
-            'PC_FFECHA_INICIO': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'PC_FFECHA_FIN_ESTIMADA': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'PC_FFECHA_FIN_REAL': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'PC_CESTADO': forms.TextInput(attrs={'class': 'form-control'}),
-            'PC_NPRESUPUESTO': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
-            'PC_COBSERVACIONES': forms.Textarea(attrs={'class': 'form-control'}),
-            'PC_CONTACTO_CLIENTE': forms.Select(attrs={'class': 'form-control'}),
-            'PC_DIRECCION_CLIENTE': forms.Select(attrs={'class': 'form-control'}),
-            'PC_NVALOR_HORA': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
-            'PC_NHORAS_ESTIMADAS': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
-            'PC_NCOSTO_ESTIMADO': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
-            'PC_NHORAS_REALES': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
-            'PC_NCOSTO_REAL': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
-            'PC_NMARGEN': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'PC_CCODIGO': forms.TextInput(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'PC_CNOMBRE': forms.TextInput(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'PC_CDESCRIPCION': forms.Textarea(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'PC_CCATEGORIA': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'PC_CTIPO': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'PC_CUNIDAD_NEGOCIO': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'PC_CLIENTE': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'PC_CONTACTO_CLIENTE': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'PC_DIRECCION_CLIENTE': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'PC_FFECHA_INICIO': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'style': 'width: 480px;'}),
+            'PC_FFECHA_FIN_ESTIMADA': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'style': 'width: 480px;'}),
+            'PC_FFECHA_FIN_REAL': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'style': 'width: 480px;'}),
+            'PC_CESTADO': forms.TextInput(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'PC_COBSERVACIONES': forms.Textarea(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'PC_NPRESUPUESTO': forms.NumberInput(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'PC_TIPO_CAMBIO': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'PC_NVALOR_HORA': forms.NumberInput(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'PC_NHORAS_ESTIMADAS': forms.NumberInput(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'PC_NCOSTO_ESTIMADO': forms.NumberInput(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'PC_NHORAS_REALES': forms.NumberInput(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'PC_NCOSTO_REAL': forms.NumberInput(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'PC_NMARGEN': forms.NumberInput(attrs={'class': 'form-control', 'style': 'width: 480px;'})
         }
 
     def __init__(self, *args, **kwargs):
         super(formPROYECTO_CLIENTE, self).__init__(*args, **kwargs)
-        for field in ['PC_FFECHA_CREACION', 'PC_FFECHA_MODIFICACION', 
-                      'PC_CUSUARIO_CREADOR', 'PC_CUSUARIO_MODIFICADOR']:
+        
+        self.fields['PC_TIPO_CAMBIO'].required = False
+        self.fields['PC_FFECHA_FIN_REAL'].required = False
+        
+        for field in ['PC_FFECHA_CREACION', 'PC_FFECHA_MODIFICACION', 'PC_CUSUARIO_CREADOR', 'PC_CUSUARIO_MODIFICADOR']:
             if field in self.fields:
                 self.fields[field].widget = forms.HiddenInput()
+
+        # Comentado el filtro de tipo de cambio
+        '''
+        if self.is_bound and 'PC_FFECHA_INICIO' in self.data:
+            try:
+                fecha_str = self.data['PC_FFECHA_INICIO']
+                fecha = datetime.datetime.strptime(fecha_str, '%Y-%m-%d').date()
+                self.fields['PC_TIPO_CAMBIO'].queryset = TIPO_CAMBIO.objects.filter(TC_FFECHA=fecha)
+            except (ValueError, TypeError):
+                self.fields['PC_TIPO_CAMBIO'].queryset = TIPO_CAMBIO.objects.all()
+        elif self.instance.pk and self.instance.PC_FFECHA_INICIO:
+            self.fields['PC_TIPO_CAMBIO'].queryset = TIPO_CAMBIO.objects.filter(TC_FFECHA=self.instance.PC_FFECHA_INICIO)
+        else:
+            today = datetime.datetime.now().date()
+            self.fields['PC_TIPO_CAMBIO'].queryset = TIPO_CAMBIO.objects.filter(TC_FFECHA=today)
+        '''
+
+        # Asegurarse de que todos los tipos de cambio estén disponibles
+        self.fields['PC_TIPO_CAMBIO'].queryset = TIPO_CAMBIO.objects.all()
+
+        self.fields['PC_TIPO_CAMBIO'].empty_label = "No aplicar tipo de cambio"
 
     def clean(self):
         cleaned_data = super().clean()

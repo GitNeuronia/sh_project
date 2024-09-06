@@ -775,7 +775,8 @@ class PROYECTO_CLIENTE(models.Model):
     PC_NHORAS_REALES = models.PositiveIntegerField(default=0, verbose_name='Horas reales')
     PC_NCOSTO_REAL = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name='Costo real')
     PC_NMARGEN = models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Margen (%)')
-
+    PC_TIPO_CAMBIO = models.ForeignKey('TIPO_CAMBIO', on_delete=models.SET_NULL, null=True, blank=True, related_name='proyectos', verbose_name='Tipo de Cambio')    
+    
     def __str__(self):
         return f"Proyecto {self.PC_CCODIGO} - {self.PC_CNOMBRE}"
 
