@@ -158,7 +158,14 @@
                                 <div class="col-md-4">
                                     <h5 class="mb-3 text-primary"><i class="fas fa-chart-line mr-2"></i>Finanzas y Progreso</h5>
                                     <ul class="list-unstyled">
-                                        <li class="mb-2"><i class="fas fa-money-bill-wave mr-2 text-muted"></i><strong>Presupuesto:</strong> ${{ proyecto.PC_NPRESUPUESTO|floatformat:0|intcomma }}</li>
+                                        <li class="mb-2">
+                                            <i class="fas fa-money-bill-wave mr-2 text-muted"></i><strong>Presupuesto:</strong>
+                                            {% if proyecto.PC_TIPO_CAMBIO %}
+                                                {{ proyecto.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ proyecto.PC_NPRESUPUESTO|floatformat:2|intcomma }}
+                                            {% else %}
+                                                CLP ${{ proyecto.PC_NPRESUPUESTO|floatformat:2|intcomma }}
+                                            {% endif %}
+                                        </li>
                                         {% comment %} <li class="mb-2"><i class="fas fa-clock mr-2 text-muted"></i><strong>Valor/hora:</strong> ${{ proyecto.PC_NVALOR_HORA|floatformat:0|intcomma }}</li> {% endcomment %}
                                         <li class="mb-2"><i class="fas fa-percentage mr-2 text-muted"></i><strong>Margen:</strong> {{ proyecto.PC_NMARGEN|floatformat:2 }}%</li>
                                         <li class="mb-2"><i class="fas fa-hourglass-half mr-2 text-muted"></i><strong>Horas est/real:</strong> {{ proyecto.PC_NHORAS_ESTIMADAS }} / {{ proyecto.PC_NHORAS_REALES }}</li>
@@ -170,28 +177,40 @@
                                     <h5 class="mb-3 text-primary"><i class="fas fa-calculator mr-2"></i>Resumen de Costos</h5>
                                     <div class="progress-group">
                                         <div class="mb-2">
-                                            <strong>Costo Real:</strong> ${{ proyecto.PC_NCOSTO_REAL|floatformat:0|intcomma }}
+                                            <strong>Costo Real:</strong>
+                                            {% if proyecto.PC_TIPO_CAMBIO %}
+                                                {{ proyecto.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ proyecto.PC_NCOSTO_REAL|floatformat:2|intcomma }}
+                                            {% else %}
+                                                CLP ${{ proyecto.PC_NCOSTO_REAL|floatformat:2|intcomma }}
+                                            {% endif %}
                                             {% if proyecto.PC_NCOSTO_REAL > proyecto.PC_NCOSTO_ESTIMADO %}
                                                 <span class="text-danger ml-2">
                                                     <i class="fas fa-exclamation-triangle"></i>
-                                                    Exceso: ${{ proyecto.PC_NCOSTO_REAL|subtract:proyecto.PC_NCOSTO_ESTIMADO|floatformat:0|intcomma }}
+                                                    Exceso: 
+                                                    {% if proyecto.PC_TIPO_CAMBIO %}
+                                                        {{ proyecto.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ proyecto.PC_NCOSTO_REAL|subtract:proyecto.PC_NCOSTO_ESTIMADO|floatformat:2|intcomma }}
+                                                    {% else %}
+                                                        CLP ${{ proyecto.PC_NCOSTO_REAL|subtract:proyecto.PC_NCOSTO_ESTIMADO|floatformat:2|intcomma }}
+                                                    {% endif %}
                                                 </span>
                                             {% endif %}
                                         </div>
                                         <div class="progress mb-3" style="height: 20px;">
                                             <div class="progress-bar bg-danger" role="progressbar" style="width: {% widthratio proyecto.PC_NCOSTO_REAL max_costo 100 %}%" aria-valuenow="{{ proyecto.PC_NCOSTO_REAL }}" aria-valuemin="0" aria-valuemax="{{ max_costo }}">
-                                                
                                             </div>
                                         </div>
                                         <div class="mb-2">
-                                            <strong>Costo Estimado:</strong> ${{ proyecto.PC_NCOSTO_ESTIMADO|floatformat:0|intcomma }}
+                                            <strong>Costo Estimado:</strong>
+                                            {% if proyecto.PC_TIPO_CAMBIO %}
+                                                {{ proyecto.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ proyecto.PC_NCOSTO_ESTIMADO|floatformat:2|intcomma }}
+                                            {% else %}
+                                                CLP ${{ proyecto.PC_NCOSTO_ESTIMADO|floatformat:2|intcomma }}
+                                            {% endif %}
                                         </div>
                                         <div class="progress mb-3" style="height: 20px;">
                                             <div class="progress-bar bg-info" role="progressbar" style="width: {% widthratio proyecto.PC_NCOSTO_ESTIMADO max_costo 100 %}%" aria-valuenow="{{ proyecto.PC_NCOSTO_ESTIMADO }}" aria-valuemin="0" aria-valuemax="{{ max_costo }}">
-                                                
                                             </div>
                                         </div>
-                                        
                                     </div>
                                 </div>
                             </div>
@@ -211,19 +230,7 @@
                         </div>
                     </div>
                 </div>                
-                <div class="col-md-3"></div> {% endcomment %}
-
-                <!-- Carta Gantt -->
-                <div class="col-md-12 mt-4">
-                    <div class="card shadow-sm">
-                        <div class="card-header">
-                            <h5>Carta Gantt del Proyecto</h5>
-                        </div>
-                        <div class="card-body">
-                            <div id="gantt"></div>
-                        </div>
-                    </div>
-                </div>
+                <div class="col-md-3"></div> {% endcomment %}                
                 
                 <!-- Tabs de tareas -->
                 <div class="col-md-12 mt-4">
@@ -284,6 +291,9 @@
                                                     <!-- En la sección de tareas financieras -->
                                                     <a href="#" class="btn btn-sm btn-secondary" title="Actualizar datos" style="background-color: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 3px; transition: background-color 0.3s;" data-toggle="modal" data-target="#updateDataModal" data-url="{% url 'tarea_update_data' 'financiera' tarea.id %}">
                                                         <i class="fas fa-sync-alt"></i>
+                                                    </a>
+                                                    <a href="#" class="btn btn-sm btn-primary mr-1" title="Adjuntos" onclick="openAdjuntosModal({{ tarea.id }}, 'TAREA_FINANCIERA')">
+                                                        <i class="fas fa-paperclip"></i>
                                                     </a>
                                                 </td>
                                                 <td>
@@ -348,7 +358,10 @@
                                                     <!-- En la sección de tareas generales -->
                                                     <a href="#" class="btn btn-sm btn-secondary" title="Actualizar datos" style="background-color: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 3px; transition: background-color 0.3s;" data-toggle="modal" data-target="#updateDataModal" data-url="{% url 'tarea_update_data' 'general' tarea.id %}">
                                                         <i class="fas fa-sync-alt"></i>
-                                                    </a>                                                   
+                                                    </a>  
+                                                    <a href="#" class="btn btn-sm btn-primary mr-1" title="Adjuntos" onclick="openAdjuntosModal({{ tarea.id }}, 'TAREA_GENERAL')">
+                                                        <i class="fas fa-paperclip"></i>
+                                                    </a>                                                
                                                 </td>
                                                 <td>
                                                     {{ tarea.TG_CNOMBRE }}
@@ -413,6 +426,9 @@
                                                     <a href="#" class="btn btn-sm btn-secondary" title="Actualizar datos" style="background-color: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 3px; transition: background-color 0.3s;" data-toggle="modal" data-target="#updateDataModal" data-url="{% url 'tarea_update_data' 'ingenieria' tarea.id %}">
                                                         <i class="fas fa-sync-alt"></i>
                                                     </a>
+                                                    <a href="#" class="btn btn-sm btn-primary mr-1" title="Adjuntos" onclick="openAdjuntosModal({{ tarea.id }}, 'TAREA_INGENIERIA')">
+                                                        <i class="fas fa-paperclip"></i>
+                                                    </a>
                                                 </td>
                                                 <td>
                                                     {{ tarea.TI_CNOMBRE }}
@@ -446,6 +462,18 @@
                                     </table>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Carta Gantt -->
+                <div class="col-md-12 mt-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h5>Carta Gantt del Proyecto</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="gantt"></div>
                         </div>
                     </div>
                 </div>
@@ -483,7 +511,8 @@
         </div>
     </div>
 
-    
+    <!-- Include del modal de adjuntos -->
+    {% include "home/TAREA/tarea_documents.html" %}
 {% endblock content %}
 
 <!-- Specific Page JS goes HERE  -->
@@ -882,7 +911,7 @@
     </script>
     <!-- Validación de horas -->
     <script>
-        // Variable global para almacenar el estado de validación
+        {% comment %} // Variable global para almacenar el estado de validación
         let horasValidas = true;
 
         // Función para validar las horas
@@ -907,7 +936,7 @@
 
             // Actualizar el estado del botón de envío
             $('#btnGuardarCambios').prop('disabled', !horasValidas);
-        }
+        } {% endcomment %}
 
         $(document).ready(function() {
             $('#updateDataModal').on('show.bs.modal', function (event) {
@@ -986,7 +1015,7 @@
             });
         });        
     </script>
-
+    <!--Modal de documentos-->
     <script>
         // Initialize logger
         var logger = {
@@ -1029,5 +1058,151 @@
             logger.log('Event handlers set up');
         });        
     </script>
-    
+    <!-- Adjuntos tareas -->
+    <script>
+        var currentTareaId, currentTipoTarea;
+        
+        function openAdjuntosModal(tareaId, tipoTarea) {
+            currentTareaId = tareaId;
+            currentTipoTarea = tipoTarea;
+            $('#adjuntosModal').modal('show');
+            cargarListaAdjuntos();
+        }
+        
+        function cargarListaAdjuntos() {
+            $.ajax({
+                url: `/tarea_adjuntos/${currentTareaId}/${currentTipoTarea}/`,
+                method: 'GET',
+                success: function(data) {
+                    var tableHtml = '<table class="table table-striped">' +
+                                    '<thead><tr><th>Nombre</th><th>Descripción</th><th>Fecha de Creación</th><th>Acciones</th></tr></thead>' +
+                                    '<tbody>';
+                    
+                    if (data.adjuntos.length === 0) {
+                        tableHtml += '<tr><td colspan="4" class="text-center">No hay adjuntos para esta tarea.</td></tr>';
+                    } else {
+                        data.adjuntos.forEach(function(adjunto) {
+                            tableHtml += `<tr>
+                                <td>${adjunto.nombre}</td>
+                                <td>${adjunto.descripcion}</td>
+                                <td>${adjunto.fecha_creacion}</td>
+                                <td>
+                                    <button onclick="editarAdjunto(${adjunto.id})" class="btn btn-primary btn-sm"><i class="fas fa-edit"></i> Editar</button>
+                                    <button onclick="eliminarAdjunto(${adjunto.id})" class="btn btn-danger btn-sm"><i class="fas fa-trash-alt"></i> Eliminar</button>
+                                    <a href="/tarea_adjunto/descargar/${adjunto.id}/${currentTipoTarea}/" class="btn btn-success btn-sm"><i class="fas fa-download"></i> Descargar</a>
+                                </td>
+                            </tr>`;
+                        });
+                    }
+                    
+                    tableHtml += '</tbody></table>';
+                    $('#lista').html(tableHtml);
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error al cargar los adjuntos:", error);
+                    $('#lista').html('<p class="text-danger">Error al cargar los adjuntos. Por favor, intente nuevamente.</p>');
+                }
+            });
+        }
+        
+        $(document).ready(function() {
+            $('#formAgregarAdjunto').on('submit', function(e) {
+                e.preventDefault();
+                var formData = new FormData(this);
+                
+                $.ajax({
+                    url: `/tarea_adjunto/agregar/${currentTareaId}/${currentTipoTarea}/`,
+                    type: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        if (response.success) {
+                            alert(response.message);
+                            $('#formAgregarAdjunto')[0].reset();
+                            cargarListaAdjuntos();
+                            $('#lista-tab').tab('show');
+                        } else {
+                            alert('Error: ' + response.message);
+                        }
+                    },
+                    error: function(xhr, errmsg, err) {
+                        console.log(xhr.status + ": " + xhr.responseText);
+                        alert('Error al agregar el adjunto');
+                    },
+                    cache: false,
+                    contentType: false,
+                    processData: false
+                });
+            });
+        });
+        
+        function editarAdjunto(adjuntoId) {
+            $.ajax({
+                url: `/tarea_adjunto/editar/${adjuntoId}/${currentTipoTarea}/`,
+                method: 'GET',
+                success: function(data) {
+                    $('#editar').html(data);
+                    $('#editar-tab').show().tab('show');
+                    
+                    $('#adjuntoForm').off('submit').on('submit', function(e) {
+                        e.preventDefault();
+                        var formData = new FormData(this);
+                        
+                        $.ajax({
+                            url: `/tarea_adjunto/editar/${adjuntoId}/${currentTipoTarea}/`,
+                            type: 'POST',
+                            data: formData,
+                            headers: {
+                                'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                            },
+                            success: function(response) {
+                                if (response.success) {
+                                    alert(response.message);
+                                    cargarListaAdjuntos();
+                                    $('#lista-tab').tab('show');
+                                    $('#editar-tab').hide();
+                                } else {
+                                    alert('Error: ' + response.message);
+                                }
+                            },
+                            error: function(xhr, errmsg, err) {
+                                console.log(xhr.status + ": " + xhr.responseText);
+                                alert('Error al editar el adjunto');
+                            },
+                            cache: false,
+                            contentType: false,
+                            processData: false
+                        });
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error al cargar el formulario de edición:", error);
+                    alert('Error al cargar el formulario de edición');
+                }
+            });
+        }
+        
+        function eliminarAdjunto(adjuntoId) {
+            if (confirm('¿Está seguro de que desea eliminar este adjunto?')) {
+                $.ajax({
+                    url: `/tarea_adjunto/eliminar/${adjuntoId}/${currentTipoTarea}/`,
+                    method: 'POST',
+                    data: {
+                        csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val()
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            alert(response.message);
+                            cargarListaAdjuntos();
+                        } else {
+                            alert('Error: ' + response.message);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error al eliminar el adjunto:", error);
+                        alert('Error al eliminar el adjunto');
+                    }
+                });
+            }
+        }
+    </script>
 {% endblock javascripts %}

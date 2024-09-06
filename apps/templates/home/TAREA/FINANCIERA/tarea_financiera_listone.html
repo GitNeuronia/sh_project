@@ -141,7 +141,11 @@
                                 <h5 class="mb-3">Detalles Financieros</h5>
                                 <div class="detail-item">
                                     <span class="detail-label">Monto:</span>
-                                    <span class="detail-value">{{ tarea.TF_NMONTO|floatformat:0 }}</span>
+                                    {% if tarea.TF_PROYECTO_CLIENTE.PC_TIPO_CAMBIO %}
+                                        <span class="detail-value">{{ tarea.TF_PROYECTO_CLIENTE.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ tarea.TF_NMONTO|floatformat:0 }}</span>
+                                    {% else %}
+                                        <span class="detail-value">CLP ${{ tarea.TF_NMONTO|floatformat:0 }}</span>
+                                    {% endif %}
                                 </div>
                                 <div class="detail-item">
                                     <span class="detail-label">Tipo de Transacción:</span>

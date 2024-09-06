@@ -3,31 +3,280 @@
 Copyright (c) 2019 - present AppSeed.us
 """
 
-from decimal import Decimal
+# Módulos de Python estándar
 import json
+import mimetypes
+import os
 import re
+import logging
+import base64
+import requests
+import traceback
+from django.conf import settings
+from decimal import Decimal
+from xhtml2pdf import pisa
+from io import BytesIO
+# Módulos de Django
 from django import template
-from django.contrib.auth.decorators import login_required
-from django.db import connection
-from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseRedirect, JsonResponse
-from django.template import loader
-from django.urls import reverse
-from django.db.models import Sum
-from apps.home.models import * 
-from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from .models import *
+from django.contrib.staticfiles.storage import staticfiles_storage
+from django.core.serializers.json import DjangoJSONEncoder
+from django.core.exceptions import FieldError
+from django.db import connection
+from django.db.utils import DatabaseError
+from django.db.models import (
+    Avg, Case, Count, DecimalField, ExpressionWrapper, F, Func,
+    IntegerField, Q, Sum, Value, When
+)
+from django.db.models.functions import Coalesce, Least, Cast, Greatest
+from django.http import (
+    FileResponse, HttpResponse, HttpResponseBadRequest,
+    HttpResponseNotFound, HttpResponseRedirect, JsonResponse
+)
+from django.middleware.csrf import get_token
+from django.shortcuts import get_object_or_404, redirect, render
+from django.template import loader
+from django.template.loader import render_to_string, get_template
+from django.urls import reverse
+from django.utils.encoding import smart_str
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.http import require_http_methods
+
+# Módulos locales
+from apps.home.models import *
 from .forms import *
+from .models import *
+
+logger = logging.getLogger(__name__)
+
 
 @login_required(login_url="/login/")
 def index(request):
+    
     context = {'segment': 'index'}
 
     html_template = loader.get_template('home/index.html')
     return HttpResponse(html_template.render(context, request))
 
+class DecimalEncoder(DjangoJSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return float(obj)
+        return super(DecimalEncoder, self).default(obj)
 
+class WeightedAvg(Func):
+    function = 'SUM'
+    template = '(%(expressions)s) / NULLIF(SUM(%(weight)s), 0)'
+    
+    def __init__(self, expression, weight, **extras):
+        super().__init__(
+            expression * weight,
+            weight=weight,
+            output_field=DecimalField(),
+            **extras
+        )
+
+def proyecto_index(request):
+    fecha_actual = datetime.datetime.now()
+    proyectos = PROYECTO_CLIENTE.objects.all()
+
+    # Calcular estadísticas generales
+    estadisticas = proyectos.aggregate(
+        total_proyectos=Count('id'),
+        proyectos_activos=Count('id', filter=~Q(PC_CESTADO__iexact='Cerrado')),
+        total_presupuesto=Coalesce(Sum('PC_NPRESUPUESTO'), Decimal('0')),
+        total_costo_real=Coalesce(Sum('PC_NCOSTO_REAL'), Decimal('0')),
+        promedio_margen=Coalesce(Avg('PC_NMARGEN'), Decimal('0')),
+    )
+
+    # Agregar estadísticas de EdP
+    estadisticas_edp = ESTADO_DE_PAGO.objects.aggregate(
+        total_edp=Coalesce(Sum('EP_NTOTAL'), Decimal('0')),
+        total_pagado=Coalesce(Sum('EP_NMONTO_PAGADO'), Decimal('0')),
+    )
+    estadisticas['total_saldo_edp'] = estadisticas_edp['total_edp'] - estadisticas_edp['total_pagado']
+
+    # Preparar datos para el gráfico y la tabla de proyectos
+    proyectos_data = proyectos.annotate(
+        alerta_fecha=Case(
+            When(PC_FFECHA_FIN_REAL__isnull=True, PC_FFECHA_FIN_ESTIMADA__lt=fecha_actual, then=Value(1)),
+            default=Value(0),
+            output_field=IntegerField()
+        ),
+        alerta_costo=Case(
+            When(PC_NCOSTO_REAL__gt=F('PC_NCOSTO_ESTIMADO'), then=Value(1)),
+            default=Value(0),
+            output_field=IntegerField()
+        ),
+        porcentaje_avance=Coalesce(
+            Avg(
+                Case(
+                    When(tareas_generales_proyecto__TG_NPROGRESO__isnull=False, 
+                            then='tareas_generales_proyecto__TG_NPROGRESO'),
+                    When(tareas_ingenieria_proyecto__TI_NPROGRESO__isnull=False, 
+                            then='tareas_ingenieria_proyecto__TI_NPROGRESO'),
+                    When(tareas_financieras_proyecto__TF_NPROGRESO__isnull=False, 
+                            then='tareas_financieras_proyecto__TF_NPROGRESO'),
+                    output_field=DecimalField()
+                )
+            ),
+            Value(0),
+            output_field=DecimalField(max_digits=5, decimal_places=2)
+        ),
+        alerta_prioridad=Case(
+            When(Q(alerta_fecha=1) | Q(alerta_costo=1), then=Value(1)),
+            default=Value(0),
+            output_field=IntegerField()
+        )
+    ).values(
+        'id', 'PC_CCODIGO', 'PC_CNOMBRE', 'PC_CESTADO', 'PC_NPRESUPUESTO', 'PC_NCOSTO_REAL', 
+        'PC_NCOSTO_ESTIMADO', 'PC_FFECHA_INICIO', 'PC_FFECHA_FIN_ESTIMADA', 'PC_FFECHA_FIN_REAL', 
+        'alerta_fecha', 'alerta_costo', 'porcentaje_avance', 'alerta_prioridad'
+    ).order_by('-alerta_prioridad', 'PC_FFECHA_FIN_ESTIMADA')
+
+    # Preparar datos de EdP por proyecto
+    proyectos_edp = PROYECTO_CLIENTE.objects.annotate(
+        total_edp=Coalesce(Sum('estados_de_pago__EP_NTOTAL'), Decimal('0')),
+        pendiente=Coalesce(Sum(Case(
+            When(estados_de_pago__EP_CESTADO='PENDIENTE', then=F('estados_de_pago__EP_NTOTAL')),
+            default=0,
+            output_field=DecimalField()
+        )), Decimal('0')),
+        aprobado=Coalesce(Sum(Case(
+            When(estados_de_pago__EP_CESTADO='APROBADO', then=F('estados_de_pago__EP_NTOTAL')),
+            default=0,
+            output_field=DecimalField()
+        )), Decimal('0')),
+        rechazado=Coalesce(Sum(Case(
+            When(estados_de_pago__EP_CESTADO='RECHAZADO', then=F('estados_de_pago__EP_NTOTAL')),
+            default=0,
+            output_field=DecimalField()
+        )), Decimal('0')),
+        monto_pagado=Coalesce(Sum('estados_de_pago__EP_NMONTO_PAGADO'), Decimal('0'))
+    ).annotate(
+        porcentaje_pagado=Case(
+            When(total_edp=0, then=0),
+            default=F('monto_pagado') * 100 / F('total_edp'),
+            output_field=DecimalField(max_digits=5, decimal_places=2)
+        )
+    ).values('PC_CNOMBRE', 'total_edp', 'pendiente', 'aprobado', 'rechazado', 'monto_pagado', 'porcentaje_pagado')
+
+    # Filtrar y preparar datos de proyectos activos
+    proyectos_activos = list(proyectos.filter(~Q(PC_CESTADO__iexact='Cerrado')).annotate(
+        porcentaje_avance=Coalesce(
+            Avg(
+                Case(
+                    When(tareas_generales_proyecto__TG_NPROGRESO__isnull=False, 
+                            then='tareas_generales_proyecto__TG_NPROGRESO'),
+                    When(tareas_ingenieria_proyecto__TI_NPROGRESO__isnull=False, 
+                            then='tareas_ingenieria_proyecto__TI_NPROGRESO'),
+                    When(tareas_financieras_proyecto__TF_NPROGRESO__isnull=False, 
+                            then='tareas_financieras_proyecto__TF_NPROGRESO'),
+                    output_field=DecimalField()
+                )
+            ),
+            Value(0),
+            output_field=DecimalField(max_digits=5, decimal_places=2)
+        )
+    ).values(
+        'id', 'PC_CCODIGO', 'PC_CNOMBRE', 'PC_FFECHA_INICIO', 'PC_FFECHA_FIN_ESTIMADA', 
+        'PC_NPRESUPUESTO', 'PC_NCOSTO_REAL', 'PC_CESTADO', 'porcentaje_avance'
+    ))
+
+    # Convertir las fechas a strings y los Decimales a float
+    for proyecto in proyectos_activos:
+        if proyecto['PC_FFECHA_INICIO']:
+            proyecto['PC_FFECHA_INICIO'] = proyecto['PC_FFECHA_INICIO'].strftime('%Y-%m-%d')
+        if proyecto['PC_FFECHA_FIN_ESTIMADA']:
+            proyecto['PC_FFECHA_FIN_ESTIMADA'] = proyecto['PC_FFECHA_FIN_ESTIMADA'].strftime('%Y-%m-%d')
+        proyecto['PC_NPRESUPUESTO'] = float(proyecto['PC_NPRESUPUESTO'])
+        proyecto['PC_NCOSTO_REAL'] = float(proyecto['PC_NCOSTO_REAL'])
+        proyecto['porcentaje_avance'] = min(float(proyecto['porcentaje_avance']), 100)
+
+    context = {
+        'estadisticas': estadisticas,
+        'proyectos': proyectos_data,
+        'fecha_actual': fecha_actual,
+        'chart_labels': [p['PC_CCODIGO'] for p in proyectos_data],
+        'chart_presupuestos': [float(p['PC_NPRESUPUESTO']) for p in proyectos_data],
+        'chart_costos_reales': [float(p['PC_NCOSTO_REAL']) for p in proyectos_data],
+        'proyectos_activos': json.dumps(proyectos_activos, cls=DecimalEncoder),
+        'proyectos_edp': proyectos_edp,
+    }
+
+    return render(request, 'home/proyecto_index.html', context)
+
+def api_proyectos_edp(request):
+    try:
+        draw = int(request.GET.get('draw', 1))
+        start = int(request.GET.get('start', 0))
+        length = int(request.GET.get('length', 10))
+        search_value = request.GET.get('search[value]', '')
+
+        queryset = PROYECTO_CLIENTE.objects.annotate(
+            total_edp=Coalesce(Sum('estados_de_pago__EP_NTOTAL'), Value(0, output_field=DecimalField(max_digits=20, decimal_places=2))),
+            pendiente=Coalesce(Sum(Case(
+                When(estados_de_pago__EP_CESTADO='PENDIENTE', 
+                     then=ExpressionWrapper(F('estados_de_pago__EP_NTOTAL'), output_field=DecimalField(max_digits=20, decimal_places=2))),
+                default=Value(0, output_field=DecimalField(max_digits=20, decimal_places=2))
+            )), Value(0, output_field=DecimalField(max_digits=20, decimal_places=2))),
+            aprobado=Coalesce(Sum(Case(
+                When(estados_de_pago__EP_CESTADO='APROBADO', 
+                     then=ExpressionWrapper(F('estados_de_pago__EP_NTOTAL'), output_field=DecimalField(max_digits=20, decimal_places=2))),
+                default=Value(0, output_field=DecimalField(max_digits=20, decimal_places=2))
+            )), Value(0, output_field=DecimalField(max_digits=20, decimal_places=2))),
+            rechazado=Coalesce(Sum(Case(
+                When(estados_de_pago__EP_CESTADO='RECHAZADO', 
+                     then=ExpressionWrapper(F('estados_de_pago__EP_NTOTAL'), output_field=DecimalField(max_digits=20, decimal_places=2))),
+                default=Value(0, output_field=DecimalField(max_digits=20, decimal_places=2))
+            )), Value(0, output_field=DecimalField(max_digits=20, decimal_places=2))),
+            monto_pagado=Coalesce(Sum('estados_de_pago__EP_NMONTO_PAGADO'), Value(0, output_field=DecimalField(max_digits=20, decimal_places=2)))
+        )
+
+        if search_value:
+            queryset = queryset.filter(PC_CNOMBRE__icontains=search_value)
+
+        total_records = queryset.count()
+        queryset = queryset[start:start+length]
+
+        data = []
+        for proyecto in queryset:
+            total_edp = float(proyecto.total_edp)
+            monto_pagado = float(proyecto.monto_pagado)
+            
+            if total_edp > 0:
+                porcentaje_pagado = (monto_pagado / total_edp) * 100
+            else:
+                porcentaje_pagado = 0
+
+            logger.debug(f"Proyecto: {proyecto.PC_CNOMBRE}")
+            logger.debug(f"Total EdP: {total_edp}")
+            logger.debug(f"Monto Pagado: {monto_pagado}")
+            logger.debug(f"Porcentaje Pagado: {porcentaje_pagado:.2f}%")
+            logger.debug("--------------------")
+
+            data.append({
+                'PC_CNOMBRE': proyecto.PC_CNOMBRE,
+                'total_edp': total_edp,
+                'pendiente': float(proyecto.pendiente),
+                'aprobado': float(proyecto.aprobado),
+                'rechazado': float(proyecto.rechazado),
+                'monto_pagado': monto_pagado,
+                'porcentaje_pagado': round(porcentaje_pagado, 2)
+            })
+
+        return JsonResponse({
+            'draw': draw,
+            'recordsTotal': total_records,
+            'recordsFiltered': total_records,
+            'data': data
+        })
+
+    except Exception as e:
+        logger.exception("Error in api_proyectos_edp")
+        return JsonResponse({'error': str(e)}, status=500)
+    
 @login_required(login_url="/login/")
 def pages(request):
     context = {}
@@ -1284,26 +1533,37 @@ def PROYECTO_CLIENTE_ADDONE(request):
     if not has_auth(request.user, 'ADD_PROYECTOS_CLIENTES'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
         return redirect('/')
+    
     try:
         if request.method == 'POST':
             form = formPROYECTO_CLIENTE(request.POST)
+            print(form.instance.PC_NPRESUPUESTO_MONEDA_EXTRANJERA)
             if form.is_valid():
                 proyecto = form.save(commit=False)
                 proyecto.PC_CUSUARIO_CREADOR = request.user
+                            
                 proyecto.save()
-                crear_log(request.user, 'Crear Proyecto de Cliente', f'Se creó el proyecto de cliente: {form.instance.PC_CNOMBRE}')
+                crear_log(request.user, 'Crear Proyecto de Cliente', f'Se creó el proyecto de cliente: {proyecto.PC_CNOMBRE}')
                 messages.success(request, 'Proyecto de cliente guardado correctamente')
                 return redirect('/proycli_listall/')
-        form = formPROYECTO_CLIENTE()
+            else:
+                # Si el formulario no es válido, imprimir los errores para depuración
+                print(form.errors)
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        messages.error(request, f'Error en el campo {field}: {error}')
+        else:
+            form = formPROYECTO_CLIENTE()
+        
         ctx = {
-            'form': form
+            'form': form,
+            'state': 'add'
         }
         return render(request, 'home/PROYECTO_CLIENTE/proycli_addone.html', ctx)
     except Exception as e:
-        print(e)
-        messages.error(request, f'Error, {str(e)}')
+        print(f"Error detallado: {str(e)}")
+        messages.error(request, f'Error al procesar la solicitud: {str(e)}')
         return redirect('/')
-
 def PROYECTO_CLIENTE_UPDATE(request, pk, page):
     if not has_auth(request.user, 'UPD_PROYECTOS_CLIENTES'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
@@ -1379,84 +1639,58 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
 
         for tarea in tareas_general:
             tarea.TG_NPROGRESO = int(round(float(tarea.TG_NPROGRESO)))
+            print(tarea.TG_NPROGRESO)
             tarea.tiene_asignacion_cero = tiene_asignacion_cero(
                 tarea, asignacion_empleado_general, asignacion_recurso_general, asignacion_contratista_general
             )
             if tarea.TG_NPROGRESO == 100 and tarea.TG_NDURACION_REAL is not None and tarea.TG_NDURACION_REAL > 0:                
-                    horas_reales_proyecto += tarea.TG_NDURACION_REAL    
+                horas_reales_proyecto += tarea.TG_NDURACION_REAL    
 
-                    if not asignacion_empleado_general.filter(AE_TAREA=tarea).exists():
-                        costo_real_proyecto +=  tarea.TG_NPRESUPUESTO
-                    else:
-                        for asignacion in asignacion_empleado_general:
-                            if asignacion.AE_TAREA == tarea:                            
-                                costo_real_proyecto +=  asignacion.AE_COSTO_TOTAL
-                    if not asignacion_recurso_general.filter(ART_TAREA=tarea).exists():
-                        costo_real_proyecto +=  tarea.TG_NPRESUPUESTO
-                    else:
-                        for asignacion in asignacion_recurso_general:
-                            if asignacion.ART_TAREA == tarea:                            
-                                costo_real_proyecto +=  asignacion.ART_COSTO_TOTAL
-                    if not asignacion_contratista_general.filter(AEC_TAREA=tarea).exists():
-                        costo_real_proyecto +=  tarea.TG_NPRESUPUESTO
-                    else:
-                        for asignacion in asignacion_contratista_general:
-                            if asignacion.AEC_TAREA == tarea:                            
-                                costo_real_proyecto +=  asignacion.AEC_COSTO_TOTAL
+                if asignacion_empleado_general.filter(AE_TAREA=tarea).exists():
+                    for asignacion in asignacion_empleado_general.filter(AE_TAREA=tarea):
+                        costo_real_proyecto += asignacion.AE_COSTO_TOTAL
+                if asignacion_recurso_general.filter(ART_TAREA=tarea).exists():
+                    for asignacion in asignacion_recurso_general.filter(ART_TAREA=tarea):
+                        costo_real_proyecto += asignacion.ART_COSTO_REAL
+                if asignacion_contratista_general.filter(AEC_TAREA=tarea).exists():
+                    for asignacion in asignacion_contratista_general.filter(AEC_TAREA=tarea):
+                        costo_real_proyecto += asignacion.AEC_COSTO_TOTAL
+
         for tarea in tareas_ingenieria:
             tarea.TI_NPROGRESO = int(round(float(tarea.TI_NPROGRESO)))
             tarea.tiene_asignacion_cero = tiene_asignacion_cero(
                 tarea, asignacion_empleado_ingenieria, asignacion_recurso_ingenieria, asignacion_contratista_ingenieria
             )
             if tarea.TI_NPROGRESO == 100 and tarea.TI_NDURACION_REAL is not None and tarea.TI_NDURACION_REAL > 0:
-                    
-                    horas_reales_proyecto += tarea.TI_NDURACION_REAL
-                    
-                    if not asignacion_empleado_ingenieria.filter(AE_TAREA=tarea).exists():
-                        costo_real_proyecto +=  tarea.TI_NPRESUPUESTO
-                    else:
-                        for asignacion in asignacion_empleado_ingenieria:
-                            if asignacion.AE_TAREA == tarea:                            
-                                costo_real_proyecto +=  asignacion.AE_COSTO_TOTAL
-                    if not asignacion_recurso_ingenieria.filter(ART_TAREA=tarea).exists():
-                        costo_real_proyecto +=  tarea.TI_NPRESUPUESTO
-                    else:
-                        for asignacion in asignacion_recurso_ingenieria:
-                            if asignacion.ART_TAREA == tarea:                            
-                                costo_real_proyecto +=  asignacion.ART_COSTO_TOTAL
-                    if not asignacion_contratista_ingenieria.filter(AEC_TAREA=tarea).exists():
-                        costo_real_proyecto +=  tarea.TI_NPRESUPUESTO
-                    else:
-                        for asignacion in asignacion_contratista_ingenieria:
-                            if asignacion.AEC_TAREA == tarea:                            
-                                costo_real_proyecto +=  asignacion.AEC_COSTO_TOTAL
+                horas_reales_proyecto += tarea.TI_NDURACION_REAL
+                
+                if asignacion_empleado_ingenieria.filter(AE_TAREA=tarea).exists():
+                    for asignacion in asignacion_empleado_ingenieria.filter(AE_TAREA=tarea):
+                        costo_real_proyecto += asignacion.AE_COSTO_TOTAL
+                if asignacion_recurso_ingenieria.filter(ART_TAREA=tarea).exists():
+                    for asignacion in asignacion_recurso_ingenieria.filter(ART_TAREA=tarea):
+                        costo_real_proyecto += asignacion.ART_COSTO_REAL
+                if asignacion_contratista_ingenieria.filter(AEC_TAREA=tarea).exists():
+                    for asignacion in asignacion_contratista_ingenieria.filter(AEC_TAREA=tarea):
+                        costo_real_proyecto += asignacion.AEC_COSTO_TOTAL
+
         for tarea in tareas_financiera:
             tarea.TF_NPROGRESO = int(round(float(tarea.TF_NPROGRESO)))
             tarea.tiene_asignacion_cero = tiene_asignacion_cero(
                 tarea, asignacion_empleado_financiera, asignacion_recurso_financiera, asignacion_contratista_financiera
             )
             if tarea.TF_NPROGRESO == 100 and tarea.TF_NDURACION_REAL is not None and tarea.TF_NDURACION_REAL > 0:
-                    
-                    horas_reales_proyecto += tarea.TF_NDURACION_REAL
-                    # Si la tarea no tiene asignaciones, se suma este valor
-                    if not asignacion_empleado_financiera.filter(AE_TAREA=tarea).exists():                            
-                        costo_real_proyecto +=  tarea.TF_NMONTO                    
-                    else:
-                        for asignacion in asignacion_empleado_financiera:
-                            if asignacion.AE_TAREA == tarea:                            
-                                costo_real_proyecto +=  asignacion.AE_COSTO_TOTAL
-                    if not asignacion_recurso_financiera.filter(ART_TAREA=tarea).exists():
-                        costo_real_proyecto +=  tarea.TF_NMONTO
-                    else:
-                        for asignacion in asignacion_recurso_financiera:
-                            if asignacion.ART_TAREA == tarea:                            
-                                costo_real_proyecto +=  asignacion.ART_COSTO_TOTAL
-                    if not asignacion_contratista_financiera.filter(AEC_TAREA=tarea).exists():
-                        costo_real_proyecto +=  tarea.TF_NMONTO
-                    else:
-                        for asignacion in asignacion_contratista_financiera:
-                            if asignacion.AEC_TAREA == tarea:                            
-                                costo_real_proyecto +=  asignacion.AEC_COSTO_TOTAL
+                horas_reales_proyecto += tarea.TF_NDURACION_REAL
+                
+                if asignacion_empleado_financiera.filter(AE_TAREA=tarea).exists():
+                    for asignacion in asignacion_empleado_financiera.filter(AE_TAREA=tarea):
+                        costo_real_proyecto += asignacion.AE_COSTO_TOTAL
+                if asignacion_recurso_financiera.filter(ART_TAREA=tarea).exists():
+                    for asignacion in asignacion_recurso_financiera.filter(ART_TAREA=tarea):
+                        costo_real_proyecto += asignacion.ART_COSTO_REAL
+                if asignacion_contratista_financiera.filter(AEC_TAREA=tarea).exists():
+                    for asignacion in asignacion_contratista_financiera.filter(AEC_TAREA=tarea):
+                        costo_real_proyecto += asignacion.AEC_COSTO_TOTAL
         if horas_reales_proyecto != proyecto.PC_NHORAS_REALES:
             print('horas_reales_proyecto', horas_reales_proyecto)
             print('proyecto.PC_NHORAS_REALES', proyecto.PC_NHORAS_REALES)
@@ -1464,7 +1698,7 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
             proyecto.save()
         if costo_real_proyecto != proyecto.PC_NCOSTO_REAL:
             print('costo_real_proyecto', costo_real_proyecto)
-            print('proyecto.PC_NCOSTO_REAL', proyecto.PC_NCOSTO_REAL)
+            print('proyecto.PC_NCOSTO_REAL', proyecto.PC_NCOSTO_REAL)            
             proyecto.PC_NCOSTO_REAL = costo_real_proyecto
             proyecto.save()
         max_costo = max(proyecto.PC_NCOSTO_REAL, proyecto.PC_NCOSTO_ESTIMADO)
@@ -1542,6 +1776,98 @@ def PROYECTO_CLIENTE_DOCUMENTOS_MODAL_ADDONE(request, pk):
     except Exception as e:
         print(f"Error en PROYECTO_CLIENTE_DOCUMENTOS_MODAL_ADDONE: {str(e)}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
+def PROYECTO_CLIENTE_DOCUMENTOS_MODAL_UPDATE(request, pk):
+    if not has_auth(request.user, 'EDIT_PROYECTOS_CLIENTES'):
+        return JsonResponse({'error': 'No tienes permiso para realizar esta acción'}, status=403)
+    
+    try:
+        documento = get_object_or_404(PROYECTO_ADJUNTO, id=pk)
+        
+        if request.method == 'POST':
+            form = formPROYECTO_ADJUNTO(request.POST, request.FILES, instance=documento)
+            
+            if form.is_valid():
+                documento_editado = form.save(commit=False)
+                documento_editado.PA_CUSUARIO_MODIFICADOR = request.user
+                documento_editado.save()
+                
+                crear_log(request.user, 'Actualizar Documento de Proyecto', f'Se editó el documento {documento_editado.PA_CNOMBRE} del proyecto {documento_editado.PA_PROYECTO.PC_CNOMBRE}')
+                
+                return JsonResponse({'success': True, 'message': 'Documento editado correctamente'})
+            else:
+                return JsonResponse({'success': False, 'error': 'Formulario inválido', 'errors': form.errors}, status=400)
+        
+        else:  # GET request
+            form = formPROYECTO_ADJUNTO(instance=documento)
+            return JsonResponse({
+                'success': True,
+                'documento': {
+                    'id': documento.id,
+                    'PA_CNOMBRE': documento.PA_CNOMBRE,
+                    'PA_CDESCRIPCION': documento.PA_CDESCRIPCION,
+                    'PA_CTIPO': documento.PA_CTIPO,
+                    'PA_CARCHIVO': documento.PA_CARCHIVO.url if documento.PA_CARCHIVO else None,
+                    'PA_CARCHIVO_nombre': documento.PA_CARCHIVO.name if documento.PA_CARCHIVO else None,
+                }
+            })
+    
+    except Exception as e:
+        print(f"Error en PROYECTO_CLIENTE_DOCUMENTOS_MODAL_UPDATE: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
+def get_documento(request, documento_id):
+    try:
+        documento = PROYECTO_ADJUNTO.objects.get(id=documento_id)
+        data = {
+            'success': True,
+            'documento': {
+                'PA_CNOMBRE': documento.PA_CNOMBRE,
+                'PA_CDESCRIPCION': documento.PA_CDESCRIPCION,
+                'PA_CTIPO': documento.PA_CTIPO,
+                'PA_CARCHIVO': documento.PA_CARCHIVO.name if documento.PA_CARCHIVO else None,
+            }
+        }
+        return JsonResponse(data)
+    except PROYECTO_ADJUNTO.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Documento no encontrado'}, status=404)
+
+def PROYECTO_CLIENTE_DOCUMENTOS_DOWNLOAD(request, documento_id):
+    if not has_auth(request.user, 'VER_PROYECTOS'):  # Asumimos que existe esta función de verificación de permisos
+        messages.error(request, 'No tienes permiso para descargar este archivo')
+        return redirect('/')
+    
+    try:
+        adjunto = get_object_or_404(PROYECTO_ADJUNTO, pk=documento_id)
+        
+        if not adjunto.PA_CARCHIVO:
+            return HttpResponseNotFound('El archivo no existe')
+
+        file_path = adjunto.PA_CARCHIVO.path
+        if not os.path.exists(file_path):
+            return HttpResponseNotFound('El archivo no existe en el sistema de archivos')
+
+        # Obtener el nombre original del archivo
+        original_filename = os.path.basename(adjunto.PA_CARCHIVO.name)
+        
+        # Determinar el tipo MIME
+        content_type, encoding = mimetypes.guess_type(file_path)
+        content_type = content_type or 'application/octet-stream'
+        
+        # Abrir el archivo en modo binario
+        file = open(file_path, 'rb')
+        response = FileResponse(file, content_type=content_type)
+        
+        # Configurar los encabezados de la respuesta
+        response['Content-Disposition'] = f'attachment; filename="{original_filename}"'
+        
+        # Añadir el tamaño del archivo al encabezado
+        response['Content-Length'] = os.path.getsize(file_path)
+        
+        return response
+    except Exception as e:
+        # Registrar el error para debugging        
+        return HttpResponseNotFound('Error al descargar el archivo')
 # ----------PROYECTO MODAL DOCUMENTOS--------------
 
 #--------------------------------------
@@ -1616,7 +1942,7 @@ def TAREA_GENERAL_ADDONE(request, page):
                         AEC_FFECHA_FINALIZACION=tarea.TG_FFECHA_FIN_ESTIMADA,
                         AEC_CUSUARIO_CREADOR=request.user
                     )
-                    crear_log(request.user, 'Crear Asignación de Contratista a Tarea General', f'Se creó la asignación de contratista a tarea general: {tarea.TG_CNOMBRE} para el contratista: {id_emp.EM_CNOMBRE}')
+                    crear_log(request.user, 'Crear Asignación de Contratista a Tarea General', f'Se creó la asignación de contratista a tarea general: {tarea.TG_CNOMBRE} para el contratista: {id_emp.EC_CNOMBRE}')
                     asignacion.save()
 
                 # Procesar recursos                
@@ -1644,11 +1970,25 @@ def TAREA_GENERAL_ADDONE(request, page):
             else:
                 messages.error(request, 'Por favor, corrija los errores en el formulario.')
         
+        # Obtener todos los proyectos y sus tipos de cambio
+        proyectos = PROYECTO_CLIENTE.objects.all()
+        tipos_cambio = {}
+        for proyecto in proyectos:
+            if proyecto.PC_TIPO_CAMBIO:
+                tipos_cambio[proyecto.id] = {
+                    'moneda': proyecto.PC_TIPO_CAMBIO.TC_CMONEDA,
+                    'fecha': proyecto.PC_TIPO_CAMBIO.TC_FFECHA.strftime('%Y-%m-%d'),
+                    'valor': float(proyecto.PC_TIPO_CAMBIO.TC_NTASA)
+                }
+            else:
+                tipos_cambio[proyecto.id] = None
+
         ctx = {
             'form': form,
             'form_asignacion_empleado': form_asignacion_empleado,
             'form_asignacion_contratista': form_asignacion_contratista,
-            'form_asignacion_recurso': form_asignacion_recurso
+            'form_asignacion_recurso': form_asignacion_recurso,
+            'tipos_cambio': json.dumps(tipos_cambio, cls=DjangoJSONEncoder)
         }
         return render(request, 'home/TAREA/GENERAL/tarea_general_addone.html', ctx)
     except Exception as e:
@@ -1699,6 +2039,8 @@ def TAREA_GENERAL_UPDATE_ASIGNACIONES(request, pk, page):
         return redirect('/')
     try:
         tarea = TAREA_GENERAL.objects.get(id=pk)
+        idproyecto = tarea.TG_PROYECTO_CLIENTE.id
+        proyecto = PROYECTO_CLIENTE.objects.get(id=idproyecto)
         form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_GENERAL()
         form_asignacion_contratista = formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL()
         form_asignacion_recurso = formASIGNACION_RECURSO_TAREA_GENERAL()
@@ -1790,7 +2132,8 @@ def TAREA_GENERAL_UPDATE_ASIGNACIONES(request, pk, page):
             'empleados_asignados_ids': empleados_asignados_ids,
             'contratistas_asignados_ids': contratistas_asignados_ids,
             'recursos_asignados_data': json.dumps(recursos_asignados_data),
-            'page': page
+            'page': page,
+            'proyecto':proyecto
         }
         return render(request, 'home/TAREA/GENERAL/tarea_general_update_asignaciones.html', ctx)
     except Exception as e:
@@ -1949,12 +2292,26 @@ def TAREA_INGENIERIA_ADDONE(request, page):
             else:
                 messages.error(request, 'Por favor, corrija los errores en el formulario.')
         
+        # Obtener todos los proyectos y sus tipos de cambio
+        proyectos = PROYECTO_CLIENTE.objects.all()
+        tipos_cambio = {}
+        for proyecto in proyectos:
+            if proyecto.PC_TIPO_CAMBIO:
+                tipos_cambio[proyecto.id] = {
+                    'moneda': proyecto.PC_TIPO_CAMBIO.TC_CMONEDA,
+                    'fecha': proyecto.PC_TIPO_CAMBIO.TC_FFECHA.strftime('%Y-%m-%d'),
+                    'valor': float(proyecto.PC_TIPO_CAMBIO.TC_NTASA)
+                }
+            else:
+                tipos_cambio[proyecto.id] = None
+        
         ctx = {
             'form': form,
             'form_asignacion_empleado': form_asignacion_empleado,
             'form_asignacion_contratista': form_asignacion_contratista,
             'form_asignacion_recurso': form_asignacion_recurso,
-            'page': page
+            'page': page,
+            'tipos_cambio': json.dumps(tipos_cambio, cls=DjangoJSONEncoder),
         }
         return render(request, 'home/TAREA/INGENIERIA/tarea_ingenieria_addone.html', ctx)
     except Exception as e:
@@ -2262,12 +2619,26 @@ def TAREA_FINANCIERA_ADDONE(request, page):
             else:
                 messages.error(request, 'Por favor, corrija los errores en el formulario.')
         
+        # Obtener todos los proyectos y sus tipos de cambio
+        proyectos = PROYECTO_CLIENTE.objects.all()
+        tipos_cambio = {}
+        for proyecto in proyectos:
+            if proyecto.PC_TIPO_CAMBIO:
+                tipos_cambio[proyecto.id] = {
+                    'moneda': proyecto.PC_TIPO_CAMBIO.TC_CMONEDA,
+                    'fecha': proyecto.PC_TIPO_CAMBIO.TC_FFECHA.strftime('%Y-%m-%d'),
+                    'valor': float(proyecto.PC_TIPO_CAMBIO.TC_NTASA)
+                }
+            else:
+                tipos_cambio[proyecto.id] = None
+        
         ctx = {
             'form': form,
             'form_asignacion_empleado': form_asignacion_empleado,
             'form_asignacion_contratista': form_asignacion_contratista,
             'form_asignacion_recurso': form_asignacion_recurso,            
-            'page': page
+            'page': page,
+            'tipos_cambio': json.dumps(tipos_cambio, cls=DjangoJSONEncoder),
         }
         return render(request, 'home/TAREA/FINANCIERA/tarea_financiera_addone.html', ctx)
     except Exception as e:
@@ -2488,6 +2859,12 @@ def TAREA_FINANCIERA_DEPENDENCIA_ADDONE(request, pk):
         return redirect('/')
 
 # ----------TAREA UPDATE DATA--------------
+
+def format_decimal(value):
+    if value is None:
+        return '0.00'
+    return str(Decimal(value).quantize(Decimal('0.01')))
+
 def tarea_update_data(request, tipo_tarea, pk):
     if not has_auth(request.user, 'UPD_TAREAS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
@@ -2497,23 +2874,63 @@ def tarea_update_data(request, tipo_tarea, pk):
         AsignacionEmpleado = ASIGNACION_EMPLEADO_TAREA_GENERAL
         AsignacionContratista = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL
         AsignacionRecurso = ASIGNACION_RECURSO_TAREA_GENERAL
+        progreso_field = 'TG_NPROGRESO'
+        duracion_real_field = 'TG_NDURACION_REAL'
+        proyecto_field = 'TG_PROYECTO_CLIENTE'
     elif tipo_tarea == 'ingenieria':
         Tarea = TAREA_INGENIERIA
         AsignacionEmpleado = ASIGNACION_EMPLEADO_TAREA_INGENIERIA
         AsignacionContratista = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA
         AsignacionRecurso = ASIGNACION_RECURSO_TAREA_INGENIERIA
+        progreso_field = 'TI_NPROGRESO'
+        duracion_real_field = 'TI_NDURACION_REAL'
+        proyecto_field = 'TI_PROYECTO_CLIENTE'
     elif tipo_tarea == 'financiera':
         Tarea = TAREA_FINANCIERA
         AsignacionEmpleado = ASIGNACION_EMPLEADO_TAREA_FINANCIERA
         AsignacionContratista = ASIGNACION_EMPLEADO_CONTRATISTA_TAREA_FINANCIERA
         AsignacionRecurso = ASIGNACION_RECURSO_TAREA_FINANCIERA
+        progreso_field = 'TF_NPROGRESO'
+        duracion_real_field = 'TF_NDURACION_REAL'
+        proyecto_field = 'TF_PROYECTO_CLIENTE'
     else:
         return HttpResponseBadRequest("Tipo de tarea no válido")
 
     tarea = get_object_or_404(Tarea, id=pk)
+    proyecto = getattr(tarea, proyecto_field)
+    tipo_cambio = proyecto.PC_TIPO_CAMBIO if proyecto.PC_TIPO_CAMBIO else None
+    
     empleados_asignados = AsignacionEmpleado.objects.filter(AE_TAREA=tarea)
     contratistas_asignados = AsignacionContratista.objects.filter(AEC_TAREA=tarea)
     recursos_asignados = AsignacionRecurso.objects.filter(ART_TAREA=tarea)
+
+    empleados_formateados = []
+    for empleado in empleados_asignados:
+        empleados_formateados.append({
+            'id': empleado.id,
+            'AE_EMPLEADO': empleado.AE_EMPLEADO,
+            'AE_COSTO_REAL': format_decimal(empleado.AE_COSTO_REAL),
+            'AE_HORAS_REALES': format_decimal(empleado.AE_HORAS_REALES),
+        })
+
+    contratistas_formateados = []
+    for contratista in contratistas_asignados:
+        contratistas_formateados.append({
+            'id': contratista.id,
+            'AEC_EMPLEADO': contratista.AEC_EMPLEADO,
+            'AEC_COSTO_REAL': format_decimal(contratista.AEC_COSTO_REAL),
+            'AEC_HORAS_REALES': format_decimal(contratista.AEC_HORAS_REALES),
+        })
+
+    recursos_formateados = []
+    for recurso in recursos_asignados:
+        recursos_formateados.append({
+            'id': recurso.id,
+            'ART_PRODUCTO': recurso.ART_PRODUCTO,
+            'ART_CANTIDAD': format_decimal(recurso.ART_CANTIDAD),
+            'ART_COSTO_UNITARIO': format_decimal(recurso.ART_COSTO_UNITARIO),
+            'ART_HORAS_REALES': format_decimal(recurso.ART_HORAS_REALES),
+        })
 
     if request.method == 'POST':
         try:
@@ -2586,13 +3003,197 @@ def tarea_update_data(request, tipo_tarea, pk):
 
     ctx = {
         'tarea': tarea,
-        'empleados_asignados': empleados_asignados,
-        'contratistas_asignados': contratistas_asignados,
-        'recursos_asignados': recursos_asignados,
-        'tipo_tarea': tipo_tarea
+        'empleados_asignados': empleados_formateados,
+        'contratistas_asignados': contratistas_formateados,
+        'recursos_asignados': recursos_formateados,
+        'porcentaje_avance': format_decimal(getattr(tarea, progreso_field)),
+        'horas_tarea': format_decimal(getattr(tarea, duracion_real_field)),
+        'tipo_tarea': tipo_tarea,
+        'tipo_cambio': tipo_cambio
     }
     return render(request, 'home/TAREA/tarea_update_data.html', ctx)
 # ----------TAREA UPDATE DATA--------------
+
+# ----------TAREA DOCUMENTOS--------------
+def get_adjunto_model(tipo_tarea):
+    if tipo_tarea == 'TAREA_GENERAL':
+        return ADJUNTO_TAREA_GENERAL
+    elif tipo_tarea == 'TAREA_INGENIERIA':
+        return ADJUNTO_TAREA_INGENIERIA
+    elif tipo_tarea == 'TAREA_FINANCIERA':
+        return ADJUNTO_TAREA_FINANCIERA
+    raise ValueError(f"Tipo de tarea no válido: {tipo_tarea}")
+
+def get_adjunto_model_and_prefix(tipo_tarea):
+    if tipo_tarea == 'TAREA_GENERAL':
+        return ADJUNTO_TAREA_GENERAL, 'AT'
+    elif tipo_tarea == 'TAREA_INGENIERIA':
+        return ADJUNTO_TAREA_INGENIERIA, 'ATI'
+    elif tipo_tarea == 'TAREA_FINANCIERA':
+        return ADJUNTO_TAREA_FINANCIERA, 'ATF'
+    else:
+        raise ValueError(f"Tipo de tarea no válido: {tipo_tarea}")
+
+def tarea_adjuntos_lista(request, tarea_id, tipo_tarea):
+    if not has_auth(request.user, 'VER_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        if tipo_tarea == 'TAREA_GENERAL':
+            adjuntos = ADJUNTO_TAREA_GENERAL.objects.filter(AT_TAREA_id=tarea_id)
+            prefix = 'AT'
+        elif tipo_tarea == 'TAREA_INGENIERIA':
+            adjuntos = ADJUNTO_TAREA_INGENIERIA.objects.filter(ATI_TAREA_id=tarea_id)
+            prefix = 'ATI'
+        elif tipo_tarea == 'TAREA_FINANCIERA':
+            adjuntos = ADJUNTO_TAREA_FINANCIERA.objects.filter(ATF_TAREA_id=tarea_id)
+            prefix = 'ATF'
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': f'Tipo de tarea no válido: {tipo_tarea}'
+            }, status=400)
+        
+        adjuntos_data = []
+        for adjunto in adjuntos:
+            adjuntos_data.append({
+                'nombre': getattr(adjunto, f'{prefix}_CNOMBRE'),
+                'descripcion': getattr(adjunto, f'{prefix}_CDESCRIPCION'),
+                'fecha_creacion': getattr(adjunto, f'{prefix}_FFECHA_CREACION').strftime('%d/%m/%Y'),
+                'id': adjunto.id
+            })
+        
+        return JsonResponse({'success': True, 'adjuntos': adjuntos_data})
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al obtener los adjuntos: {str(e)}'
+        }, status=400)
+
+def tarea_adjunto_agregar(request, tarea_id, tipo_tarea):
+    if not has_auth(request.user, 'ADD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        AdjuntoModel, prefix = get_adjunto_model_and_prefix(tipo_tarea)
+        form = AdjuntoTareaForm(request.POST, request.FILES, tipo_tarea=tipo_tarea)
+        if form.is_valid():
+            adjunto = AdjuntoModel(**{
+                f'{prefix}_TAREA_id': tarea_id,
+                f'{prefix}_CARCHIVO': form.cleaned_data['CARCHIVO'],
+                f'{prefix}_CNOMBRE': form.cleaned_data['CNOMBRE'],
+                f'{prefix}_CDESCRIPCION': form.cleaned_data['CDESCRIPCION'],
+                f'{prefix}_CUSUARIO_CREADOR': request.user,
+            })
+            adjunto.save()
+            return JsonResponse({'success': True, 'message': 'Adjunto agregado correctamente'})
+        else:
+            return JsonResponse({'success': False, 'message': 'Formulario inválido', 'errors': form.errors})
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al agregar el adjunto: {str(e)}'
+        }, status=400)
+        
+@ensure_csrf_cookie        
+@require_http_methods(["GET", "POST"])
+def tarea_adjunto_editar(request, pk, tipo_tarea):
+    if not has_auth(request.user, 'UPD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        AdjuntoModel, prefix = get_adjunto_model_and_prefix(tipo_tarea)
+        adjunto = get_object_or_404(AdjuntoModel, pk=pk)
+        
+        if request.method == 'GET':
+            initial_data = {
+                'CNOMBRE': getattr(adjunto, f'{prefix}_CNOMBRE'),
+                'CDESCRIPCION': getattr(adjunto, f'{prefix}_CDESCRIPCION'),
+            }
+            form = AdjuntoTareaForm(initial=initial_data, tipo_tarea=tipo_tarea, is_edit=True)
+            csrf_token = get_token(request)
+            form_html = render_to_string('home/TAREA/adjunto_form_partial.html', {
+                'form': form, 
+                'adjunto': adjunto, 
+                'tipo_tarea': tipo_tarea,
+                'csrf_token': csrf_token
+            }, request=request)
+            return HttpResponse(form_html)
+        
+        elif request.method == 'POST':
+            form = AdjuntoTareaForm(request.POST, request.FILES, tipo_tarea=tipo_tarea, is_edit=True)
+            if form.is_valid():
+                setattr(adjunto, f'{prefix}_CNOMBRE', form.cleaned_data['CNOMBRE'])
+                setattr(adjunto, f'{prefix}_CDESCRIPCION', form.cleaned_data['CDESCRIPCION'])
+                if form.cleaned_data['CARCHIVO']:
+                    setattr(adjunto, f'{prefix}_CARCHIVO', form.cleaned_data['CARCHIVO'])
+                setattr(adjunto, f'{prefix}_CUSUARIO_MODIFICADOR', request.user)
+                adjunto.save()
+                return JsonResponse({'success': True, 'message': 'Adjunto editado correctamente'})
+            else:
+                return JsonResponse({'success': False, 'message': 'Formulario inválido', 'errors': form.errors})
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al editar el adjunto: {str(e)}'
+        }, status=400)
+
+def tarea_adjunto_eliminar(request, pk, tipo_tarea):
+    if not has_auth(request.user, 'UPD_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        AdjuntoModel = get_adjunto_model(tipo_tarea)
+        adjunto = get_object_or_404(AdjuntoModel, pk=pk)
+        adjunto.delete()
+        return JsonResponse({'success': True, 'message': 'Adjunto eliminado correctamente'})
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al eliminar el adjunto: {str(e)}'
+        }, status=400)
+
+def tarea_adjunto_descargar(request, pk, tipo_tarea):
+    if not has_auth(request.user, 'VER_TAREAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        AdjuntoModel, prefix = get_adjunto_model_and_prefix(tipo_tarea)
+        adjunto = get_object_or_404(AdjuntoModel, pk=pk)
+        
+        file_field = getattr(adjunto, f'{prefix}_CARCHIVO')
+        if not file_field:
+            return HttpResponseNotFound('El archivo no existe')
+
+        file_path = file_field.path
+        if not os.path.exists(file_path):
+            return HttpResponseNotFound('El archivo no existe en el sistema de archivos')
+
+        # Obtener el nombre original del archivo
+        original_filename = os.path.basename(file_field.name)
+        
+        # Determinar el tipo MIME
+        content_type, encoding = mimetypes.guess_type(file_path)
+        content_type = content_type or 'application/octet-stream'
+        
+        # Abrir el archivo en modo binario
+        file = open(file_path, 'rb')
+        response = FileResponse(file, content_type=content_type)
+        
+        # Configurar los encabezados de la respuesta
+        response['Content-Disposition'] = f'attachment; filename="{original_filename}"'
+        
+        # Añadir el tamaño del archivo al encabezado
+        response['Content-Length'] = os.path.getsize(file_path)
+        
+        return response
+    except Exception as e:
+        # Registrar el error para debugging
+        import logging
+        logging.error(f"Error al descargar adjunto: {str(e)}")
+        
+        return HttpResponseNotFound('Error al descargar el archivo')
+# ----------TAREA DOCUMENTOS--------------
 
 #--------------------------------------
 #----------------TAREAS----------------
@@ -2677,25 +3278,42 @@ def COTIZACION_ADDONE(request):
     if not has_auth(request.user, 'ADD_DOCUMENTOS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
         return redirect('/')
+    
     try:
         if request.method == 'POST':
             form = formCOTIZACION(request.POST)
+            print(form.instance.CO_NTOTAL_MONEDA_EXTRANJERA)
             if form.is_valid():
                 cotizacion = form.save(commit=False)
                 cotizacion.CO_CUSUARIO_CREADOR = request.user
+                
+                # Calcular CO_NTOTAL_MONEDA_EXTRANJERA si es necesario
+                if cotizacion.CO_TIPO_CAMBIO and cotizacion.CO_NTOTAL:
+                    cotizacion.CO_NTOTAL_MONEDA_EXTRANJERA = Decimal(cotizacion.CO_NTOTAL) / Decimal(cotizacion.CO_TIPO_CAMBIO.TC_NTASA)
+                else:
+                    cotizacion.CO_NTOTAL_MONEDA_EXTRANJERA = None
+                
                 cotizacion.save()
                 crear_log(request.user, f'Crear Cotización', f'Se creó la cotización: {cotizacion.CO_CNUMERO}')
                 messages.success(request, 'Cotización guardada correctamente')
                 return redirect('/cotizacion_listall/')
-        form = formCOTIZACION()
+            else:
+                # Si el formulario no es válido, imprimir los errores para depuración
+                print(form.errors)
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        messages.error(request, f'Error en el campo {field}: {error}')
+        else:
+            form = formCOTIZACION()
+        
         ctx = {
             'form': form,
             'state': 'add'
         }
         return render(request, 'home/COTIZACION/cotizacion_addone.html', ctx)
     except Exception as e:
-        print(e)
-        messages.error(request, f'Error, {str(e)}')
+        print(f"Error detallado: {str(e)}")
+        messages.error(request, f'Error al procesar la solicitud: {str(e)}')
         return redirect('/')
 
 def COTIZACION_ADD_LINE(request):
@@ -2704,53 +3322,66 @@ def COTIZACION_ADD_LINE(request):
         return redirect('/')
     try:
         if request.method == 'POST':
-
             cotizacion_id = request.POST.get('cotizacion_id')
             producto_id = request.POST.get('producto')
             cantidad = request.POST.get('cantidad')
             precio_unitario = request.POST.get('precioUnitario')
             descuento = request.POST.get('descuento')
 
+            cotizacion = COTIZACION.objects.get(id=cotizacion_id)
+            producto = PRODUCTO.objects.get(id=producto_id)
+
             # Ensure cantidad and precio_unitario are at least 1
             cantidad = max(1, int(cantidad or 0))
             precio_unitario = max(Decimal('1'), Decimal(precio_unitario or '0'))
 
-            # Recalculate subtotal
-            subtotal = Decimal(cantidad) * precio_unitario
+            # Check if there's a foreign currency exchange rate
+            if cotizacion.CO_TIPO_CAMBIO:
+                # If there's a foreign currency, we assume the input is in the foreign currency
+                exchange_rate = cotizacion.CO_TIPO_CAMBIO.TC_NTASA
+                # Convert to local currency for storage
+                precio_unitario_local = precio_unitario * exchange_rate
+                descuento_local = Decimal(descuento or '0') * exchange_rate
+            else:
+                # If there's no foreign currency, use the input values directly
+                precio_unitario_local = precio_unitario
+                descuento_local = Decimal(descuento or '0')
+
+            # Recalculate subtotal in local currency
+            subtotal_local = Decimal(cantidad) * precio_unitario_local
 
             # Ensure descuento is non-negative and not greater than subtotal
-            descuento = max(Decimal('0'), min(Decimal(descuento or '0'), subtotal))
+            descuento_local = max(Decimal('0'), min(descuento_local, subtotal_local))
 
-            cotizacion = COTIZACION.objects.get(id=cotizacion_id)
-            producto = PRODUCTO.objects.get(id=producto_id)
-
-            subtotal = Decimal(cantidad) * Decimal(precio_unitario)
-            total = subtotal - Decimal(descuento)
+            # Recalculate total in local currency
+            total_local = subtotal_local - descuento_local
 
             # Verificar si la combinación de cotización y producto ya existe
             existing_detail = COTIZACION_DETALLE.objects.filter(CD_COTIZACION=cotizacion, CD_PRODUCTO=producto).first()
             if existing_detail:
                 existing_detail.delete()
 
-            # Recalculate total
-            total = subtotal - descuento
-
             detalle = COTIZACION_DETALLE(
                 CD_COTIZACION=cotizacion,
                 CD_PRODUCTO=producto,
                 CD_NCANTIDAD=cantidad,
-                CD_NPRECIO_UNITARIO=precio_unitario,
-                CD_NSUBTOTAL=subtotal,
-                CD_NDESCUENTO=descuento,
-                CD_NTOTAL=total,
+                CD_NPRECIO_UNITARIO=precio_unitario_local,
+                CD_NSUBTOTAL=subtotal_local,
+                CD_NDESCUENTO=descuento_local,
+                CD_NTOTAL=total_local,
                 CD_CUSUARIO_CREADOR=request.user
             )
             crear_log(request.user, f'Crear Línea de Cotización', f'Se creó la línea de cotización: {detalle.CD_PRODUCTO}')
             detalle.save()
 
             # Recalculate COTIZACION.CO_NTOTAL
-            total_cotizacion = COTIZACION_DETALLE.objects.filter(CD_COTIZACION=cotizacion).aggregate(Sum('CD_NTOTAL'))['CD_NTOTAL__sum'] or 0
-            cotizacion.CO_NTOTAL = total_cotizacion
+            total_cotizacion_local = COTIZACION_DETALLE.objects.filter(CD_COTIZACION=cotizacion).aggregate(Sum('CD_NTOTAL'))['CD_NTOTAL__sum'] or 0
+            cotizacion.CO_NTOTAL = total_cotizacion_local
+
+            # If there's a foreign currency, calculate and store the foreign currency total
+            if cotizacion.CO_TIPO_CAMBIO:
+                cotizacion.CO_NTOTAL_MONEDA_EXTRANJERA = total_cotizacion_local / exchange_rate
+
             crear_log(request.user, f'Actualizar Cotización', f'Se actualizó la cotización: {cotizacion.CO_CNUMERO}')
             cotizacion.save()
 
@@ -2759,7 +3390,8 @@ def COTIZACION_ADD_LINE(request):
         
         return redirect('/cotizacion_listall/')
     except Exception as e:
-        errMsg=print(f"Error al agregar línea de cotización: {str(e)}")
+        errMsg = f"Error al agregar línea de cotización: {str(e)}"
+        print(errMsg)
         messages.error(request, errMsg)
         return JsonResponse({'error': str(errMsg)}, status=400)
 
@@ -2826,7 +3458,11 @@ def COTIZACION_GET_DATA(request, pk):
                 'CO_CESTADO': cotizacion.CO_CESTADO,
                 'CO_NTOTAL': str(cotizacion.CO_NTOTAL),
                 'CO_COBSERVACIONES': cotizacion.CO_COBSERVACIONES,
-                'CO_CCOMENTARIO': cotizacion.CO_CCOMENTARIO
+                'CO_CCOMENTARIO': cotizacion.CO_CCOMENTARIO,
+                'CO_TIPO_CAMBIO': {
+                    'id': cotizacion.CO_TIPO_CAMBIO.id if cotizacion.CO_TIPO_CAMBIO else None,
+                    'tasa': str(cotizacion.CO_TIPO_CAMBIO.TC_NTASA) if cotizacion.CO_TIPO_CAMBIO else None
+                }
             }
         }
         return JsonResponse(data)
@@ -2835,7 +3471,7 @@ def COTIZACION_GET_DATA(request, pk):
     except Exception as e:
         print("ERROR:", e)
         return JsonResponse({'error': str(e)}, status=500)
-
+    
 def COTIZACION_LISTONE_FORMAT(request, pk):
     if not has_auth(request.user, 'VER_DOCUMENTOS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
@@ -2928,14 +3564,17 @@ def ORDEN_VENTA_ADDONE(request):
         if request.method == 'POST':
             form = formORDEN_VENTA(request.POST)
             if form.is_valid():
-                print("form is valid")
                 orden_venta = form.save(commit=False)
                 orden_venta.OV_CUSUARIO_CREADOR = request.user
+                
+                # Si hay una cotización relacionada, copiar el tipo de cambio si no se ha especificado uno nuevo
+                if orden_venta.OV_COTIZACION and not orden_venta.OV_TIPO_CAMBIO:
+                    orden_venta.OV_TIPO_CAMBIO = orden_venta.OV_COTIZACION.CO_TIPO_CAMBIO
+                
                 orden_venta.save()
-                print("orden_venta saved")
-                # If there's a related cotización, copy its details
+                
+                # Copiar detalles de la cotización si existe
                 if orden_venta.OV_COTIZACION:
-                    print("orden_venta.OV_COTIZACION:", orden_venta.OV_COTIZACION)
                     try:
                         cotizacion_detalles = COTIZACION_DETALLE.objects.filter(CD_COTIZACION=orden_venta.OV_COTIZACION)
                         for cotizacion_detalle in cotizacion_detalles:
@@ -2949,54 +3588,76 @@ def ORDEN_VENTA_ADDONE(request):
                                 OVD_NTOTAL=cotizacion_detalle.CD_NTOTAL,
                                 OVD_CUSUARIO_CREADOR=request.user
                             )
-                            crear_log(request.user, f'Crear Línea de Orden de Venta', f'Se creó la línea de orden de venta: {cotizacion_detalle.CD_COTIZACION}')
                     except Exception as e:
                         print(f"Error al copiar detalles de cotización: {str(e)}")
 
                 messages.success(request, 'Orden de venta guardada correctamente')
                 return redirect('/orden_venta_listall/')
             else:
-                print("Form is not valid. Errors:", form.errors)
-                return HttpResponse(form.errors.as_text())
-        form = formORDEN_VENTA()
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        messages.error(request, f'Error en el campo {field}: {error}')
+        else:
+            form = formORDEN_VENTA()        
         ctx = {
             'form': form,
             'state': 'add'
         }
         return render(request, 'home/ORDEN_VENTA/orden_venta_addone.html', ctx)
     except Exception as e:
-        print(e)
-        messages.error(request, f'Error, {str(e)}')
+        print(f"Error detallado: {str(e)}")
+        messages.error(request, f'Error al procesar la solicitud: {str(e)}')
         return redirect('/')
+
+def get_tipo_cambio_options(request):
+    fecha = request.GET.get('fecha')
+    if fecha:
+        tipos_cambio = TIPO_CAMBIO.objects.filter(TC_FFECHA=fecha)
+    else:
+        tipos_cambio = TIPO_CAMBIO.objects.none()
     
+    options = [{'id': tc.id, 'text': f"{tc.TC_NTASA} - {tc.TC_CMONEDA}"} for tc in tipos_cambio]
+    return JsonResponse(options, safe=False)
+
 def ORDEN_VENTA_ADD_LINE(request):
     if not has_auth(request.user, 'ADD_DOCUMENTOS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
         return redirect('/')
     try:
         if request.method == 'POST':
-
             orden_venta_id = request.POST.get('orden_venta_id')
             producto_id = request.POST.get('producto')
             cantidad = request.POST.get('cantidad')
             precio_unitario = request.POST.get('precioUnitario')
             descuento = request.POST.get('descuento')
 
+            orden_venta = ORDEN_VENTA.objects.get(id=orden_venta_id)
+            producto = PRODUCTO.objects.get(id=producto_id)
+
             # Ensure cantidad and precio_unitario are at least 1
             cantidad = max(1, int(cantidad or 0))
             precio_unitario = max(Decimal('1'), Decimal(precio_unitario or '0'))
 
-            # Recalculate subtotal
-            subtotal = Decimal(cantidad) * precio_unitario
+            # Check if there's a foreign currency exchange rate
+            if orden_venta.OV_TIPO_CAMBIO:
+                # If there's a foreign currency, we assume the input is in the foreign currency
+                exchange_rate = orden_venta.OV_TIPO_CAMBIO.TC_NTASA
+                # Convert to local currency for storage
+                precio_unitario_local = precio_unitario * exchange_rate
+                descuento_local = Decimal(descuento or '0') * exchange_rate
+            else:
+                # If there's no foreign currency, use the input values directly
+                precio_unitario_local = precio_unitario
+                descuento_local = Decimal(descuento or '0')
+
+            # Recalculate subtotal in local currency
+            subtotal_local = Decimal(cantidad) * precio_unitario_local
 
             # Ensure descuento is non-negative and not greater than subtotal
-            descuento = max(Decimal('0'), min(Decimal(descuento or '0'), subtotal))
+            descuento_local = max(Decimal('0'), min(descuento_local, subtotal_local))
 
-            orden_venta = ORDEN_VENTA.objects.get(id=orden_venta_id)
-            producto = PRODUCTO.objects.get(id=producto_id)
-
-            subtotal = Decimal(cantidad) * Decimal(precio_unitario)
-            total = subtotal - Decimal(descuento)
+            # Recalculate total in local currency
+            total_local = subtotal_local - descuento_local
 
             # Verificar si la combinación de orden de venta y producto ya existe
             existing_detail = ORDEN_VENTA_DETALLE.objects.filter(OVD_ORDEN_VENTA=orden_venta, OVD_PRODUCTO=producto).first()
@@ -3004,37 +3665,40 @@ def ORDEN_VENTA_ADD_LINE(request):
                 existing_detail.delete()
                 crear_log(request.user, f'Eliminar Línea de Orden de Venta', f'Se eliminó la línea de orden de venta: {orden_venta}')
 
-            # Recalculate total
-            total = subtotal - descuento
-
             detalle = ORDEN_VENTA_DETALLE(
                 OVD_ORDEN_VENTA=orden_venta,
                 OVD_PRODUCTO=producto,
                 OVD_NCANTIDAD=cantidad,
-                OVD_NPRECIO_UNITARIO=precio_unitario,
-                OVD_NSUBTOTAL=subtotal,
-                OVD_NDESCUENTO=descuento,
-                OVD_NTOTAL=total,
+                OVD_NPRECIO_UNITARIO=precio_unitario_local,
+                OVD_NSUBTOTAL=subtotal_local,
+                OVD_NDESCUENTO=descuento_local,
+                OVD_NTOTAL=total_local,
                 OVD_CUSUARIO_CREADOR=request.user
             )
+            crear_log(request.user, f'Crear Línea de Orden de Venta', f'Se creó la línea de orden de venta: {detalle.OVD_PRODUCTO}')
             detalle.save()
-            crear_log(request.user, f'Crear Línea de Orden de Venta', f'Se creó la línea de orden de venta: {orden_venta}')
 
             # Recalculate ORDEN_VENTA.OV_NTOTAL
-            total_orden_venta = ORDEN_VENTA_DETALLE.objects.filter(OVD_ORDEN_VENTA=orden_venta).aggregate(Sum('OVD_NTOTAL'))['OVD_NTOTAL__sum'] or 0
-            orden_venta.OV_NTOTAL = total_orden_venta
-            orden_venta.save()
+            total_orden_venta_local = ORDEN_VENTA_DETALLE.objects.filter(OVD_ORDEN_VENTA=orden_venta).aggregate(Sum('OVD_NTOTAL'))['OVD_NTOTAL__sum'] or 0
+            orden_venta.OV_NTOTAL = total_orden_venta_local
+
+            # If there's a foreign currency, calculate and store the foreign currency total
+            if orden_venta.OV_TIPO_CAMBIO:
+                orden_venta.OV_NTOTAL_MONEDA_EXTRANJERA = total_orden_venta_local / exchange_rate
+
             crear_log(request.user, f'Actualizar Orden de Venta', f'Se actualizó la orden de venta: {orden_venta.OV_CNUMERO}')
+            orden_venta.save()
 
             messages.success(request, 'Línea de orden de venta agregada correctamente')
             return redirect(f'/orden_venta_listone/{orden_venta_id}')
         
         return redirect('/orden_venta_listall/')
     except Exception as e:
-        errMsg=print(f"Error al agregar línea de orden de venta: {str(e)}")
+        errMsg = f"Error al agregar línea de orden de venta: {str(e)}"
+        print(errMsg)
         messages.error(request, errMsg)
         return JsonResponse({'error': str(errMsg)}, status=400)
-
+    
 def ORDEN_VENTA_UPDATE(request, pk):
     if not has_auth(request.user, 'UPD_DOCUMENTOS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
@@ -3108,7 +3772,6 @@ def ORDEN_VENTA_GET_DATA(request, pk):
         print("ERROR:", e)
         return JsonResponse({'error': str(e)}, status=500)
 
-
 def ORDEN_VENTA_LISTONE_FORMAT(request, pk):
     if not has_auth(request.user, 'VER_DOCUMENTOS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
@@ -3178,7 +3841,6 @@ def CHECK_OV_NUMERO(request):
         return JsonResponse({'exists': exists})
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
-
 def FACTURA_LISTALL(request):
     if not has_auth(request.user, 'VER_DOCUMENTOS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
@@ -3202,14 +3864,17 @@ def FACTURA_ADDONE(request):
         if request.method == 'POST':
             form = formFACTURA(request.POST)
             if form.is_valid():
-                print("form is valid")
                 factura = form.save(commit=False)
                 factura.FA_CUSUARIO_CREADOR = request.user
+                
+                # Si hay una orden de venta relacionada, copiar el tipo de cambio si no se ha especificado uno nuevo
+                if factura.FA_CORDEN_VENTA and not factura.FA_TIPO_CAMBIO:
+                    factura.FA_TIPO_CAMBIO = factura.FA_CORDEN_VENTA.OV_TIPO_CAMBIO
+                
                 factura.save()
-                print("factura saved")
-                # If there's a related orden_venta, copy its details
+                
+                # Copiar detalles de la orden de venta si existe
                 if factura.FA_CORDEN_VENTA:
-                    print("factura.FA_CORDEN_VENTA:", factura.FA_CORDEN_VENTA)
                     try:
                         orden_venta_detalles = ORDEN_VENTA_DETALLE.objects.filter(OVD_ORDEN_VENTA=factura.FA_CORDEN_VENTA)
                         for orden_venta_detalle in orden_venta_detalles:
@@ -3223,53 +3888,67 @@ def FACTURA_ADDONE(request):
                                 FAD_NTOTAL=orden_venta_detalle.OVD_NTOTAL,
                                 FAD_CUSUARIO_CREADOR=request.user
                             )
-                            crear_log(request.user, f'Crear Línea de Factura', f'Se creó la línea de factura: {orden_venta_detalle.OVD_ORDEN_VENTA}')
+                        crear_log(request.user, f'Crear Líneas de Factura', f'Se crearon las líneas de factura para: {factura.FA_CNUMERO}')
                     except Exception as e:
                         print(f"Error al copiar detalles de orden de venta: {str(e)}")
 
                 messages.success(request, 'Factura guardada correctamente')
                 return redirect('/factura_listall/')
             else:
-                print("Form is not valid. Errors:", form.errors)
-                return HttpResponse(form.errors.as_text())
-        form = formFACTURA()
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        messages.error(request, f'Error en el campo {field}: {error}')
+        else:
+            form = formFACTURA()
         ctx = {
             'form': form,
             'state': 'add'
         }
         return render(request, 'home/FACTURA/factura_addone.html', ctx)
     except Exception as e:
-        print(e)
-        messages.error(request, f'Error, {str(e)}')
+        print(f"Error detallado: {str(e)}")
+        messages.error(request, f'Error al procesar la solicitud: {str(e)}')
         return redirect('/')
+    
 def FACTURA_ADD_LINE(request):
     if not has_auth(request.user, 'ADD_DOCUMENTOS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
         return redirect('/')
     try:
         if request.method == 'POST':
-
             factura_id = request.POST.get('factura_id')
             producto_id = request.POST.get('producto')
             cantidad = request.POST.get('cantidad')
             precio_unitario = request.POST.get('precioUnitario')
             descuento = request.POST.get('descuento')
 
+            factura = FACTURA.objects.get(id=factura_id)
+            producto = PRODUCTO.objects.get(id=producto_id)
+
             # Ensure cantidad and precio_unitario are at least 1
             cantidad = max(1, int(cantidad or 0))
             precio_unitario = max(Decimal('1'), Decimal(precio_unitario or '0'))
 
-            # Recalculate subtotal
-            subtotal = Decimal(cantidad) * precio_unitario
+            # Check if there's a foreign currency exchange rate
+            if factura.FA_TIPO_CAMBIO:
+                # If there's a foreign currency, we assume the input is in the foreign currency
+                exchange_rate = factura.FA_TIPO_CAMBIO.TC_NTASA
+                # Convert to local currency for storage
+                precio_unitario_local = precio_unitario * exchange_rate
+                descuento_local = Decimal(descuento or '0') * exchange_rate
+            else:
+                # If there's no foreign currency, use the input values directly
+                precio_unitario_local = precio_unitario
+                descuento_local = Decimal(descuento or '0')
+
+            # Recalculate subtotal in local currency
+            subtotal_local = Decimal(cantidad) * precio_unitario_local
 
             # Ensure descuento is non-negative and not greater than subtotal
-            descuento = max(Decimal('0'), min(Decimal(descuento or '0'), subtotal))
+            descuento_local = max(Decimal('0'), min(descuento_local, subtotal_local))
 
-            factura = FACTURA.objects.get(id=factura_id)
-            producto = PRODUCTO.objects.get(id=producto_id)
-
-            subtotal = Decimal(cantidad) * Decimal(precio_unitario)
-            total = subtotal - Decimal(descuento)
+            # Recalculate total in local currency
+            total_local = subtotal_local - descuento_local
 
             # Verificar si la combinación de factura y producto ya existe
             existing_detail = FACTURA_DETALLE.objects.filter(FAD_FACTURA=factura, FAD_PRODUCTO=producto).first()
@@ -3277,37 +3956,40 @@ def FACTURA_ADD_LINE(request):
                 existing_detail.delete()
                 crear_log(request.user, f'Eliminar Línea de Factura', f'Se eliminó la línea de factura: {factura}')
 
-            # Recalculate total
-            total = subtotal - descuento
-
             detalle = FACTURA_DETALLE(
                 FAD_FACTURA=factura,
                 FAD_PRODUCTO=producto,
                 FAD_NCANTIDAD=cantidad,
-                FAD_NPRECIO_UNITARIO=precio_unitario,
-                FAD_NSUBTOTAL=subtotal,
-                FAD_NDESCUENTO=descuento,
-                FAD_NTOTAL=total,
+                FAD_NPRECIO_UNITARIO=precio_unitario_local,
+                FAD_NSUBTOTAL=subtotal_local,
+                FAD_NDESCUENTO=descuento_local,
+                FAD_NTOTAL=total_local,
                 FAD_CUSUARIO_CREADOR=request.user
             )
+            crear_log(request.user, f'Crear Línea de Factura', f'Se creó la línea de factura: {detalle.FAD_PRODUCTO}')
             detalle.save()
-            crear_log(request.user, f'Crear Línea de Factura', f'Se creó la línea de factura: {factura}')
 
             # Recalculate FACTURA.FA_NTOTAL
-            total_factura = FACTURA_DETALLE.objects.filter(FAD_FACTURA=factura).aggregate(Sum('FAD_NTOTAL'))['FAD_NTOTAL__sum'] or 0
-            factura.FA_NTOTAL = total_factura
-            factura.save()
+            total_factura_local = FACTURA_DETALLE.objects.filter(FAD_FACTURA=factura).aggregate(Sum('FAD_NTOTAL'))['FAD_NTOTAL__sum'] or 0
+            factura.FA_NTOTAL = total_factura_local
+
+            # If there's a foreign currency, calculate and store the foreign currency total
+            if factura.FA_TIPO_CAMBIO:
+                factura.FA_NTOTAL_MONEDA_EXTRANJERA = total_factura_local / exchange_rate
+
             crear_log(request.user, f'Actualizar Factura', f'Se actualizó la factura: {factura.FA_CNUMERO}')
+            factura.save()
 
             messages.success(request, 'Línea de factura agregada correctamente')
             return redirect(f'/factura_listone/{factura_id}')
         
         return redirect('/factura_listall/')
     except Exception as e:
-        errMsg=print(f"Error al agregar línea de factura: {str(e)}")
+        errMsg = f"Error al agregar línea de factura: {str(e)}"
+        print(errMsg)
         messages.error(request, errMsg)
         return JsonResponse({'error': str(errMsg)}, status=400)
-
+    
 def FACTURA_UPDATE(request, pk):
     if not has_auth(request.user, 'UPD_DOCUMENTOS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
@@ -3966,7 +4648,6 @@ def run_query_sql(query):
 #------------QUERY MANAGER-------------
 #--------------------------------------
 
-
 def BOLETA_GARANTIA_LISTALL(request):
     try:
         object_list = BOLETA_GARANTIA.objects.all()
@@ -3981,20 +4662,40 @@ def BOLETA_GARANTIA_LISTALL(request):
 
 def BOLETA_GARANTIA_ADDONE(request):
     try:
-        if request.method =='POST':
-            form = formBOLETA_GARANTIA(request.POST)
+        if request.method == 'POST':
+            form = formBOLETA_GARANTIA(request.POST, request.FILES)
             if form.is_valid():
-                form.save()
+                boleta = form.save(commit=False)
+                boleta.BG_CUSUARIO_CREADOR = request.user
+                boleta.save()
                 messages.success(request, 'Boleta de garantía guardada correctamente')
                 return redirect('/boletagarantia_listall/')
-        form = formBOLETA_GARANTIA()
+            else:
+                messages.error(request, 'Por favor, corrija los errores en el formulario.')
+        else:
+            form = formBOLETA_GARANTIA()
+        
+        # Obtener todos los proyectos y sus tipos de cambio
+        proyectos = PROYECTO_CLIENTE.objects.all()
+        tipos_cambio = {}
+        for proyecto in proyectos:
+            if proyecto.PC_TIPO_CAMBIO:
+                tipos_cambio[proyecto.id] = {
+                    'moneda': proyecto.PC_TIPO_CAMBIO.TC_CMONEDA,
+                    'fecha': proyecto.PC_TIPO_CAMBIO.TC_FFECHA.strftime('%Y-%m-%d'),
+                    'valor': float(proyecto.PC_TIPO_CAMBIO.TC_NTASA)
+                }
+            else:
+                tipos_cambio[proyecto.id] = None
+        
         ctx = {
-            'form': form
+            'form': form,
+            'tipos_cambio': json.dumps(tipos_cambio, cls=DjangoJSONEncoder),
         }
         return render(request, 'home/BOLETA_GARANTIA/boletagarantia_addone.html', ctx)
     except Exception as e:
         print(e)
-        messages.error(request, f'Error, {str(e)}')
+        messages.error(request, f'Error: {str(e)}')
         return redirect('/')
 
 def BOLETA_GARANTIA_UPDATE(request, pk):
@@ -4011,6 +4712,663 @@ def BOLETA_GARANTIA_UPDATE(request, pk):
             'form': form
         }
         return render(request, 'home/BOLETA_GARANTIA/boletagarantia_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def EDP_LISTALL(request):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        object_list = ESTADO_DE_PAGO.objects.all()
+        ctx = {
+            'object_list': object_list
+        }
+        return render(request, 'home/ESTADO_DE_PAGO/edp_listall.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def EDP_ADDONE(request):
+    if not has_auth(request.user, 'ADD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        if request.method == 'POST':
+            form = formESTADO_DE_PAGO(request.POST)
+            if form.is_valid():
+                edp = form.save(commit=False)
+                edp.EP_CUSUARIO_CREADOR = request.user
+                edp.save()
+                crear_log(request.user, f'Crear Estado de Pago', f'Se creó el Estado de Pago: {edp.EP_CNUMERO}')
+                messages.success(request, 'Estado de Pago guardado correctamente')
+                return redirect('/edp_listall/')
+            else:
+                messages.error(request, 'Por favor, corrija los errores en el formulario.')
+        else:
+            form = formESTADO_DE_PAGO()
+        
+        # Obtener todos los proyectos y sus tipos de cambio
+        proyectos = PROYECTO_CLIENTE.objects.all()
+        tipos_cambio = {}
+        for proyecto in proyectos:
+            if proyecto.PC_TIPO_CAMBIO:
+                tipos_cambio[proyecto.id] = {
+                    'moneda': proyecto.PC_TIPO_CAMBIO.TC_CMONEDA,
+                    'fecha': proyecto.PC_TIPO_CAMBIO.TC_FFECHA.strftime('%Y-%m-%d'),
+                    'valor': float(proyecto.PC_TIPO_CAMBIO.TC_NTASA)
+                }
+            else:
+                tipos_cambio[proyecto.id] = None
+        
+        ctx = {
+            'form': form,
+            'state': 'add',
+            'tipos_cambio': json.dumps(tipos_cambio, cls=DjangoJSONEncoder),
+        }
+        return render(request, 'home/ESTADO_DE_PAGO/edp_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error: {str(e)}')
+        return redirect('/')
+def EDP_UPDATE(request, pk):
+    if not has_auth(request.user, 'EDITAR_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        edp = ESTADO_DE_PAGO.objects.get(id=pk)
+        if request.method == 'POST':
+            form = formESTADO_DE_PAGO(request.POST, instance=edp)
+            if form.is_valid():
+                edp = form.save(commit=False)
+                edp.EP_CUSUARIO_MODIFICADOR = request.user
+                edp.save()
+                crear_log(request.user, f'Editar Estado de Pago', f'Se editó el Estado de Pago: {edp.EP_CNUMERO}')
+                messages.success(request, 'Estado de Pago actualizado correctamente')
+                return redirect('/edp_listall/')
+        form = formESTADO_DE_PAGO(instance=edp)
+        ctx = {
+            'form': form,
+            'state': 'update'
+        }
+        return render(request, 'home/ESTADO_DE_PAGO/edp_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def EDP_LISTONE(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        edp = ESTADO_DE_PAGO.objects.get(id=pk)
+        product_list = list(PRODUCTO.objects.filter(PR_BACTIVO=True).values_list('id', 'PR_CNOMBRE'))
+        
+        # Obtener el tipo de cambio del proyecto asociado al EDP
+        tipo_cambio = None
+        if edp.EP_PROYECTO and hasattr(edp.EP_PROYECTO, 'PC_TIPO_CAMBIO'):
+            tipo_cambio = edp.EP_PROYECTO.PC_TIPO_CAMBIO
+
+        ctx = {
+            'edp': edp,
+            'product_list': product_list,
+            'tipos_cambio': {
+                edp.EP_PROYECTO.id: {
+                    'moneda': tipo_cambio.TC_CMONEDA if tipo_cambio else 'CLP',
+                    'valor': float(tipo_cambio.TC_NTASA) if tipo_cambio else 1,
+                    'fecha': tipo_cambio.TC_FFECHA.strftime('%Y-%m-%d') if tipo_cambio else None
+                }
+            } if edp.EP_PROYECTO else {}
+        }
+        return render(request, 'home/ESTADO_DE_PAGO/edp_listone.html', ctx)
+    except Exception as e:
+        print("ERROR:", e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/edp_listall/')
+    
+def EDP_LISTONE_FORMAT(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        edp = ESTADO_DE_PAGO.objects.get(id=pk)
+        product_list = list(PRODUCTO.objects.filter(PR_BACTIVO=True).values_list('id', 'PR_CNOMBRE'))
+        
+        ctx = {
+            'edp': edp,
+            'product_list': product_list,
+        }
+        return render(request, 'home/ESTADO_DE_PAGO/edp_listone_format.html', ctx)
+    except Exception as e:
+        print("ERROR:", e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/edp_listall/')
+    
+def EDP_GET_LINE(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        print("id línea:", pk)
+        detalle = ESTADO_DE_PAGO_DETALLE.objects.get(id=pk)
+        
+        data = {
+            'id': detalle.id,
+            'producto': detalle.EDD_PRODUCTO.id,
+            'cantidad': detalle.EDD_NCANTIDAD,
+            'precioUnitario': detalle.EDD_NPRECIO_UNITARIO,
+            'descuento': detalle.EDD_NDESCUENTO
+        }
+        return JsonResponse(data)
+    except ESTADO_DE_PAGO_DETALLE.DoesNotExist:
+        return JsonResponse({'error': 'Línea de estado de pago no encontrada'}, status=404)
+    except Exception as e:
+        print("ERROR:", e)
+        return JsonResponse({'error': str(e)}, status=500)
+
+def EDP_ADD_LINE(request):
+    if not has_auth(request.user, 'ADD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        if request.method == 'POST':
+            edp_id = request.POST.get('edp_id')
+            producto_id = request.POST.get('producto')
+            cantidad = request.POST.get('cantidad')
+            precio_unitario = request.POST.get('precioUnitario')
+            descuento = request.POST.get('descuento')
+
+            # Ensure cantidad and precio_unitario are at least 1
+            cantidad = max(1, int(cantidad or 0))
+            precio_unitario = max(Decimal('1'), Decimal(precio_unitario or '0'))
+
+            # Recalculate subtotal
+            subtotal = Decimal(cantidad) * precio_unitario
+
+            # Ensure descuento is non-negative and not greater than subtotal
+            descuento = max(Decimal('0'), min(Decimal(descuento or '0'), subtotal))
+
+            edp = ESTADO_DE_PAGO.objects.get(id=edp_id)
+            producto = PRODUCTO.objects.get(id=producto_id)
+
+            subtotal = Decimal(cantidad) * Decimal(precio_unitario)
+            total = subtotal - Decimal(descuento)
+
+            # Verificar si la combinación de estado de pago y producto ya existe
+            existing_detail = ESTADO_DE_PAGO_DETALLE.objects.filter(EDD_ESTADO_DE_PAGO=edp, EDD_PRODUCTO=producto).first()
+            if existing_detail:
+                existing_detail.delete()
+
+            # Recalculate total
+            total = subtotal - descuento
+
+            detalle = ESTADO_DE_PAGO_DETALLE(
+                EDD_ESTADO_DE_PAGO=edp,
+                EDD_PRODUCTO=producto,
+                EDD_NCANTIDAD=cantidad,
+                EDD_NPRECIO_UNITARIO=precio_unitario,
+                EDD_NSUBTOTAL=subtotal,
+                EDD_NDESCUENTO=descuento,
+                EDD_NTOTAL=total,
+                EDD_CUSUARIO_CREADOR=request.user
+            )
+            crear_log(request.user, f'Crear Línea de Estado de Pago', f'Se creó la línea de estado de pago: {detalle.EDD_PRODUCTO}')
+            detalle.save()
+
+            # Recalculate ESTADO_DE_PAGO.EP_NTOTAL
+            total_edp = ESTADO_DE_PAGO_DETALLE.objects.filter(EDD_ESTADO_DE_PAGO=edp).aggregate(Sum('EDD_NTOTAL'))['EDD_NTOTAL__sum'] or 0
+            edp.EP_NTOTAL = total_edp
+            crear_log(request.user, f'Actualizar Estado de Pago', f'Se actualizó el estado de pago: {edp.EP_CNUMERO}')
+            edp.save()
+
+            messages.success(request, 'Línea de estado de pago agregada correctamente')
+            return redirect(f'/edp_listone/{edp_id}')
+        
+        return redirect('/edp_listall/')
+    except Exception as e:
+        errMsg=print(f"Error al agregar línea de estado de pago: {str(e)}")
+        messages.error(request, errMsg)
+        return JsonResponse({'error': str(errMsg)}, status=400)
+
+def EDP_DELETE_LINE(request, pk):
+    if not has_auth(request.user, 'UPD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        detalle = ESTADO_DE_PAGO_DETALLE.objects.get(id=pk)
+        edp_id = detalle.EDD_ESTADO_DE_PAGO.id
+        detalle.delete()
+        crear_log(request.user, f'Eliminar Línea de Estado de Pago', f'Se eliminó la línea de estado de pago: {detalle.EDD_PRODUCTO}')
+        # Recalculate ESTADO_DE_PAGO.EP_NTOTAL
+        total_edp = ESTADO_DE_PAGO_DETALLE.objects.filter(EDD_ESTADO_DE_PAGO=detalle.EDD_ESTADO_DE_PAGO).aggregate(Sum('EDD_NTOTAL'))['EDD_NTOTAL__sum'] or 0
+        detalle.EDD_ESTADO_DE_PAGO.EP_NTOTAL = total_edp
+        crear_log(request.user, f'Actualizar Estado de Pago', f'Se actualizó el estado de pago: {detalle.EDD_ESTADO_DE_PAGO.EP_CNUMERO}')
+        detalle.EDD_ESTADO_DE_PAGO.save()
+        return JsonResponse({'success': 'Línea de estado de pago eliminada correctamente', 'edp_id': edp_id})
+    except ESTADO_DE_PAGO_DETALLE.DoesNotExist:
+        return JsonResponse({'error': 'Línea de estado de pago no encontrada'}, status=404)
+    except Exception as e:
+        print("ERROR:", e)
+        return JsonResponse({'error': str(e)}, status=500)
+
+def CHECK_EDP_NUMERO(request):
+    if request.method == 'POST':
+        edp_numero = request.POST.get('edp_numero')
+        exists = ESTADO_DE_PAGO.objects.filter(EP_CNUMERO=edp_numero).exists()
+        return JsonResponse({'exists': exists})
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+def UNIDAD_NEGOCIO_LISTALL(request):
+    if not has_auth(request.user, 'VER_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        unidades_negocio = UNIDAD_NEGOCIO.objects.all()
+        ctx = {
+            'unidades_negocio': unidades_negocio
+        }
+        return render(request, 'home/UNIDAD_NEGOCIO/un_listall.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def UNIDAD_NEGOCIO_ADDONE(request):
+    if not has_auth(request.user, 'ADD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        if request.method == 'POST':
+            form = formUNIDAD_NEGOCIO(request.POST)
+            if form.is_valid():
+                unidad_negocio = form.save(commit=False)
+                unidad_negocio.UN_CUSUARIO_CREADOR = request.user
+                unidad_negocio.save()
+                crear_log(request.user, 'Crear Unidad de Negocio', f'Se creó la unidad de negocio: {unidad_negocio.UN_CCODIGO}')
+                messages.success(request, 'Unidad de negocio guardada correctamente')
+                return redirect('/un_listall/')
+        form = formUNIDAD_NEGOCIO()
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/UNIDAD_NEGOCIO/un_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def UNIDAD_NEGOCIO_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPDATE_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        unidad_negocio = UNIDAD_NEGOCIO.objects.get(pk=pk)
+        if request.method == 'POST':
+            form = formUNIDAD_NEGOCIO(request.POST, instance=unidad_negocio)
+            if form.is_valid():
+                form.save()
+                crear_log(request.user, 'Actualizar Unidad de Negocio', f'Se actualizó la unidad de negocio: {unidad_negocio.UN_CCODIGO}')
+                messages.success(request, 'Unidad de negocio actualizada correctamente')
+                return redirect('/un_listall/')
+        else:
+            form = formUNIDAD_NEGOCIO(instance=unidad_negocio)
+        ctx = {
+            'form': form,
+            'unidad_negocio': unidad_negocio
+        }
+        return render(request, 'home/UNIDAD_NEGOCIO/un_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def FC_LISTALL(request):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        object_list = FICHA_CIERRE.objects.all()
+        ctx = {
+            'object_list': object_list
+        }
+        return render(request, 'home/FICHA_CIERRE/fc_listall.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def FC_ADDONE(request):
+    if not has_auth(request.user, 'ADD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        if request.method == 'POST':
+            form = formFICHA_CIERRE(request.POST)
+            if form.is_valid():
+                fc = form.save(commit=False)
+                fc.save()
+                crear_log(request.user, f'Crear Ficha de Cierre', f'Se creó la Ficha de Cierre: {fc.FC_NUMERO_DE_PROYECTO}')                
+
+                detalle = FICHA_CIERRE_DETALLE(
+                    FCD_FICHA_CIERRE=fc,
+                    FCD_NACTIVIDAD=1,
+                    FCD_CACTIVIDAD='Todos los entregables comprometidos fueron enviados a cliente.',
+                    FCD_CCUMPLIMIENTO='SI',
+                    FCD_COBSERVACIONES='',
+                    FCD_CUSUARIO_CREADOR=request.user
+                )
+                detalle.save()
+                detalle = FICHA_CIERRE_DETALLE(
+                    FCD_FICHA_CIERRE=fc,
+                    FCD_NACTIVIDAD=2,
+                    FCD_CACTIVIDAD='Todos los entregables comprometidos están en rev 0 o su equivalente.',
+                    FCD_CCUMPLIMIENTO='SI',
+                    FCD_COBSERVACIONES='',
+                    FCD_CUSUARIO_CREADOR=request.user
+                )
+                detalle.save()
+                detalle = FICHA_CIERRE_DETALLE(
+                    FCD_FICHA_CIERRE=fc,
+                    FCD_NACTIVIDAD=3,
+                    FCD_CACTIVIDAD='Se realizó la reunión de cierre con el cliente (presentación de resultados).',
+                    FCD_CCUMPLIMIENTO='SI',
+                    FCD_COBSERVACIONES='',
+                    FCD_CUSUARIO_CREADOR=request.user
+                )
+                detalle.save()
+                detalle = FICHA_CIERRE_DETALLE(
+                    FCD_FICHA_CIERRE=fc,
+                    FCD_NACTIVIDAD=4,
+                    FCD_CACTIVIDAD='Se emitió el último estado de pago (EDP) pactado por el cliente.',
+                    FCD_CCUMPLIMIENTO='SI',
+                    FCD_COBSERVACIONES='',
+                    FCD_CUSUARIO_CREADOR=request.user
+                )
+                detalle.save()
+                detalle = FICHA_CIERRE_DETALLE(
+                    FCD_FICHA_CIERRE=fc,
+                    FCD_NACTIVIDAD=5,
+                    FCD_CACTIVIDAD='Satisfacción al cliente.',
+                    FCD_CCUMPLIMIENTO='SI',
+                    FCD_COBSERVACIONES='',
+                    FCD_CUSUARIO_CREADOR=request.user
+                )
+                detalle.save()
+                
+                messages.success(request, 'Ficha de Cierre guardada correctamente')
+                return redirect('/fc_listall/')
+        form = formFICHA_CIERRE()
+        proyectos = PROYECTO_CLIENTE.objects.all()
+        ctx = {
+            'form': form,
+            'state': 'add',
+            'proyectos': proyectos,
+        }
+        return render(request, 'home/FICHA_CIERRE/fc_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def FC_UPDATE(request, pk):
+    if not has_auth(request.user, 'EDITAR_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        fc = FICHA_CIERRE.objects.get(id=pk)
+        if request.method == 'POST':
+            form = formFICHA_CIERRE(request.POST, instance=fc)
+            if form.is_valid():
+                fc = form.save(commit=False)
+                # Actualizar el número de proyecto si es necesario
+                proyecto = PROYECTO_CLIENTE.objects.get(id=form.cleaned_data['FC_NOMBRE_DE_PROYECTO'].id)
+                fc.FC_NUMERO_DE_PROYECTO = f"FC-{proyecto.PC_CCODIGO}-{fc.FC_FECHA_DE_CIERRE.year}"
+                fc.save()
+                crear_log(request.user, f'Editar Ficha de Cierre', f'Se editó la Ficha de Cierre: {fc.FC_NUMERO_DE_PROYECTO}')
+                messages.success(request, 'Ficha de Cierre actualizada correctamente')
+                return redirect('/fc_listall/')
+        else:
+            form = formFICHA_CIERRE(instance=fc)
+        
+        proyectos = PROYECTO_CLIENTE.objects.all()
+        ctx = {
+            'form': form,
+            'state': 'update',
+            'proyectos': proyectos,
+            'ficha_cierre': fc,
+        }
+        return render(request, 'home/FICHA_CIERRE/fc_update.html', ctx)
+    except FICHA_CIERRE.DoesNotExist:
+        messages.error(request, 'No se encontró la Ficha de Cierre especificada')
+        return redirect('/')
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error: {str(e)}')
+        return redirect('/')
+
+def FC_LISTONE(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        fc = FICHA_CIERRE.objects.get(id=pk)
+        ctx = {
+            'fc': fc,
+        }
+        return render(request, 'home/FICHA_CIERRE/fc_listone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/fc_listall/')
+
+def FC_LISTONE_FORMAT(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        fc = FICHA_CIERRE.objects.get(id=pk)
+        
+        ctx = {
+            'fc': fc,
+        }
+        return render(request, 'home/FICHA_CIERRE/fc_listone_format.html', ctx)
+    except Exception as e:
+        print("ERROR:", e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/fc_listall/')
+    
+def FC_GET_LINE(request, pk):
+    if not has_auth(request.user, 'VER_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        detalle = FICHA_CIERRE_DETALLE.objects.get(id=pk)
+        
+        data = {
+            'id': detalle.id,
+            'nactividad': detalle.FCD_NACTIVIDAD,
+            'cactividad': detalle.FCD_CACTIVIDAD,
+            'ccumplimiento': detalle.FCD_CCUMPLIMIENTO,
+            'cobservaciones': detalle.FCD_COBSERVACIONES
+        }
+        return JsonResponse(data)
+    except FICHA_CIERRE_DETALLE.DoesNotExist:
+        return JsonResponse({'error': 'Detalle de ficha de cierre no encontrado'}, status=404)
+    except Exception as e:
+        print("ERROR:", e)
+        return JsonResponse({'error': str(e)}, status=500)
+
+def FC_ADD_UPDATE_LINE(request):
+    if not has_auth(request.user, 'ADD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        if request.method == 'POST':
+            fc_id = request.POST.get('fc_id')
+            line_id = request.POST.get('lineId')
+            cactividad = request.POST.get('cactividad')
+            ccumplimiento = request.POST.get('ccumplimiento')
+            cobservaciones = request.POST.get('cobservaciones')
+
+            fc = FICHA_CIERRE.objects.get(id=fc_id)
+
+            if line_id:  # Actualizar línea existente
+                detalle = FICHA_CIERRE_DETALLE.objects.get(id=line_id)
+                detalle.FCD_CACTIVIDAD = cactividad
+                detalle.FCD_CCUMPLIMIENTO = ccumplimiento
+                detalle.FCD_COBSERVACIONES = cobservaciones
+                detalle.save()
+                crear_log(request.user, f'Actualizar Detalle de Ficha de Cierre', f'Se actualizó el detalle de ficha de cierre: Actividad {detalle.FCD_NACTIVIDAD}')
+                mensaje = 'Detalle de ficha de cierre actualizado correctamente'
+            else:  # Crear nueva línea
+                # Obtener el último número de actividad para esta ficha de cierre
+                last_detail = FICHA_CIERRE_DETALLE.objects.filter(FCD_FICHA_CIERRE=fc).order_by('-FCD_NACTIVIDAD').first()
+                if last_detail:
+                    nactividad = last_detail.FCD_NACTIVIDAD + 1
+                else:
+                    nactividad = 1
+
+                detalle = FICHA_CIERRE_DETALLE(
+                    FCD_FICHA_CIERRE=fc,
+                    FCD_NACTIVIDAD=nactividad,
+                    FCD_CACTIVIDAD=cactividad,
+                    FCD_CCUMPLIMIENTO=ccumplimiento,
+                    FCD_COBSERVACIONES=cobservaciones,
+                    FCD_CUSUARIO_CREADOR=request.user
+                )
+                detalle.save()
+                crear_log(request.user, f'Crear Detalle de Ficha de Cierre', f'Se creó el detalle de ficha de cierre: Actividad {detalle.FCD_NACTIVIDAD}')
+                mensaje = 'Detalle de ficha de cierre agregado correctamente'
+
+            messages.success(request, mensaje)
+            return JsonResponse({'success': True, 'message': mensaje})
+        
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    except Exception as e:
+        errMsg = f"Error al procesar detalle de ficha de cierre: {str(e)}"
+        print(errMsg)
+        messages.error(request, errMsg)
+        return JsonResponse({'error': str(errMsg)}, status=400)
+
+def FC_DELETE_LINE(request, pk):
+    if not has_auth(request.user, 'UPD_DOCUMENTOS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        detalle = FICHA_CIERRE_DETALLE.objects.get(id=pk)
+        fc_id = detalle.FCD_FICHA_CIERRE.id
+        crear_log(request.user, f'Eliminar Detalle de Ficha de Cierre', f'Se eliminó el detalle de ficha de cierre: Actividad {detalle.FCD_NACTIVIDAD}')
+        detalle.delete()
+        return JsonResponse({'success': 'Detalle de ficha de cierre eliminado correctamente', 'fc_id': fc_id})
+    except FICHA_CIERRE_DETALLE.DoesNotExist:
+        return JsonResponse({'error': 'Detalle de ficha de cierre no encontrado'}, status=404)
+    except Exception as e:
+        print("ERROR:", e)
+        return JsonResponse({'error': str(e)}, status=500)
+
+def CHECK_FC_NUMERO(request):
+    if request.method == 'POST':
+        fc_numero = request.POST.get('fc_numero')
+        exists = FICHA_CIERRE.objects.filter(FC_NUMERO_DE_PROYECTO=fc_numero).exists()
+        return JsonResponse({'exists': exists})
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+def FC_GENERATE_PDF(request, pk):
+    try:
+        fc = FICHA_CIERRE.objects.get(id=pk)
+        template = get_template('home/FICHA_CIERRE/fc_pdf_template.html')
+        
+        # Obtener la URL del logo
+        logo_url = request.build_absolute_uri(staticfiles_storage.url('assets/images/logo_png_sin_fondo.png'))
+        
+        # Descargar la imagen
+        response = requests.get(logo_url)
+        if response.status_code == 200:
+            encoded_string = base64.b64encode(response.content).decode()
+        else:
+            # Si no se puede obtener la imagen, usa una cadena vacía
+            encoded_string = ""
+        
+        context = {
+            'fc': fc,
+            'logo_base64': encoded_string,
+        }
+        
+        html = template.render(context)
+        result = BytesIO()
+        
+        pdf = pisa.pisaDocument(BytesIO(html.encode("UTF-8")), result)
+        
+        if not pdf.err:
+            response = HttpResponse(result.getvalue(), content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="Ficha_de_Cierre_{fc.FC_NUMERO_DE_PROYECTO}.pdf"'
+            return response
+        else:
+            return HttpResponse(f'Error al generar el PDF: {pdf.err}', status=400)
+    
+    except Exception as e:
+        error_message = f"Error: {str(e)}\n\nTraceback:\n{traceback.format_exc()}"
+        return HttpResponse(error_message, content_type="text/plain", status=500)
+    
+def TC_LISTALL(request):
+    if not has_auth(request.user, 'VER_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        object_list = TIPO_CAMBIO.objects.all()
+        ctx = {
+            'object_list': object_list
+        }
+        return render(request, 'home/TIPO_CAMBIO/tc_listall.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def TC_ADDONE(request):
+    if not has_auth(request.user, 'ADD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        if request.method =='POST':
+            form = formTIPO_CAMBIO(request.POST)
+            if form.is_valid():
+                form.save()
+                crear_log(request.user, 'Crear Tipo de Cambio', f'Se creó el tipo de cambio: {form.instance.TC_CMONEDA}')
+                messages.success(request, 'Tipo de cambio guardado correctamente')
+                return redirect('/tc_listall/')
+        form = formTIPO_CAMBIO()
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/TIPO_CAMBIO/tc_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def TC_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        tipo_cambio = TIPO_CAMBIO.objects.get(id=pk)
+        if request.method == 'POST':
+            form = formTIPO_CAMBIO(request.POST, instance=tipo_cambio)
+            if form.is_valid():
+                form.save()
+                crear_log(request.user, 'Actualizar Tipo de Cambio', f'Se actualizó el tipo de cambio: {form.instance.TC_CMONEDA}')
+                messages.success(request, 'Tipo de cambio actualizado correctamente')
+                return redirect('/tc_listall/')
+        form = formTIPO_CAMBIO(instance=tipo_cambio)
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/TIPO_CAMBIO/tc_addone.html', ctx)
     except Exception as e:
         print(e)
         messages.error(request, f'Error, {str(e)}')

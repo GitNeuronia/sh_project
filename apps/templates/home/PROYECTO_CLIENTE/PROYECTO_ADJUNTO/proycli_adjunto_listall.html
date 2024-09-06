@@ -38,8 +38,8 @@
                             <td>{{ documento.PA_CTIPO }}</td>
                             <td>{{ documento.PA_FFECHA_SUBIDA|date:"d/m/Y H:i" }}</td>
                             <td>
-                                <button class="btn btn-sm btn-info" onclick="editarDocumento({{ documento.id }})"><i class="fas fa-edit"></i></button>
-                                <a href="{{ documento.PA_CARCHIVO.url }}" class="btn btn-sm btn-success" target="_blank"><i class="fas fa-download"></i></a>
+                                {% comment %} <button class="btn btn-sm btn-info" onclick="editarDocumento({{ documento.id }})"><i class="fas fa-edit"></i></button> {% endcomment %}
+                                <a href="{% url 'proyecto_cliente_documentos_download' documento.id %}" class="btn btn-sm btn-success" target="_blank"><i class="fas fa-download"></i></a>
                             </td>
                         </tr>
                         {% endfor %}
@@ -100,24 +100,24 @@
                 <form id="formEditarDocumento" enctype="multipart/form-data">
                     {% csrf_token %}
                     <input type="hidden" id="editDocumentoId" name="documento_id">
-                    {{ form.PA_PROYECTO }}
                     <div class="form-group">
-                        <label for="{{ form.PA_CNOMBRE.id_for_label }}">{{ form.PA_CNOMBRE.label }}</label>
-                        {{ form.PA_CNOMBRE }}
+                        <label for="id_PA_CNOMBRE">Nombre</label>
+                        <input type="text" class="form-control" id="id_PA_CNOMBRE" name="PA_CNOMBRE">
                     </div>
                     <div class="form-group">
-                        <label for="{{ form.PA_CDESCRIPCION.id_for_label }}">{{ form.PA_CDESCRIPCION.label }}</label>
-                        {{ form.PA_CDESCRIPCION }}
+                        <label for="id_PA_CDESCRIPCION">Descripción</label>
+                        <textarea class="form-control" id="id_PA_CDESCRIPCION" name="PA_CDESCRIPCION"></textarea>
                     </div>
                     <div class="form-group">
-                        <label for="{{ form.PA_CTIPO.id_for_label }}">{{ form.PA_CTIPO.label }}</label>
-                        {{ form.PA_CTIPO }}
+                        <label for="id_PA_CTIPO">Tipo</label>
+                        <input type="text" class="form-control" id="id_PA_CTIPO" name="PA_CTIPO">
                     </div>
                     <div class="form-group">
-                        <label for="{{ form.PA_CARCHIVO.id_for_label }}">{{ form.PA_CARCHIVO.label }} (opcional)</label>
-                        {{ form.PA_CARCHIVO }}
+                        <label for="id_PA_CARCHIVO">Archivo (opcional)</label>
+                        <input type="file" class="form-control-file" id="id_PA_CARCHIVO" name="PA_CARCHIVO">
+                        <div id="file-name" class="mt-2 text-muted"></div>
                     </div>
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-2"></i>Guardar cambios</button>
+                    <button type="submit" class="btn btn-primary">Guardar cambios</button>
                 </form>
             </div>
         </div>
@@ -127,9 +127,46 @@
 <script>
     function editarDocumento(documentoId) {
         console.log('Editando documento con ID:', documentoId);
-        // Aquí deberías cargar los datos del documento y llenar el formulario
-        $('#editDocumentoId').val(documentoId);
-        $('#editarDocumentoModal').modal('show');
+        
+        $.ajax({
+            url: `/proyecto_cliente_documentos_modal_update/${documentoId}/`,
+            type: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    var documento = response.documento;
+                    
+                    // Llenar el formulario con los datos del documento
+                    $('#editDocumentoId').val(documento.id);
+                    $('#id_PA_CNOMBRE').val(documento.PA_CNOMBRE);
+                    $('#id_PA_CDESCRIPCION').val(documento.PA_CDESCRIPCION);
+                    $('#id_PA_CTIPO').val(documento.PA_CTIPO);
+                    
+                    // Mostrar el nombre del archivo actual si existe
+                    if (documento.PA_CARCHIVO_nombre) {
+                        $('#file-name').text('Archivo actual: ' + documento.PA_CARCHIVO_nombre);
+                    } else {
+                        $('#file-name').text('No hay archivo adjunto');
+                    }
+    
+                    // Mostrar el modal de edición
+                    $('#editarDocumentoModal').modal('show');
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'No se pudo cargar la información del documento'
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error al obtener datos del documento:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Hubo un problema al cargar los datos del documento'
+                });
+            }
+        });
     }
 
     $(document).ready(function() {

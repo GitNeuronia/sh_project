@@ -9,6 +9,7 @@
     {% load humanize %}
     {% load i18n %}
     {% load l10n %}
+    {% load custom_filters %}
 {% endblock stylesheets %}
 
 {% block content %}	
@@ -85,7 +86,13 @@
                                   </tr>
                                   <tr>
                                     <th>Total:</th>
-                                    <td>{{factura.FA_NTOTAL}}</td>
+                                    <td>
+                                        {% if factura.FA_TIPO_CAMBIO %}
+                                            {{ factura.FA_TIPO_CAMBIO.TC_CMONEDA }} : {{ factura.FA_NTOTAL_MONEDA_EXTRANJERA|floatformat:2 }}
+                                        {% else %}
+                                            CLP : {{ factura.FA_NTOTAL|floatformat:2 }}
+                                        {% endif %}
+                                    </td>
                                   </tr>
                                   <tr>
                                     <th>Observaciones:</th>
@@ -124,10 +131,34 @@
                                         </td>
                                         <td>{{ detalle.FAD_PRODUCTO }}</td>
                                         <td>{{ detalle.FAD_NCANTIDAD }}</td>
-                                        <td>{{ detalle.FAD_NPRECIO_UNITARIO }}</td>
-                                        <td>{{ detalle.FAD_NSUBTOTAL }}</td>
-                                        <td>{{ detalle.FAD_NDESCUENTO }}</td>
-                                        <td>{{ detalle.FAD_NTOTAL }}</td>
+                                        <td>
+                                            {% if factura.FA_TIPO_CAMBIO %}
+                                                {{ factura.FA_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.FAD_NPRECIO_UNITARIO|div:factura.FA_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
+                                            {% else %}
+                                                CLP {{ detalle.FAD_NPRECIO_UNITARIO|floatformat:2 }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if factura.FA_TIPO_CAMBIO %}
+                                                {{ factura.FA_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.FAD_NSUBTOTAL|div:factura.FA_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
+                                            {% else %}
+                                                CLP {{ detalle.FAD_NSUBTOTAL|floatformat:2 }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if factura.FA_TIPO_CAMBIO %}
+                                                {{ factura.FA_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.FAD_NDESCUENTO|div:factura.FA_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
+                                            {% else %}
+                                                CLP {{ detalle.FAD_NDESCUENTO|floatformat:2 }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if factura.FA_TIPO_CAMBIO %}
+                                                {{ factura.FA_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.FAD_NTOTAL|div:factura.FA_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
+                                            {% else %}
+                                                CLP {{ detalle.FAD_NTOTAL|floatformat:2 }}
+                                            {% endif %}
+                                        </td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -167,7 +198,7 @@
                             <input type="number" class="form-control" id="cantidad" name="cantidad" required>
                         </div>
                         <div class="form-group">
-                            <label for="precioUnitario">Precio Unitario</label>
+                            <label for="precioUnitario">Precio Unitario <span id="currency"></span></label>
                             <input type="number" step="0.01" class="form-control" id="precioUnitario" name="precioUnitario" required>
                         </div>
                         <div class="form-group">
@@ -203,13 +234,24 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
     $(document).ready(function() {
-        var table = $('#factura-lines').DataTable();
+        var table = $('#factura-lines').DataTable({
+            "columnDefs": [
+                { "orderable": false, "targets": 0 }
+            ],
+            "order": [[1, 'asc']]
+        });
 
-        
+        // Function to set the currency
+        function setCurrency() {
+            var currency = "{% if factura.FA_TIPO_CAMBIO %}{{ factura.FA_TIPO_CAMBIO.TC_CMONEDA }}{% else %}CLP{% endif %}";
+            $('#currency').text('(' + currency + ')');
+        }
+
         // Add line
         $('#addLineModal, #addLineModal2').on('click', function() {
             $('#lineForm')[0].reset();
             $('#lineId').val('');
+            setCurrency();
             $('#lineModal').modal('show');
         });
 
@@ -224,8 +266,14 @@
                     $('#lineId').val(data.id);
                     $('#producto').val(data.producto);
                     $('#cantidad').val(data.cantidad);
-                    $('#precioUnitario').val(data.precioUnitario);
-                    $('#descuento').val(data.descuento);
+                    {% if factura.FA_TIPO_CAMBIO %}
+                        $('#precioUnitario').val((data.precioUnitario / {{ factura.FA_TIPO_CAMBIO.TC_NTASA }}).toFixed(2));
+                        $('#descuento').val((data.descuento / {{ factura.FA_TIPO_CAMBIO.TC_NTASA }}).toFixed(2));
+                    {% else %}
+                        $('#precioUnitario').val(data.precioUnitario);
+                        $('#descuento').val(data.descuento);
+                    {% endif %}
+                    setCurrency();
                     $('#lineModal').modal('show');
                 },
                 error: function(xhr, status, error) {

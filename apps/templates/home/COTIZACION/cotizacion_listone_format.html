@@ -1,4 +1,5 @@
 {% extends "layouts/base.html" %}
+{% load custom_filters %}
 {% load humanize %}
 {% load l10n %}
 {% block title %} Cotización {% endblock %} 
@@ -125,12 +126,16 @@
 												<tr>
 													<th>Total:</th>
 													<td>
-														<span>$ {{ cotizacion.CO_NTOTAL|floatformat:0|intcomma }}</span>
+														{% if cotizacion.CO_TIPO_CAMBIO %}
+															<span>{{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} {{ cotizacion.CO_NTOTAL_MONEDA_EXTRANJERA|floatformat:2|intcomma }}</span>
+														{% else %}
+															<span>CLP {{ cotizacion.CO_NTOTAL|floatformat:0|intcomma }}</span>
+														{% endif %}
 													</td>
 												</tr>
 											</tbody>
 										</table>
-									</div>
+									</div>									
 								</div>
 								<div class="row">
 									<div class="col-sm-12">
@@ -161,12 +166,30 @@
 														<tr>
 															<td>
 																<p class="m-0">{{ detalle.CD_PRODUCTO.PR_CNOMBRE }}</p>
-                                                                <p class="m-0"><small>{{ detalle.CD_PRODUCTO.PR_CDESCRIPCION|truncatechars:150|wordwrap:70|linebreaksbr }}</small></p>
+																<p class="m-0"><small>{{ detalle.CD_PRODUCTO.PR_CDESCRIPCION|truncatechars:150|wordwrap:70|linebreaksbr }}</small></p>
 															</td>
 															<td style="text-align: right;">{{ detalle.CD_NCANTIDAD|floatformat:0|intcomma }}</td>
-															<td style="text-align: right;">{{ detalle.CD_NPRECIO_UNITARIO|floatformat:0|intcomma }}</td>
-															<td style="text-align: right;">{{ detalle.CD_NDESCUENTO|floatformat:0|intcomma }}</td>
-															<td style="text-align: right;">{{ detalle.CD_NTOTAL|floatformat:0|intcomma }}</td>
+															<td style="text-align: right;">
+																{% if cotizacion.CO_TIPO_CAMBIO %}
+																	{{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.CD_NPRECIO_UNITARIO|div:cotizacion.CO_TIPO_CAMBIO.TC_NTASA|floatformat:2|intcomma }}
+																{% else %}
+																	CLP {{ detalle.CD_NPRECIO_UNITARIO|floatformat:0|intcomma }}
+																{% endif %}
+															</td>
+															<td style="text-align: right;">
+																{% if cotizacion.CO_TIPO_CAMBIO %}
+																	{{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.CD_NDESCUENTO|div:cotizacion.CO_TIPO_CAMBIO.TC_NTASA|floatformat:2|intcomma }}
+																{% else %}
+																	CLP {{ detalle.CD_NDESCUENTO|floatformat:0|intcomma }}
+																{% endif %}
+															</td>
+															<td style="text-align: right;">
+																{% if cotizacion.CO_TIPO_CAMBIO %}
+																	{{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.CD_NTOTAL|div:cotizacion.CO_TIPO_CAMBIO.TC_NTASA|floatformat:2|intcomma }}
+																{% else %}
+																	CLP {{ detalle.CD_NTOTAL|floatformat:0|intcomma }}
+																{% endif %}
+															</td>
 														</tr>
 													{% endfor %}
 												</tbody>
@@ -180,7 +203,13 @@
 											<tbody>
 												<tr>
 													<th>Sub Total :</th>
-													<td style="text-align: right;">{{ cotizacion.CO_NTOTAL|floatformat:0|intcomma }}</td>
+													<td style="text-align: right;">
+														{% if cotizacion.CO_TIPO_CAMBIO %}
+															{{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} {{ cotizacion.CO_NTOTAL_MONEDA_EXTRANJERA|floatformat:2|intcomma }}
+														{% else %}
+															CLP {{ cotizacion.CO_NTOTAL|floatformat:0|intcomma }}
+														{% endif %}
+													</td>
 												</tr>
 												<tr class="text-info">
 													<td>
@@ -189,7 +218,13 @@
 													</td>
 													<td style="text-align: right;">
 														<hr />
-														<h5 class="text-primary">{{ cotizacion.CO_NTOTAL|floatformat:0|intcomma }}</h5>
+														<h5 class="text-primary">
+															{% if cotizacion.CO_TIPO_CAMBIO %}
+																{{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} {{ cotizacion.CO_NTOTAL_MONEDA_EXTRANJERA|floatformat:2|intcomma }}
+															{% else %}
+																CLP {{ cotizacion.CO_NTOTAL|floatformat:0|intcomma }}
+															{% endif %}
+														</h5>
 													</td>
 												</tr>
 											</tbody>
@@ -211,10 +246,10 @@
 							</div>
 						</div>
 						<div class="row text-center">
-							<div class="col-sm-12 invoice-btn-group text-center">
-								<button type="button" class="btn waves-effect waves-light btn-primary m-b-10" onclick="closeTab()">Cerrar Ventana</button>
-							</div>
-						</div>
+                            <div class="col-sm-12 invoice-btn-group text-center">
+                                <button type="button" class="btn waves-effect waves-light btn-primary m-b-10" onclick="goBack()">Volver</button>
+                            </div>
+                        </div>
 					</div>
 				</div>
 				<!-- [ Cotización ] end -->
@@ -230,10 +265,16 @@
 {% block javascripts %}
 
 <script>
-	function closeTab() {
-		window.close();
-	}
-</script>
+    function goBack() {
+        if (document.referrer) {
+            // Si hay una página anterior, volvemos a ella
+            window.history.back();
+        } else {
+            // Si no hay página anterior, redirigimos a la lista de estados de pago
+            window.location.href = "{% url 'edp_listall' %}";
+        }
+    }
+</script>>
 
 <script>
     function printData() {

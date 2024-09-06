@@ -1,0 +1,181 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Ficha de Cierre {% endblock %}
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}
+    {{ block.super }}
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+{% endblock stylesheets %}
+
+{% block content %}
+    <!-- [ Main Content ] start -->
+    <section class="pcoded-main-container">
+        <div class="pcoded-content">
+            <!-- [ breadcrumb ] start -->
+            <div class="page-header">
+                <div class="page-block">
+                    <div class="row align-items-center">
+                        <div class="col-md-12">
+                            <div class="page-header-title">
+                                <h5 class="m-b-10">Fichas de Cierre</h5>
+                            </div>
+                            <ul class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="/"><i class="feather icon-home"></i></a></li>
+                                <li class="breadcrumb-item"><a href="{% url 'fc_listall' %}">Fichas de Cierre</a></li>
+                                <li class="breadcrumb-item"><a href="#!">Agregar Ficha de Cierre</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- [ breadcrumb ] end -->
+            <!-- [ Main Content ] start -->
+            <div class="row">
+                <!-- [ form-element ] start -->
+                <div class="col-sm-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Ficha de Cierre</h5>
+                        </div>
+                        <div class="card-body">
+                            <h5>Ingrese datos de la ficha de cierre</h5>
+                            <hr>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <form method="POST" id="validation-form123" enctype="multipart/form-data">
+                                        {% csrf_token %}
+                                        {{ form.non_field_errors }}
+                                        {% for field in form %}
+                                            <div class="fieldWrapper">
+                                                {{ field.errors }}
+                                                <label class="my-1 me-2" for="{{ field.id_for_label }}">{{ field.label }}:</label>
+                                                {% if field.name == 'FC_FECHA_DE_CIERRE' %}
+                                                    <input type="date" name="{{ field.name }}" id="{{ field.id_for_label }}" class="form-control" style="width: 480px;" value="{{ field.value|date:'Y-m-d' }}" required>
+                                                {% elif field.name == 'FC_NOMBRE_DE_PROYECTO' %}
+                                                    <select name="{{ field.name }}" id="{{ field.id_for_label }}" class="form-control" style="width: 100%;">
+                                                        <option></option>
+                                                        {% for proyecto in proyectos %}
+                                                            <option value="{{ proyecto.id }}" data-codigo="{{ proyecto.PC_CCODIGO }}" data-tipo-cambio="{{ proyecto.PC_TIPO_CAMBIO.TC_CMONEDA }}" data-tasa="{{ proyecto.PC_TIPO_CAMBIO.TC_NTASA }}">
+                                                                {{ proyecto.PC_CNOMBRE }}
+                                                            </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                {% elif field.name == 'FC_NUMERO_DE_PROYECTO' %}
+                                                    <input type="text" name="{{ field.name }}" id="{{ field.id_for_label }}" class="form-control" readonly>
+                                                {% else %}
+                                                    {{ field }}
+                                                {% endif %}
+                                            </div>
+                                        {% endfor %}
+                                        <div class="fieldWrapper">
+                                            <label class="my-1 me-2" for="id_tipo_cambio">Tipo de Cambio:</label>
+                                            <input type="text" id="id_tipo_cambio" class="form-control" readonly>
+                                        </div>
+                                        {{ form.errors }}
+                                        <br>
+                                        <div class="form-group nav justify-content-end">
+                                            <button class="btn btn-success mr-4" type="submit">Guardar</button>
+                                            <a class="btn btn-danger mr-1" onclick="window.history.go(-1); return false;">Volver</a>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- [ form-element ] end -->
+            </div>
+            <!-- [ Main Content ] end -->
+        </div>
+    </section>
+    <!-- [ Main Content ] end -->
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}
+    {{ block.super }}
+    <!-- Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    
+    <!-- bootstrap-tagsinput-latest Js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/typeahead.js/0.11.1/typeahead.bundle.min.js"></script>
+    <script src="/static/assets/js/plugins/bootstrap-tagsinput.min.js"></script>
+    <!-- bootstrap-maxlength Js -->
+    <script src="/static/assets/js/plugins/bootstrap-maxlength.js"></script>
+    <!-- form-advance custom js -->
+    <script src="/static/assets/js/pages/form-advance-custom.js"></script>
+    <!-- SweetAlert2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>   
+    <script>
+    $(document).ready(function() {
+        // Inicializar Select2 en el campo de proyecto
+        $('#id_FC_NOMBRE_DE_PROYECTO').select2({
+            placeholder: 'Buscar y seleccionar proyecto',
+            allowClear: true,
+            width: '100%'
+        });
+
+        // Manejar el cambio en la selección del proyecto
+        $('#id_FC_NOMBRE_DE_PROYECTO').on('change', function() {
+            var selectedOption = $(this).find('option:selected');
+            var projectCode = selectedOption.data('codigo');
+            var tipoCambio = selectedOption.data('tipo-cambio');
+            var tasa = selectedOption.data('tasa');
+            
+            if (projectCode) {
+                var currentYear = new Date().getFullYear();
+                var fcNumber = 'FC-' + projectCode + '-' + currentYear;
+                $('#id_FC_NUMERO_DE_PROYECTO').val(fcNumber);
+            } else {
+                $('#id_FC_NUMERO_DE_PROYECTO').val('');
+            }
+
+            if (tipoCambio && tasa) {
+                $('#id_tipo_cambio').val(tipoCambio + ' - Tasa: ' + tasa);
+            } else {
+                $('#id_tipo_cambio').val('CLP');
+            }
+        });
+
+        // Validación del formulario
+        $('form').on('submit', function(e) {                
+            e.preventDefault();
+            var fcNumero = $('#id_FC_NUMERO_DE_PROYECTO').val();
+            
+            $.ajax({
+                url: "{% url 'check_fc_numero' %}",
+                type: 'POST',
+                data: {
+                    'fc_numero': fcNumero
+                },
+                dataType: 'json',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.exists) {
+                        Swal.fire({
+                            title: 'Error',
+                            text: 'Número de Ficha de Cierre ya existe',
+                            icon: 'error',
+                            confirmButtonText: 'Ok'
+                        });
+                    } else {
+                        $('form')[0].submit();
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error checking ficha de cierre number:', error);
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'Ocurrió un error al verificar el número de Ficha de Cierre',
+                        icon: 'error',
+                        confirmButtonText: 'Ok'
+                    });
+                }
+            });
+        });
+    });
+    </script>
+{% endblock javascripts %}

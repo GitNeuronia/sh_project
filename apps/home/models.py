@@ -3,6 +3,7 @@
 Copyright (c) 2019 - present AppSeed.us
 """
 
+import datetime
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import FileExtensionValidator
@@ -67,6 +68,21 @@ class PARAMETRO(models.Model):
         db_table = 'PARAMETRO'
         verbose_name = 'Parametro'
         verbose_name_plural = 'Parametros'
+
+class TIPO_CAMBIO(models.Model):
+    TC_CMONEDA = models.CharField(max_length=10,verbose_name="Moneda")
+    TC_FFECHA = models.DateField(verbose_name="Fecha de Tipo de Cambio")
+    TC_NTASA = models.DecimalField(max_digits=10,decimal_places=2,verbose_name="Tasa de Cambio")
+    FECHA_CREACION = models.DateTimeField(auto_now_add=True,verbose_name="Fecha de Creación")
+
+    def __str__(self):
+        return f"{self.TC_CMONEDA} - {self.TC_FFECHA}"
+
+    class Meta:
+        db_table = 'TIPO_CAMBIO'
+        verbose_name = "Tipo de Cambio"
+        verbose_name_plural = "Tipos de Cambio"
+        unique_together = ['TC_CMONEDA', 'TC_FFECHA']
 
 class ALERTA(models.Model):
     AL_USUARIO_ORIGEN = models.ForeignKey(User, verbose_name='Usuario origen', on_delete=models.PROTECT, related_name='alertas_enviadas')
@@ -301,6 +317,16 @@ class COTIZACION(models.Model):
     CO_CUSUARIO_CREADOR = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='cotizaciones_creadas', verbose_name='Usuario creador')
     CO_CUSUARIO_MODIFICADOR = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='cotizaciones_modificadas', verbose_name='Usuario modificador')
     CO_CCOMENTARIO = models.TextField(blank=True, null=True, verbose_name='Comentarios generales')
+    CO_TIPO_CAMBIO = models.ForeignKey(TIPO_CAMBIO, on_delete=models.SET_NULL, null=True, blank=True, related_name='cotizaciones', verbose_name='Tipo de Cambio')
+    CO_NTOTAL_MONEDA_EXTRANJERA = models.DecimalField(max_digits=15, decimal_places=4,blank=True, null=True, verbose_name='Total en Moneda Extranjera')
+
+    def save(self, *args, **kwargs):
+        if self.CO_TIPO_CAMBIO and self.CO_NTOTAL:
+            self.CO_NTOTAL_MONEDA_EXTRANJERA = self.CO_NTOTAL / self.CO_TIPO_CAMBIO.TC_NTASA
+        else:
+            self.CO_NTOTAL_MONEDA_EXTRANJERA = None
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"Cotización {self.CO_CNUMERO} - {self.CO_CLIENTE}"
 
@@ -350,7 +376,15 @@ class ORDEN_VENTA(models.Model):
     OV_CUSUARIO_MODIFICADOR = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='ordenes_venta_modificadas', verbose_name='Usuario modificador')
     OV_CCOMENTARIO = models.TextField(blank=True, null=True, verbose_name='Comentarios generales')
     OV_COTIZACION = models.ForeignKey(COTIZACION, on_delete=models.SET_NULL, null=True, blank=True, related_name='ordenes_venta', verbose_name='Cotización')
+    OV_TIPO_CAMBIO = models.ForeignKey(TIPO_CAMBIO, on_delete=models.SET_NULL, blank=True, null=True, related_name='ordenes_venta', verbose_name='Tipo de Cambio')
+    OV_NTOTAL_MONEDA_EXTRANJERA = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True, verbose_name='Total en Moneda Extranjera')
 
+    def save(self, *args, **kwargs):
+        if self.OV_TIPO_CAMBIO and self.OV_NTOTAL:
+            self.OV_NTOTAL_MONEDA_EXTRANJERA = self.OV_NTOTAL / self.OV_TIPO_CAMBIO.TC_NTASA
+        else:
+            self.OV_NTOTAL_MONEDA_EXTRANJERA = None
+        super().save(*args, **kwargs)
     def __str__(self):
         return f"Orden de Venta {self.OV_CNUMERO} - {self.OV_CCLIENTE}"
 
@@ -404,6 +438,15 @@ class FACTURA(models.Model):
     ], default='PENDIENTE')
     FA_NMONTO_PAGADO = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name='Monto pagado')
     FA_FFECHA_ULTIMO_PAGO = models.DateField(null=True, blank=True, verbose_name='Fecha del último pago')
+    FA_TIPO_CAMBIO = models.ForeignKey(TIPO_CAMBIO, on_delete=models.SET_NULL, null=True, related_name='facturas', verbose_name='Tipo de Cambio')
+    FA_NTOTAL_MONEDA_EXTRANJERA = models.DecimalField(max_digits=15, decimal_places=2,blank=True, null=True, verbose_name='Total en Moneda Extranjera')
+    FA_NMONTO_PAGADO_MONEDA_EXTRANJERA = models.DecimalField(max_digits=15, decimal_places=2, default=0, blank=True, null=True, verbose_name='Monto Pagado en Moneda Extranjera')
+
+    def save(self, *args, **kwargs):
+        if self.FA_TIPO_CAMBIO:
+            self.FA_NTOTAL_MONEDA_EXTRANJERA = self.FA_NTOTAL / self.FA_TIPO_CAMBIO.TC_NTASA
+            self.FA_NMONTO_PAGADO_MONEDA_EXTRANJERA = self.FA_NMONTO_PAGADO / self.FA_TIPO_CAMBIO.TC_NTASA
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Factura {self.FA_CNUMERO} - {self.FA_CORDEN_VENTA.OV_CNUMERO}"
@@ -691,6 +734,21 @@ class ANEXO(models.Model):
         verbose_name = 'Anexo'
         verbose_name_plural = 'Anexos'
 
+class UNIDAD_NEGOCIO(models.Model):
+    UN_CCODIGO = models.CharField(max_length=20, unique=True, verbose_name='Código de unidad de negocio')
+    UN_CDESCRIPCION = models.CharField(max_length=1024, verbose_name='Descripción de la unidad de negocio')
+    UN_BHABILITADO = models.BooleanField(default=True, verbose_name='Habilitado')
+    UN_CUSUARIO_CREADOR = models.ForeignKey(User, on_delete=models.PROTECT, related_name='unidad_negocio_creador', verbose_name='Usuario creador')
+    UN_FFECHA_CREACION = models.DateTimeField(auto_now_add=True,blank=True, null=True, verbose_name='Fecha de creación')
+    
+    def __str__(self):
+        return f"Proyecto {self.UN_CCODIGO}"
+    
+    class Meta:
+        db_table = 'UNIDAD_NEGOCIO'
+        verbose_name = 'Unidad de Negocio'
+        verbose_name_plural = 'Unidades de Negocio'
+    
 class PROYECTO_CLIENTE(models.Model):
     PC_CCODIGO = models.CharField(max_length=100, unique=True, verbose_name='Código de proyecto')
     PC_CNOMBRE = models.CharField(max_length=255, verbose_name='Nombre del proyecto')
@@ -698,6 +756,7 @@ class PROYECTO_CLIENTE(models.Model):
     PC_CLIENTE = models.ForeignKey('CLIENTE', on_delete=models.CASCADE, related_name='proyectos', verbose_name='Cliente')
     PC_CCATEGORIA = models.ForeignKey('CATEGORIA_PROYECTO', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Categoría del proyecto')
     PC_CTIPO = models.ForeignKey('TIPO_PROYECTO', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Tipo de proyecto')
+    PC_CUNIDAD_NEGOCIO = models.ForeignKey('UNIDAD_NEGOCIO', on_delete=models.CASCADE, null=True, blank=True, related_name='proyectos', verbose_name='Unidad de Negocio')
     PC_FFECHA_INICIO = models.DateField(verbose_name='Fecha de inicio')
     PC_FFECHA_FIN_ESTIMADA = models.DateField(verbose_name='Fecha de fin estimada')
     PC_FFECHA_FIN_REAL = models.DateField(null=True, blank=True, verbose_name='Fecha de fin real')
@@ -716,7 +775,8 @@ class PROYECTO_CLIENTE(models.Model):
     PC_NHORAS_REALES = models.PositiveIntegerField(default=0, verbose_name='Horas reales')
     PC_NCOSTO_REAL = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name='Costo real')
     PC_NMARGEN = models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Margen (%)')
-
+    PC_TIPO_CAMBIO = models.ForeignKey('TIPO_CAMBIO', on_delete=models.SET_NULL, null=True, blank=True, related_name='proyectos', verbose_name='Tipo de Cambio')    
+    
     def __str__(self):
         return f"Proyecto {self.PC_CCODIGO} - {self.PC_CNOMBRE}"
 
@@ -748,6 +808,103 @@ class ETAPA(models.Model):
         db_table = 'ETAPA'
         verbose_name = 'Etapa de Proyecto'
         verbose_name_plural = 'Etapas de Proyectos'
+
+class ESTADO_DE_PAGO(models.Model):
+    EP_PROYECTO = models.ForeignKey(PROYECTO_CLIENTE, on_delete=models.CASCADE, related_name='estados_de_pago', verbose_name='Proyecto cliente')
+    EP_CNUMERO = models.CharField(max_length=20, unique=True, verbose_name='Número de estado de pago')
+    EP_FFECHA = models.DateField(verbose_name='Fecha de estado de pago')
+    EP_CESTADO = models.CharField(max_length=20, verbose_name='Estado', choices=[
+        ('PENDIENTE', 'Pendiente'),
+        ('APROBADO', 'Aprobado'),
+        ('RECHAZADO', 'Rechazado'),
+    ])
+    EP_NTOTAL = models.DecimalField(max_digits=20, decimal_places=2, verbose_name='Total')
+    EP_COBSERVACIONES = models.TextField(blank=True, null=True, verbose_name='Observaciones')
+    EP_FFECHA_CREACION = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de creación')
+    EP_FFECHA_MODIFICACION = models.DateTimeField(auto_now=True, verbose_name='Fecha de modificación')
+    EP_CUSUARIO_CREADOR = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='estados_de_pago_creados', verbose_name='Usuario creador')
+    EP_CUSUARIO_MODIFICADOR = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='estados_de_pago_modificados', verbose_name='Usuario modificador')
+    EP_CESTADO_PAGO = models.CharField(max_length=20, verbose_name='Estado de pago', choices=[
+        ('PENDIENTE', 'Pendiente'),
+        ('PARCIAL', 'Parcial'),
+        ('COMPLETO', 'Completo'),
+    ], default='PENDIENTE')
+    EP_NMONTO_PAGADO = models.DecimalField(max_digits=20, decimal_places=2, default=0, verbose_name='Monto pagado')
+    EP_FFECHA_ULTIMO_PAGO = models.DateField(null=True, blank=True, verbose_name='Fecha del último pago')
+
+    def __str__(self):
+        return f"Estado de Pago {self.EP_CNUMERO} - {self.EP_PROYECTO.PC_CNOMBRE}"
+
+    class Meta:
+        db_table = 'ESTADO_DE_PAGO'
+        verbose_name = 'Estado de Pago'
+        verbose_name_plural = 'Estados de Pago'
+
+class ESTADO_DE_PAGO_DETALLE(models.Model):
+    EDD_ESTADO_DE_PAGO = models.ForeignKey(ESTADO_DE_PAGO, on_delete=models.CASCADE, related_name='detalles', verbose_name='Estado de Pago')
+    EDD_PRODUCTO = models.ForeignKey(PRODUCTO, on_delete=models.CASCADE, related_name='detalles_edp', verbose_name='Producto')
+    EDD_NCANTIDAD = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Cantidad')
+    EDD_NPRECIO_UNITARIO = models.DecimalField(max_digits=15, decimal_places=2, verbose_name='Precio unitario')
+    EDD_NSUBTOTAL = models.DecimalField(max_digits=15, decimal_places=2, verbose_name='Subtotal')
+    EDD_NDESCUENTO = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name='Descuento')
+    EDD_NTOTAL = models.DecimalField(max_digits=15, decimal_places=2, verbose_name='Total')
+    EDD_FFECHA_CREACION = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de creación')
+    EDD_FFECHA_MODIFICACION = models.DateTimeField(auto_now=True, verbose_name='Fecha de modificación')
+    EDD_CUSUARIO_CREADOR = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='detalles_edp_creados', verbose_name='Usuario creador')
+    EDD_CUSUARIO_MODIFICADOR = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='detalles_edp_modificados', verbose_name='Usuario modificador')
+
+    def __str__(self):
+        return f"Detalle de EDP {self.EDD_ESTADO_DE_PAGO.EP_CNUMERO} - {self.EDD_ACTIVIDAD}"
+
+    class Meta:
+        db_table = 'EDP_DETALLE'
+        verbose_name = 'Detalle de Estado de Pago'
+        verbose_name_plural = 'Detalles de Estados de Pago'
+        unique_together = ('EDD_ESTADO_DE_PAGO', 'EDD_PRODUCTO')
+
+class FICHA_CIERRE(models.Model):    
+    FC_JEFE_DE_PROYECTO = models.CharField(max_length=255, null=True, verbose_name='Jefe de Proyecto')
+    FC_NOMBRE_DE_PROYECTO = models.ForeignKey(PROYECTO_CLIENTE, on_delete=models.CASCADE, related_name='fichas_cierre', verbose_name='Nombre de Proyecto')
+    FC_NUMERO_DE_PROYECTO = models.CharField(max_length=100, verbose_name='Número de Proyecto')
+    FC_FECHA_DE_CIERRE = models.DateField(verbose_name='Fecha de Cierre')
+    FC_HH_GASTADAS = models.DecimalField(max_digits=100, decimal_places=2, verbose_name='Horas Hombre Gastadas')
+    FC_HH_COBRADAS = models.DecimalField(max_digits=100, decimal_places=2, verbose_name='Horas Hombre Cobradas')
+    FC_EXCEDENTES = models.DecimalField(max_digits=100, decimal_places=2, verbose_name='Excedentes')
+    FC_PROYECCION_CON_EL_CLIENTE = models.DecimalField(max_digits=100, decimal_places=2, verbose_name='Proyección con el Cliente')
+    FC_OBSERVACIONES = models.TextField(blank=True, null=True, verbose_name='Observaciones')
+
+    def __str__(self):
+        return f"Ficha de Cierre {self.FC_ESTADO_DE_PAGO.EP_CNUMERO} - {self.FC_NOMBRE_DE_PROYECTO}"
+
+    class Meta:
+        db_table = 'FICHA_CIERRE'
+        verbose_name = 'Ficha de Cierre'
+        verbose_name_plural = 'Fichas de Cierre'
+
+class FICHA_CIERRE_DETALLE(models.Model):
+    OPCION_SI_NO = [
+        ('SI', 'Sí'),
+        ('NO', 'No'),
+    ]
+
+    FCD_FICHA_CIERRE = models.ForeignKey('FICHA_CIERRE', on_delete=models.CASCADE, related_name='detalles', verbose_name='Ficha de Cierre')
+    FCD_FFECHA_CREACION = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de creación')
+    FCD_FFECHA_MODIFICACION = models.DateTimeField(auto_now=True, verbose_name='Fecha de modificación')
+    FCD_CUSUARIO_CREADOR = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='detalles_ficha_cierre_creados', verbose_name='Usuario creador')
+    FCD_CUSUARIO_MODIFICADOR = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='detalles_ficha_cierre_modificados', verbose_name='Usuario modificador')
+    FCD_NACTIVIDAD = models.PositiveIntegerField(verbose_name='Nº Actividad')
+    FCD_CACTIVIDAD = models.TextField(verbose_name='Actividad Técnica o Administrativa')
+    FCD_CCUMPLIMIENTO = models.CharField(max_length=2, choices=OPCION_SI_NO, verbose_name='¿Cumple?')
+    FCD_COBSERVACIONES = models.TextField(blank=True, verbose_name='Observaciones')
+
+    def __str__(self):
+        return f"Detalle de Ficha de Cierre {self.FCD_FICHA_CIERRE.FC_NUMERO_DE_PROYECTO} - Actividad {self.FCD_NACTIVIDAD}"
+
+    class Meta:
+        db_table = 'FICHA_CIERRE_DETALLE'
+        verbose_name = 'Detalle de Ficha de Cierre'
+        verbose_name_plural = 'Detalles de Fichas de Cierre'
+        unique_together = ('FCD_FICHA_CIERRE', 'FCD_NACTIVIDAD')
 
 class TAREA_GENERAL(models.Model):
     TG_CCODIGO = models.CharField(max_length=100, unique=True, verbose_name='Código de tarea general')

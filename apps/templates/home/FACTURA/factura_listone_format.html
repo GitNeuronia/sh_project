@@ -1,6 +1,7 @@
 {% extends "layouts/base.html" %}
 {% load humanize %}
 {% load l10n %}
+{% load custom_filters %}
 {% block title %} Factura {% endblock %} 
 
 <!-- Specific CSS goes HERE -->
@@ -125,7 +126,11 @@
 												<tr>
 													<th>Total:</th>
 													<td>
-														<span>$ {{ factura.FA_NTOTAL|floatformat:0|intcomma }}</span>
+														{% if factura.FA_TIPO_CAMBIO %}
+															<span>{{ factura.FA_TIPO_CAMBIO.TC_CMONEDA }} {{ factura.FA_NTOTAL_MONEDA_EXTRANJERA|floatformat:2|intcomma }}</span>
+														{% else %}
+															<span>CLP {{ factura.FA_NTOTAL|floatformat:0|intcomma }}</span>
+														{% endif %}
 													</td>
 												</tr>
 											</tbody>
@@ -164,9 +169,27 @@
                                                                 <p class="m-0"><small>{{ detalle.FAD_PRODUCTO.PR_CDESCRIPCION|truncatechars:150|wordwrap:70|linebreaksbr }}</small></p>
 															</td>
 															<td style="text-align: right;">{{ detalle.FAD_NCANTIDAD|floatformat:0|intcomma }}</td>
-															<td style="text-align: right;">{{ detalle.FAD_NPRECIO_UNITARIO|floatformat:0|intcomma }}</td>
-															<td style="text-align: right;">{{ detalle.FAD_NDESCUENTO|floatformat:0|intcomma }}</td>
-															<td style="text-align: right;">{{ detalle.FAD_NTOTAL|floatformat:0|intcomma }}</td>
+															<td style="text-align: right;">
+																{% if factura.FA_TIPO_CAMBIO %}
+																	{{ factura.FA_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.FAD_NPRECIO_UNITARIO|div:factura.FA_TIPO_CAMBIO.TC_NTASA|floatformat:2|intcomma }}
+																{% else %}
+																	CLP {{ detalle.FAD_NPRECIO_UNITARIO|floatformat:0|intcomma }}
+																{% endif %}
+															</td>
+															<td style="text-align: right;">
+																{% if factura.FA_TIPO_CAMBIO %}
+																	{{ factura.FA_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.FAD_NDESCUENTO|div:factura.FA_TIPO_CAMBIO.TC_NTASA|floatformat:2|intcomma }}
+																{% else %}
+																	CLP {{ detalle.FAD_NDESCUENTO|floatformat:0|intcomma }}
+																{% endif %}
+															</td>
+															<td style="text-align: right;">
+																{% if factura.FA_TIPO_CAMBIO %}
+																	{{ factura.FA_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.FAD_NTOTAL|div:factura.FA_TIPO_CAMBIO.TC_NTASA|floatformat:2|intcomma }}
+																{% else %}
+																	CLP {{ detalle.FAD_NTOTAL|floatformat:0|intcomma }}
+																{% endif %}
+															</td>
 														</tr>
 													{% endfor %}
 												</tbody>
@@ -180,7 +203,13 @@
 											<tbody>
 												<tr>
 													<th>Sub Total :</th>
-													<td style="text-align: right;">{{ factura.FA_NTOTAL|floatformat:0|intcomma }}</td>
+													<td style="text-align: right;">
+														{% if factura.FA_TIPO_CAMBIO %}
+															{{ factura.FA_TIPO_CAMBIO.TC_CMONEDA }} {{ factura.FA_NTOTAL_MONEDA_EXTRANJERA|floatformat:2|intcomma }}
+														{% else %}
+															CLP {{ factura.FA_NTOTAL|floatformat:0|intcomma }}
+														{% endif %}
+													</td>
 												</tr>
 												<tr class="text-info">
 													<td>
@@ -189,7 +218,13 @@
 													</td>
 													<td style="text-align: right;">
 														<hr />
-														<h5 class="text-primary">{{ factura.FA_NTOTAL|floatformat:0|intcomma }}</h5>
+														<h5 class="text-primary">
+															{% if factura.FA_TIPO_CAMBIO %}
+																{{ factura.FA_TIPO_CAMBIO.TC_CMONEDA }} {{ factura.FA_NTOTAL_MONEDA_EXTRANJERA|floatformat:2|intcomma }}
+															{% else %}
+																CLP {{ factura.FA_NTOTAL|floatformat:0|intcomma }}
+															{% endif %}
+														</h5>
 													</td>
 												</tr>
 											</tbody>

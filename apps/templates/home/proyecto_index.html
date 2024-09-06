@@ -1,0 +1,423 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Dashboard de Proyectos {% endblock %} 
+
+{% block stylesheets %}
+{{ block.super }}
+<style>
+    .card-counter {
+        box-shadow: 2px 2px 10px #DADADA;
+        margin: 5px;
+        padding: 20px 10px;
+        background-color: #fff;
+        height: 100px;
+        border-radius: 5px;
+        transition: .3s linear all;
+    }
+
+    .card-counter:hover {
+        box-shadow: 4px 4px 20px #DADADA;
+        transition: .3s linear all;
+    }
+
+    .card-counter.primary {
+        background-color: #007bff;
+        color: #FFF;
+    }
+
+    .card-counter.danger {
+        background-color: #ef5350;
+        color: #FFF;
+    }
+
+    .card-counter.success {
+        background-color: #66bb6a;
+        color: #FFF;
+    }
+
+    .card-counter.info {
+        background-color: #26c6da;
+        color: #FFF;
+    }
+
+    .card-counter i {
+        font-size: 5em;
+        opacity: 0.2;
+    }
+
+    .card-counter .count-numbers {
+        position: absolute;
+        right: 35px;
+        top: 20px;
+        font-size: 32px;
+        display: block;
+    }
+
+    .card-counter .count-name {
+        position: absolute;
+        right: 35px;
+        top: 65px;
+        font-style: italic;
+        text-transform: capitalize;
+        opacity: 0.5;
+        display: block;
+        font-size: 18px;
+    }
+
+    .alert-icon {
+        font-size: 1.2em;
+        margin-right: 5px;
+    }
+
+    .project-alert {
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+    }
+
+    .date-alert {
+        background-color: #fff3cd;
+        border: 1px solid #ffeeba;
+    }
+
+    .cost-alert {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+    }
+    .progress {
+        height: 20px;
+        margin-bottom: 0;
+    }
+
+    .progress-bar {
+        line-height: 20px;
+    }
+    .alert-row {
+        background-color: #fff3cd;
+    }
+    
+    .alert-row:hover {
+        background-color: #ffeeba;
+    }
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+        padding: 0.3em 0.8em;
+    }
+    
+    .dataTables_wrapper .dataTables_filter {
+        margin-bottom: 1em;
+    }
+</style>
+{% endblock stylesheets %}
+
+{% block content %}
+<div class="pcoded-main-container">
+    <div class="pcoded-content">
+        <div class="page-header">
+            <div class="page-block">
+                <div class="row align-items-center">
+                    <div class="col-md-12">
+                        <div class="page-header-title">
+                            <h5 class="m-b-10">Dashboard de Proyectos</h5>
+                        </div>
+                        <ul class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="index.html"><i class="feather icon-home"></i></a></li>
+                            <li class="breadcrumb-item"><a href="#!">Dashboard de Proyectos</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card-counter primary">
+                    <i class="fa fa-code-fork"></i>
+                    <span class="count-numbers">{{ estadisticas.total_proyectos }}</span>
+                    <span class="count-name">Total Proyectos</span>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card-counter danger" id="proyectos-activos-card" style="cursor: pointer;">
+                    <i class="fa fa-ticket"></i>
+                    <span class="count-numbers">{{ estadisticas.proyectos_activos }}</span>
+                    <span class="count-name">Proyectos Activos</span>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card-counter success">
+                    <i class="fa fa-database"></i>
+                    <span class="count-numbers">${{ estadisticas.total_presupuesto|floatformat:2 }}</span>
+                    <span class="count-name">Presupuesto Total</span>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card-counter info">
+                    <i class="fa fa-users"></i>
+                    <span class="count-numbers">{{ estadisticas.promedio_margen|floatformat:2 }}%</span>
+                    <span class="count-name">Margen Promedio</span>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card-counter warning">
+                    <i class="fa fa-file-text-o"></i>
+                    <span class="count-numbers">${{ estadisticas.total_saldo_edp|floatformat:2 }}</span>
+                    <span class="count-name">Saldo Total EdP</span>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Presupuesto vs Costo Real</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="proyecto-chart" style="height: 300px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Estados de Pago por Proyecto</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table id="tabla-edp" class="table table-hover table-edp">
+                                <thead>
+                                    <tr>
+                                        <th>Proyecto</th>
+                                        <th>Total EdP</th>
+                                        <th>Pendiente</th>
+                                        <th>Aprobado</th>
+                                        <th>Rechazado</th>
+                                        <th>Progreso de Pago</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Los datos se cargarán dinámicamente via AJAX -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>    
+    </div>
+</div>
+
+<!-- Modal para Proyectos Activos -->
+<div class="modal fade" id="proyectosActivosModal" tabindex="-1" role="dialog" aria-labelledby="proyectosActivosModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="proyectosActivosModalLabel">Proyectos Activos</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="tablaProyectosActivos">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th>Estado</th>
+                                <th>Avance</th>
+                                <th>Fecha Inicio</th>
+                                <th>Fecha Fin Estimada</th>
+                                <th>Presupuesto</th>
+                                <th>Costo Real</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Los datos se cargarán aquí dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block javascripts %}
+    {{ block.super }}
+    <script src="/static/assets/js/plugins/apexcharts.min.js"></script>
+    <!-- datatable Js -->
+    <script src="/static/assets/js/plugins/jquery.dataTables.min.js"></script>
+    <script src="/static/assets/js/plugins/dataTables.bootstrap4.min.js"></script>
+    <script src="/static/assets/js/plugins/buttons.colVis.min.js"></script>
+    <script src="/static/assets/js/plugins/buttons.print.min.js"></script>
+    <script src="/static/assets/js/plugins/pdfmake.min.js"></script>
+    <script src="/static/assets/js/plugins/jszip.min.js"></script>
+    <script src="/static/assets/js/plugins/dataTables.buttons.min.js"></script>
+    <script src="/static/assets/js/plugins/buttons.html5.min.js"></script>
+    <script src="/static/assets/js/plugins/buttons.bootstrap4.min.js"></script>
+    <script src="/static/assets/js/pages/data-export-custom.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var options = {
+                series: [{
+                    name: 'Presupuesto',
+                    data: {{ chart_presupuestos|safe }}
+                }, {
+                    name: 'Costo Real',
+                    data: {{ chart_costos_reales|safe }}
+                }],
+                chart: {
+                    type: 'bar',
+                    height: 300
+                },
+                plotOptions: {
+                    bar: {
+                        horizontal: false,
+                        columnWidth: '55%',
+                        endingShape: 'rounded'
+                    },
+                },
+                dataLabels: {
+                    enabled: false
+                },
+                stroke: {
+                    show: true,
+                    width: 2,
+                    colors: ['transparent']
+                },
+                xaxis: {
+                    categories: {{ chart_labels|safe }},
+                },
+                yaxis: {
+                    title: {
+                        text: '$ (pesos)'
+                    }
+                },
+                fill: {
+                    opacity: 1
+                },
+                tooltip: {
+                    y: {
+                        formatter: function (val) {
+                            return "$ " + val.toFixed(2)
+                        }
+                    }
+                }
+            };
+        
+            var chart = new ApexCharts(document.querySelector("#proyecto-chart"), options);
+            chart.render();
+            
+            // Inicializar DataTable para la tabla de EdP
+            $('#tabla-edp').DataTable({
+                "processing": true,
+                "serverSide": true,
+                "ajax": {
+                    "url": "/api/proyectos-edp/",
+                    "type": "GET",
+                    "error": function (xhr, error, thrown) {
+                        console.error("Error en la llamada AJAX:", error);
+                        alert("Ha ocurrido un error al cargar los datos. Por favor, intente nuevamente más tarde.");
+                    }
+                },
+                "columns": [
+                    {"data": "PC_CNOMBRE"},
+                    {"data": "total_edp", "render": $.fn.dataTable.render.number(',', '.', 2, '$')},
+                    {"data": "pendiente", "render": $.fn.dataTable.render.number(',', '.', 2, '$')},
+                    {"data": "aprobado", "render": $.fn.dataTable.render.number(',', '.', 2, '$')},
+                    {"data": "rechazado", "render": $.fn.dataTable.render.number(',', '.', 2, '$')},
+                    {
+                        "data": "porcentaje_pagado",
+                        "render": function(data, type, row) {
+                            var percentage = parseFloat(data);
+                            return '<div class="progress">' +
+                                   '<div class="progress-bar bg-success" role="progressbar" ' +
+                                   'style="width: ' + percentage + '%;" ' +
+                                   'aria-valuenow="' + percentage + '" ' +
+                                   'aria-valuemin="0" ' +
+                                   'aria-valuemax="100">' +
+                                   percentage.toFixed(2) + '%</div></div>';
+                        }
+                    }
+                ],
+                
+                "pageLength": 10
+            });
+
+            // Agregar el evento de clic a la tarjeta de Proyectos Activos
+            document.getElementById('proyectos-activos-card').addEventListener('click', function() {
+                cargarProyectosActivos();
+                $('#proyectosActivosModal').modal('show');
+            });
+        });
+        function verProyecto(proyectoId) {
+            window.location.href = `/proycli_listone/${proyectoId}/`;
+        }
+        
+        var proyectosActivos = {{ proyectos_activos|safe }};
+        
+        function cargarProyectosActivos() {
+            // Ordenar proyectos por alertas y fecha de fin estimada
+            proyectosActivos.sort(function(a, b) {
+                // Primero, ordenar por alertas
+                if ((a.alerta_fecha || a.alerta_costo) && !(b.alerta_fecha || b.alerta_costo)) return -1;
+                if (!(a.alerta_fecha || a.alerta_costo) && (b.alerta_fecha || b.alerta_costo)) return 1;
+                
+                // Si ambos tienen o no tienen alertas, ordenar por fecha de fin estimada
+                var dateA = new Date(a.PC_FFECHA_FIN_ESTIMADA);
+                var dateB = new Date(b.PC_FFECHA_FIN_ESTIMADA);
+                return dateA - dateB;
+            });
+    
+            var tbody = document.querySelector('#tablaProyectosActivos tbody');
+            tbody.innerHTML = ''; // Limpiar tabla existente
+        
+            proyectosActivos.forEach(function(proyecto) {
+                var alertClass = (proyecto.alerta_fecha || proyecto.alerta_costo) ? 'alert-row' : '';
+                var row = `
+                    <tr class="${alertClass}">
+                        <td>${proyecto.PC_CCODIGO}</td>
+                        <td>${proyecto.PC_CNOMBRE}</td>
+                        <td>${proyecto.PC_CESTADO}</td>
+                        <td>
+                            <div class="progress">
+                                <div class="progress-bar" role="progressbar" style="width: ${proyecto.porcentaje_avance}%;" aria-valuenow="${proyecto.porcentaje_avance}" aria-valuemin="0" aria-valuemax="100">${proyecto.porcentaje_avance.toFixed(2)}%</div>
+                            </div>
+                        </td>
+                        <td>${formatDate(proyecto.PC_FFECHA_INICIO)}</td>
+                        <td>${formatDate(proyecto.PC_FFECHA_FIN_ESTIMADA)}</td>
+                        <td>$${formatNumber(proyecto.PC_NPRESUPUESTO)}</td>
+                        <td>$${formatNumber(proyecto.PC_NCOSTO_REAL)}</td>
+                        <td>
+                            <button class="btn btn-primary btn-sm" onclick="verProyecto(${proyecto.id})">Ver</button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+        
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            var parts = dateString.split('-');
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+        
+        function formatNumber(number) {
+            return parseFloat(number).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+    </script>
+{% endblock javascripts %}

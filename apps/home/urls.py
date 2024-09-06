@@ -10,8 +10,9 @@ from django.contrib.auth.views import login_required
 urlpatterns = [
 
     # La página de inicio
+    path('', login_required(views.proyecto_index), name='proyecto_index'),
+    path('api/proyectos-edp/', login_required(views.api_proyectos_edp), name='api_proyectos_edp'),
     path('', views.index, name='home'),
-
     # URLs para la gestión de regiones
     path('reg_listall/', login_required(views.REGION_LISTALL), name='reg_listall'),
     path('reg_addone/', login_required(views.REGION_ADDONE), name='reg_addone'),
@@ -36,6 +37,11 @@ urlpatterns = [
     path('rol_listall/', login_required(views.ROL_LISTALL), name='rol_listall'),
     path('rol_addone/', login_required(views.ROL_ADDONE), name='rol_addone'),
     path('rol_update/<int:pk>/', login_required(views.ROL_UPDATE), name='rol_update'),
+
+    # URLs para la gestión de tipos de cambio
+    path('tc_listall/', login_required(views.TC_LISTALL), name='tc_listall'),
+    path('tc_addone/', login_required(views.TC_ADDONE), name='tc_addone'),
+    path('tc_update/<int:pk>/', login_required(views.TC_UPDATE), name='tc_update'),
 
     # URLs para la gestión de categorías de proyecto
     path('catproy_listall/', login_required(views.CATEGORIA_PROYECTO_LISTALL), name='catproy_listall'),
@@ -111,6 +117,9 @@ urlpatterns = [
     path('proycli_listone/<int:pk>/', login_required(views.PROYECTO_CLIENTE_LISTONE), name='proycli_listone'),    
     path('proycli_documentos_modal/<int:pk>/', login_required(views.PROYECTO_CLIENTE_DOCUMENTOS_MODAL), name='proycli_documentos_modal'),    
     path('proycli_documentos_modal_addone/<int:pk>/', login_required(views.PROYECTO_CLIENTE_DOCUMENTOS_MODAL_ADDONE), name='proycli_documentos_modal_addone'),    
+    path('proycli_documento_get/<int:documento_id>/', login_required(views.get_documento), name='get_documento'),
+    path('proyecto_cliente_documentos_modal_update/<int:pk>/', login_required(views.PROYECTO_CLIENTE_DOCUMENTOS_MODAL_UPDATE), name='proyecto_cliente_documentos_modal_update'),
+    path('proyecto_cliente_documentos_download/<int:documento_id>/', login_required(views.PROYECTO_CLIENTE_DOCUMENTOS_DOWNLOAD), name='proyecto_cliente_documentos_download'),
     
     # URLs para la gestión de tareas generales
     path('tarea_general_listall/', login_required(views.TAREA_GENERAL_LISTALL), name='tarea_general_listall'),
@@ -142,6 +151,13 @@ urlpatterns = [
     # URL para la gestión de actualización de datos de tareas
     path('tarea/<str:tipo_tarea>/<int:pk>/update_data/', login_required(views.tarea_update_data), name='tarea_update_data'),
 
+    # URLs para la gestión de adjuntos de las tareas
+    path('tarea_adjuntos/<int:tarea_id>/<str:tipo_tarea>/', login_required(views.tarea_adjuntos_lista), name='tarea_adjuntos_lista'),
+    path('tarea_adjunto/agregar/<int:tarea_id>/<str:tipo_tarea>/', login_required(views.tarea_adjunto_agregar), name='tarea_adjunto_agregar'),
+    path('tarea_adjunto/editar/<int:pk>/<str:tipo_tarea>/', login_required(views.tarea_adjunto_editar), name='tarea_adjunto_editar'),
+    path('tarea_adjunto/eliminar/<int:pk>/<str:tipo_tarea>/', login_required(views.tarea_adjunto_eliminar), name='tarea_adjunto_eliminar'),
+    path('tarea_adjunto/descargar/<int:pk>/<str:tipo_tarea>/', login_required(views.tarea_adjunto_descargar), name='tarea_adjunto_descargar'),
+
     # URLs para la gestión de etapas
     path('etapa_listall/', login_required(views.ETAPA_LISTALL), name='etapa_listall'),
     path('etapa_addone/', login_required(views.ETAPA_ADDONE), name='etapa_addone'),
@@ -168,6 +184,8 @@ urlpatterns = [
     path('cotizacion_addline/', login_required(views.COTIZACION_ADD_LINE), name='cotizacion_addline'),
     path('check_co_numero/', login_required(views.CHECK_CO_NUMERO), name='check_co_numero'),
 
+    path('get_tipo_cambio_options/', login_required(views.get_tipo_cambio_options), name='get_tipo_cambio_options'),
+
     path('orden_venta_listall/', login_required(views.ORDEN_VENTA_LISTALL), name='orden_venta_listall'),
     path('orden_venta_addone/', login_required(views.ORDEN_VENTA_ADDONE), name='orden_venta_addone'),
     path('orden_venta_update/<int:pk>/', login_required(views.ORDEN_VENTA_UPDATE), name='orden_venta_update'),
@@ -189,7 +207,7 @@ urlpatterns = [
     path('factura_addline/', login_required(views.FACTURA_ADD_LINE), name='factura_addline'),
     path('check_fa_numero/', login_required(views.CHECK_FA_NUMERO), name='check_fa_numero'),
 
-
+    # URLs para query manager
     path('query_listall/', login_required(views.QUERY_LISTALL), name='query_listall'),
     path('query_listone/<int:pk>', login_required(views.QUERY_LISTONE), name='query_listone'),
     path('query_addone/', login_required(views.QUERY_ADDONE), name='query_addone'),
@@ -197,6 +215,34 @@ urlpatterns = [
     path('query_delete/<int:pk>', login_required(views.QUERY_DELETE), name='query_delete'),
     path('query_run/<int:pk>', login_required(views.QUERY_RUN), name='query_run'),
     path('run_query_param/', login_required(views.run_query_param), name='run_query_param'),
+
+    #URLs para EDP
+    path('edp_listall/', login_required(views.EDP_LISTALL), name='edp_listall'),
+    path('edp_addone/', login_required(views.EDP_ADDONE), name='edp_addone'),
+    path('edp_update/<int:pk>/', login_required(views.EDP_UPDATE), name='edp_update'),
+    path('edp_listone/<int:pk>/', login_required(views.EDP_LISTONE), name='edp_listone'),
+    path('edp_listone_format/<int:pk>/', login_required(views.EDP_LISTONE_FORMAT), name='edp_listone_format'),
+    path('edp_getline/<int:pk>', login_required(views.EDP_GET_LINE), name='edp_getline'),
+    path('edp_deleteline/<int:pk>', login_required(views.EDP_DELETE_LINE), name='edp_deleteline'),
+    path('edp_addline/', login_required(views.EDP_ADD_LINE), name='edp_addline'),
+    path('check_edp_numero/', login_required(views.CHECK_EDP_NUMERO), name='check_edp_numero'),
+    
+    #URLs para ficha de cierra
+    path('fc_listall/', login_required(views.FC_LISTALL), name='fc_listall'),
+    path('fc_addone/', login_required(views.FC_ADDONE), name='fc_addone'),
+    path('fc_update/<int:pk>/', login_required(views.FC_UPDATE), name='fc_update'),
+    path('fc_listone/<int:pk>/', login_required(views.FC_LISTONE), name='fc_listone'),
+    path('fc_listone_format/<int:pk>/', login_required(views.FC_LISTONE_FORMAT), name='fc_listone_format'),
+    path('fc_getline/<int:pk>', login_required(views.FC_GET_LINE), name='fc_getline'),
+    path('fc_deleteline/<int:pk>', login_required(views.FC_DELETE_LINE), name='fc_deleteline'),
+    path('fc_add_update_line/', login_required(views.FC_ADD_UPDATE_LINE), name='fc_add_update_line'),
+    path('check_fc_numero/', login_required(views.CHECK_FC_NUMERO), name='check_fc_numero'),
+    path('fc_generate_pdf/<int:pk>/', login_required(views.FC_GENERATE_PDF), name='fc_generate_pdf'),
+    #Urls para Unidad de negocio
+    path('un_listall/', login_required(views.UNIDAD_NEGOCIO_LISTALL), name='un_listall'),
+    path('un_addone/', login_required(views.UNIDAD_NEGOCIO_ADDONE), name='un_addone'),
+    path('un_update/<int:pk>', login_required(views.UNIDAD_NEGOCIO_UPDATE), name='un_update'),
+    
     # Coincide con cualquier archivo html
     re_path(r'^.*\.*', views.pages, name='pages'),
 

@@ -1,0 +1,286 @@
+{% extends "layouts/base.html" %}
+{% load humanize %}
+{% load l10n %}
+{% load custom_filters %}
+{% block title %} Estado de Pago {% endblock %} 
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}{% endblock stylesheets %}
+
+{% block content %}	
+
+	<!-- [ Main Content ] start -->
+	<section class="pcoded-main-container">
+		<div class="pcoded-content">
+			<!-- [ breadcrumb ] start -->
+			<div class="page-header">
+				<div class="page-block">
+					<div class="row align-items-center">
+						<div class="col-md-12">
+							<div class="page-header-title">
+								<h5 class="m-b-10">Estado de Pago</h5>
+							</div>
+							<ul class="breadcrumb">
+								<li class="breadcrumb-item"><a href="/"><i class="feather icon-home"></i></a></li>
+								<li class="breadcrumb-item"><a href="{% url 'edp_listall' %}">Estados de Pago</a></li>
+								<li class="breadcrumb-item"><a href="#!">Detalle de Estado de Pago</a></li>
+							</ul>
+						</div>
+					</div>
+				</div>
+			</div>
+			<!-- [ breadcrumb ] end -->
+			<!-- [ Main Content ] start -->
+			<div class="row">
+				<!-- [ Estado de Pago ] start -->
+				<div class="container" id="printTable">
+					<div>
+						<div class="card">
+							<div class="row invoice-contact">
+								<div class="col-md-8">
+									<div class="invoice-box row">
+										<div class="col-sm-12">
+											<table class="table table-responsive invoice-table table-borderless p-l-20">
+												<tbody>
+													<tr>
+														<td><a href="/" class="b-brand">
+																<img class="img-fluid" src="/static/assets/images/logo_png_sin_fondo.png" alt="Neuronia" width="200" height="200" >
+															</a>
+														</td>
+													</tr>
+													<tr>
+														<td>Neuronia S.p.A. </td>
+													</tr>
+													<tr>
+														<td>La Concepción 81, Providencia</td>
+													</tr>
+													<tr>
+														<td><a class="text-secondary" href="mailto:contacto@neuronia.cl" target="_top">contacto@neuronia.cl</a></td>
+													</tr>
+													<tr>
+														<td>+562 8000 9000</td>
+													</tr>
+												</tbody>
+											</table>
+										</div>
+									</div>
+								</div>
+								<div class="col-md-4"></div>
+							</div>
+							<div class="card-body">
+								<div class="row invoive-info">
+									<div class="col-md-4 col-xs-12 invoice-client-info">
+										<h6>PROYECTO :</h6>
+										<table class="table table-responsive invoice-table invoice-order table-borderless">
+											<tbody>
+												<tr>
+													<td><b>{{ edp.EP_PROYECTO }}</b></td>
+												</tr>
+												<tr>
+													<td>{{ edp.EP_PROYECTO.PC_CDIRECCION }}</td>
+												</tr>
+												<tr>
+													<td>Fono: {{ edp.EP_PROYECTO.PC_CTELEFONO }}</td>
+												</tr>
+												<tr>
+													<td>E-Mail: {{ edp.EP_PROYECTO.PC_CEMAIL }}</td>
+												</tr>
+											</tbody>
+										</table>
+									</div>
+									<div class="col-md-4 col-sm-6">
+										<h6>DATOS DEL ESTADO DE PAGO :</h6>
+										<table class="table table-responsive invoice-table invoice-order table-borderless">
+											<tbody>
+												<tr>
+													<th>Fecha :</th>
+													<td>{{ edp.EP_FFECHA|date:"SHORT_DATE_FORMAT" }}</td>
+												</tr>
+												<tr>
+													<th>Estado :</th>
+													<td>
+														<span class="label label-warning">{{ edp.EP_CESTADO }}</span>
+													</td>
+												</tr>
+											</tbody>
+										</table>
+									</div>
+									<div class="col-md-4 col-sm-6">
+										<h6 class="m-b-20">NÚMERO DE ESTADO DE PAGO </h6>
+										<table class="table table-responsive invoice-table invoice-order table-borderless">
+											<tbody>
+												<tr>
+													<th>Fecha creación:</th>
+													<td>{{ edp.EP_FFECHA_CREACION|date:"SHORT_DATE_FORMAT" }}</td>
+												</tr>
+												<tr>
+													<th>Estado de Pago:</th>
+													<td>
+														<b># {{ edp.EP_CNUMERO }}</b>
+													</td>
+												</tr>
+												<tr>
+													<th>Total:</th>
+													<td>												
+														{% if edp.EP_PROYECTO.PC_TIPO_CAMBIO %}
+															<span>{{ edp.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ edp.EP_NTOTAL|floatformat:2|intcomma }}</span>
+														{% else %}
+															<span>CLP ${{ edp.EP_NTOTAL|floatformat:0|intcomma }}</span>
+														{% endif %}
+													</td>
+												</tr>
+											</tbody>
+										</table>
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-sm-12">
+										<div class="table-responsive">
+											<div class="mb-3">
+                                                <a class="btn btn-primary mr-2" href="{% url 'edp_listall' %}">
+                                                    <svg fill="#ffffff" width="16px" height="16px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21.92,11.6C19.9,6.91,16.1,4,12,4S4.1,6.91,2.08,11.6a1,1,0,0,0,0,.8C4.1,17.09,7.9,20,12,20s7.9-2.91,9.92-7.6A1,1,0,0,0,21.92,11.6ZM12,18c-3.17,0-6.17-2.29-7.9-6C5.83,8.29,8.83,6,12,6s6.17,2.29,7.9,6C18.17,15.71,15.17,18,12,18ZM12,8a4,4,0,1,0,4,4A4,4,0,0,0,12,8Zm0,6a2,2,0,1,1,2-2A2,2,0,0,1,12,14Z"/></svg> Ver Todos
+                                                </a>
+												<a class="btn btn-primary mr-2" href="{% url 'edp_listone' edp.id %}">
+													<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+														<path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+														<path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
+													</svg> Editar
+												</a>
+											</div>
+											<table class="table invoice-detail-table">
+												<thead>
+													<tr class="thead-default" style="background-color: #495057;">
+														<th>Descripción Producto</th>
+														<th style="text-align: right;">Cantidad</th>
+														<th style="text-align: right;">Precio Unitario</th>
+														<th style="text-align: right;">Descuento</th>
+														<th style="text-align: right;">Total</th>
+													</tr>
+												</thead>
+												<tbody>
+													{% for detalle in edp.detalles.all %}
+														<tr>
+															<td>
+																<p class="m-0">{{ detalle.EDD_PRODUCTO.PR_CNOMBRE }}</p>
+                                                                <p class="m-0"><small>{{ detalle.EDD_PRODUCTO.PR_CDESCRIPCION|truncatechars:150|wordwrap:70|linebreaksbr }}</small></p>
+															</td>
+															<td style="text-align: right;">{{ detalle.EDD_NCANTIDAD|floatformat:0|intcomma }}</td>
+															<td style="text-align: right;">
+																{% if edp.EP_PROYECTO.PC_TIPO_CAMBIO %}
+																	{{ edp.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.EDD_NPRECIO_UNITARIO|floatformat:2|intcomma }}
+																{% else %}
+																	CLP ${{ detalle.EDD_NPRECIO_UNITARIO|floatformat:0|intcomma }}
+																{% endif %}
+															</td>
+															<td style="text-align: right;">
+																{% if edp.EP_PROYECTO.PC_TIPO_CAMBIO %}
+																	{{ edp.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.EDD_NDESCUENTO|floatformat:2|intcomma }}
+																{% else %}
+																	CLP ${{ detalle.EDD_NDESCUENTO|floatformat:0|intcomma }}
+																{% endif %}
+															</td>
+															<td style="text-align: right;">
+																{% if edp.EP_PROYECTO.PC_TIPO_CAMBIO %}
+																	{{ edp.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.EDD_NTOTAL|floatformat:2|intcomma }}
+																{% else %}
+																	CLP ${{ detalle.EDD_NTOTAL|floatformat:0|intcomma }}
+																{% endif %}
+															</td>
+														</tr>
+													{% endfor %}
+												</tbody>
+											</table>
+										</div>
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-sm-12">
+										<table class="table table-responsive invoice-table invoice-total">
+											<tbody>
+												<tr>
+													<th>Sub Total :</th>
+													<td style="text-align: right;">
+														{% if edp.EP_PROYECTO.PC_TIPO_CAMBIO %}
+															{{ edp.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ edp.EP_NTOTAL|floatformat:2|intcomma }}
+														{% else %}
+															CLP ${{ edp.EP_NTOTAL|floatformat:0|intcomma }}
+														{% endif %}
+													</td>
+												</tr>
+												<tr class="text-info">
+													<td>
+														<hr />
+														<h5 class="text-primary m-r-10">Total :</h5>
+													</td>
+													<td style="text-align: right;">
+														<hr />
+														<h5 class="text-primary">
+															{% if edp.EP_PROYECTO.PC_TIPO_CAMBIO %}
+																{{ edp.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ edp.EP_NTOTAL|floatformat:2|intcomma }}
+															{% else %}
+																CLP ${{ edp.EP_NTOTAL|floatformat:0|intcomma }}
+															{% endif %}
+														</h5>
+													</td>
+												</tr>
+											</tbody>
+										</table>
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-sm-12">
+										<h6>Observaciones :</h6>
+										<p>{{ edp.EP_COBSERVACIONES }}</p>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="row text-center">
+                            <div class="col-sm-12 invoice-btn-group text-center">
+                                <button type="button" class="btn waves-effect waves-light btn-primary m-b-10" onclick="goBack()">Volver</button>
+                            </div>
+                        </div>
+					</div>
+				</div>
+				<!-- [ Estado de Pago ] end -->
+			</div>
+			<!-- [ Main Content ] end -->
+		</div>
+	</section>
+	<!-- [ Main Content ] end -->
+
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}
+
+<script>
+	function closeTab() {
+		window.close();
+	}
+</script>
+<script>
+    function goBack() {
+        if (document.referrer) {
+            // Si hay una página anterior, volvemos a ella
+            window.history.back();
+        } else {
+            // Si no hay página anterior, redirigimos a la lista de estados de pago
+            window.location.href = "{% url 'edp_listall' %}";
+        }
+    }
+</script>
+<script>
+    function printData() {
+        var divToPrint = document.getElementById("printTable");
+        newWin = window.open("");
+        newWin.document.write(divToPrint.outerHTML);
+        newWin.print();
+        newWin.close();
+    }
+    $('.btn-print-invoice').on('click', function() {
+        printData();
+    })
+</script>
+
+{% endblock javascripts %}

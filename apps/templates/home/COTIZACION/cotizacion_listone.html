@@ -1,5 +1,5 @@
 {% extends "layouts/base.html" %}
-
+{% load custom_filters %}
 {% block title %} {{ cotizacion.CO_CNUMERO }} {% endblock %} 
 
 <!-- Specific CSS goes HERE -->
@@ -85,8 +85,14 @@
                                   </tr>
                                   <tr>
                                     <th>Total:</th>
-                                    <td>{{cotizacion.CO_NTOTAL}}</td>
-                                  </tr>
+                                    <td>
+                                        {% if cotizacion.CO_TIPO_CAMBIO %}
+                                            {{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} : {{ cotizacion.CO_NTOTAL_MONEDA_EXTRANJERA|floatformat:2 }}
+                                        {% else %}
+                                            CLP : {{ cotizacion.CO_NTOTAL|floatformat:2 }}
+                                        {% endif %}
+                                    </td>
+                                </tr>
                                   <tr>
                                     <th>Observaciones:</th>
                                     <td style="white-space: pre-wrap;">{{cotizacion.CO_COBSERVACIONES}}</td>
@@ -129,11 +135,34 @@
                                         </td>
                                         <td>{{ detalle.CD_PRODUCTO }}</td>
                                         <td>{{ detalle.CD_NCANTIDAD }}</td>
-                                        <td>{{ detalle.CD_NPRECIO_UNITARIO }}</td>
-                                        <td>{{ detalle.CD_NSUBTOTAL }}</td>
-                                        <td>{{ detalle.CD_NDESCUENTO }}</td>
-                                        <td>{{ detalle.CD_NTOTAL }}</td>
-                                        
+                                        <td>
+                                            {% if cotizacion.CO_TIPO_CAMBIO %}
+                                                {{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.CD_NPRECIO_UNITARIO|div:cotizacion.CO_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
+                                            {% else %}
+                                                CLP ${{ detalle.CD_NPRECIO_UNITARIO|floatformat:2 }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if cotizacion.CO_TIPO_CAMBIO %}
+                                                {{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.CD_NSUBTOTAL|div:cotizacion.CO_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
+                                            {% else %}
+                                                CLP ${{ detalle.CD_NSUBTOTAL|floatformat:2 }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if cotizacion.CO_TIPO_CAMBIO %}
+                                                {{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.CD_NDESCUENTO|div:cotizacion.CO_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
+                                            {% else %}
+                                                CLP ${{ detalle.CD_NDESCUENTO|floatformat:2 }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if cotizacion.CO_TIPO_CAMBIO %}
+                                                {{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.CD_NTOTAL|div:cotizacion.CO_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
+                                            {% else %}
+                                                CLP ${{ detalle.CD_NTOTAL|floatformat:2 }}
+                                            {% endif %}
+                                        </td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -173,7 +202,7 @@
                             <input type="number" class="form-control" id="cantidad" name="cantidad" required>
                         </div>
                         <div class="form-group">
-                            <label for="precioUnitario">Precio Unitario</label>
+                            <label for="precioUnitario">Precio Unitario <span id="currency"></span></label>
                             <input type="number" step="0.01" class="form-control" id="precioUnitario" name="precioUnitario" required>
                         </div>
                         <div class="form-group">
@@ -208,119 +237,136 @@
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-    $(document).ready(function() {
-        var table = $('#cotizacion-lines').DataTable();
-
+        $(document).ready(function() {
+            var table = $('#cotizacion-lines').DataTable({
+                "columnDefs": [
+                    { "orderable": false, "targets": 0 }
+                ],
+                "order": [[1, 'asc']]
+            });
         
-        // Add line
-        $('#addLineModal, #addLineModal2').on('click', function() {
-            $('#lineForm')[0].reset();
-            $('#lineId').val('');
-            $('#lineModal').modal('show');
-        });
-
-        // Edit line
-        $('.edit-line').on('click', function() {
-            var lineId = $(this).data('id');
-            // Fetch line data and populate form
-            $.ajax({
-                url: "{% url 'cotizacion_getline' 0 %}".replace('0', lineId),
-                method: 'GET',
-                success: function(data) {
-                    $('#lineId').val(data.id);
-                    $('#producto').val(data.producto);
-                    $('#cantidad').val(data.cantidad);
-                    $('#precioUnitario').val(data.precioUnitario);
-                    $('#descuento').val(data.descuento);
-                    $('#lineModal').modal('show');
-                },
-                error: function(xhr, status, error) {
-                    console.error("Error fetching line data:", error);
-                    var errorMessage = xhr.responseJSON && xhr.responseJSON.error ? xhr.responseJSON.error : 'Error desconocido al obtener los datos de la línea.';
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: errorMessage,
-                    });
-                }
+            // Function to set the currency
+            function setCurrency() {
+                var currency = "{% if cotizacion.CO_TIPO_CAMBIO %}{{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }}{% else %}CLP{% endif %}";
+                $('#currency').text('(' + currency + ')');
+            }
+        
+            // Add line
+            $('#addLineModal, #addLineModal2').on('click', function() {
+                $('#lineForm')[0].reset();
+                $('#lineId').val('');
+                setCurrency();
+                $('#lineModal').modal('show');
             });
-        });
-
-        // Save line
-        $('#saveLine').on('click', function() {
-            var formData = $('#lineForm').serialize();
-            formData += '&cotizacion_id={{ cotizacion.id }}';  // Add the cotizacion id to the form data
-            $.ajax({
-                url: '/cotizacion_addline/',
-                method: 'POST',
-                data: formData,
-                success: function(response) {
-                    $('#lineModal').modal('hide');
-                    // Refresh table or update row
-                    location.reload();
-                },
-                error: function(xhr, status, error) {
-                    console.error("Error saving line:", error);
-                    $('#lineModal').modal('hide');
-                    var errorMessage = xhr.responseJSON && xhr.responseJSON.error ? xhr.responseJSON.error : 'Error desconocido al agregar la línea de cotización.';
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: errorMessage,
-                    });
-                }
+        
+            // Edit line
+            $('.edit-line').on('click', function() {
+                var lineId = $(this).data('id');
+                // Fetch line data and populate form
+                $.ajax({
+                    url: "{% url 'cotizacion_getline' 0 %}".replace('0', lineId),
+                    method: 'GET',
+                    success: function(data) {
+                        $('#lineId').val(data.id);
+                        $('#producto').val(data.producto);
+                        $('#cantidad').val(data.cantidad);
+                        {% if cotizacion.CO_TIPO_CAMBIO %}
+                            $('#precioUnitario').val((data.precioUnitario / {{ cotizacion.CO_TIPO_CAMBIO.TC_NTASA }}).toFixed(2));
+                            $('#descuento').val((data.descuento / {{ cotizacion.CO_TIPO_CAMBIO.TC_NTASA }}).toFixed(2));
+                        {% else %}
+                            $('#precioUnitario').val(data.precioUnitario);
+                            $('#descuento').val(data.descuento);
+                        {% endif %}
+                        setCurrency();
+                        $('#lineModal').modal('show');
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error fetching line data:", error);
+                        var errorMessage = xhr.responseJSON && xhr.responseJSON.error ? xhr.responseJSON.error : 'Error desconocido al obtener los datos de la línea.';
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: errorMessage,
+                        });
+                    }
+                });
             });
-        });
 
-        // Delete line
-        $('.delete-line').on('click', function() {
-            var lineId = $(this).data('id');
-            Swal.fire({
-                title: '¿Está seguro?',
-                text: "¿Desea eliminar esta línea de la cotización?",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'Sí, eliminar',
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    $.ajax({
-                        url: "{% url 'cotizacion_deleteline' 0 %}".replace('0', lineId),
-                        method: 'POST',
-                        data: {
-                            csrfmiddlewaretoken: '{{ csrf_token }}'
-                        },
-                        success: function(response) {
-                            if(response.success) {
-                                Swal.fire(
-                                    'Eliminado',
-                                    'La línea ha sido eliminada.',
-                                    'success'
-                                ).then(() => {
-                                    location.reload();
-                                });
-                            } else {
+            // Save line
+            $('#saveLine').on('click', function() {
+                var formData = $('#lineForm').serialize();
+                formData += '&cotizacion_id={{ cotizacion.id }}';  // Add the cotizacion id to the form data
+                $.ajax({
+                    url: '/cotizacion_addline/',
+                    method: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        $('#lineModal').modal('hide');
+                        // Refresh table or update row
+                        location.reload();
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error saving line:", error);
+                        $('#lineModal').modal('hide');
+                        var errorMessage = xhr.responseJSON && xhr.responseJSON.error ? xhr.responseJSON.error : 'Error desconocido al agregar la línea de cotización.';
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: errorMessage,
+                        });
+                    }
+                });
+            });
+
+            // Delete line
+            $('.delete-line').on('click', function() {
+                var lineId = $(this).data('id');
+                Swal.fire({
+                    title: '¿Está seguro?',
+                    text: "¿Desea eliminar esta línea de la cotización?",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: "{% url 'cotizacion_deleteline' 0 %}".replace('0', lineId),
+                            method: 'POST',
+                            data: {
+                                csrfmiddlewaretoken: '{{ csrf_token }}'
+                            },
+                            success: function(response) {
+                                if(response.success) {
+                                    Swal.fire(
+                                        'Eliminado',
+                                        'La línea ha sido eliminada.',
+                                        'success'
+                                    ).then(() => {
+                                        location.reload();
+                                    });
+                                } else {
+                                    Swal.fire(
+                                        'Error',
+                                        'No se pudo eliminar la línea.',
+                                        'error'
+                                    );
+                                }
+                            },
+                            error: function(xhr, status, error) {
+                                console.error("Error deleting line:", error);
                                 Swal.fire(
                                     'Error',
-                                    'No se pudo eliminar la línea.',
+                                    'Ocurrió un error al eliminar la línea.',
                                     'error'
                                 );
                             }
-                        },
-                        error: function(xhr, status, error) {
-                            console.error("Error deleting line:", error);
-                            Swal.fire(
-                                'Error',
-                                'Ocurrió un error al eliminar la línea.',
-                                'error'
-                            );
-                        }
-                    });
-                }
+                        });
+                    }
+                });
             });
         });
-    });
     </script>
 {% endblock javascripts %}
