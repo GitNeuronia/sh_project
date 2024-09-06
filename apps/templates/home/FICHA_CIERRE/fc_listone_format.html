@@ -1,6 +1,7 @@
 {% extends "layouts/base.html" %}
 {% load humanize %}
 {% load l10n %}
+{% load custom_filters %}
 {% block title %} Ficha de Cierre {% endblock %} 
 
 <!-- Specific CSS goes HERE -->
@@ -113,13 +114,21 @@
 												<tr>
 													<th>Excedentes:</th>
 													<td>
-														<span>$ {{ fc.FC_EXCEDENTES|floatformat:0|intcomma }}</span>
+														{% if fc.FC_NOMBRE_DE_PROYECTO.PC_TIPO_CAMBIO %}
+															{{ fc.FC_NOMBRE_DE_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ fc.FC_EXCEDENTES|floatformat:2|intcomma }}
+														{% else %}
+															CLP ${{ fc.FC_EXCEDENTES|floatformat:0|intcomma }}
+														{% endif %}
 													</td>
 												</tr>
 												<tr>
 													<th>Proyección con el Cliente:</th>
 													<td>
-														<span>$ {{ fc.FC_PROYECCION_CON_EL_CLIENTE|floatformat:0|intcomma }}</span>
+														{% if fc.FC_NOMBRE_DE_PROYECTO.PC_TIPO_CAMBIO %}
+															{{ fc.FC_NOMBRE_DE_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ fc.FC_PROYECCION_CON_EL_CLIENTE|floatformat:2|intcomma }}
+														{% else %}
+															CLP ${{ fc.FC_PROYECCION_CON_EL_CLIENTE|floatformat:0|intcomma }}
+														{% endif %}
 													</td>
 												</tr>
 											</tbody>

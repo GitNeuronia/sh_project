@@ -4648,7 +4648,6 @@ def run_query_sql(query):
 #------------QUERY MANAGER-------------
 #--------------------------------------
 
-
 def BOLETA_GARANTIA_LISTALL(request):
     try:
         object_list = BOLETA_GARANTIA.objects.all()
@@ -4663,20 +4662,40 @@ def BOLETA_GARANTIA_LISTALL(request):
 
 def BOLETA_GARANTIA_ADDONE(request):
     try:
-        if request.method =='POST':
-            form = formBOLETA_GARANTIA(request.POST)
+        if request.method == 'POST':
+            form = formBOLETA_GARANTIA(request.POST, request.FILES)
             if form.is_valid():
-                form.save()
+                boleta = form.save(commit=False)
+                boleta.BG_CUSUARIO_CREADOR = request.user
+                boleta.save()
                 messages.success(request, 'Boleta de garantía guardada correctamente')
                 return redirect('/boletagarantia_listall/')
-        form = formBOLETA_GARANTIA()
+            else:
+                messages.error(request, 'Por favor, corrija los errores en el formulario.')
+        else:
+            form = formBOLETA_GARANTIA()
+        
+        # Obtener todos los proyectos y sus tipos de cambio
+        proyectos = PROYECTO_CLIENTE.objects.all()
+        tipos_cambio = {}
+        for proyecto in proyectos:
+            if proyecto.PC_TIPO_CAMBIO:
+                tipos_cambio[proyecto.id] = {
+                    'moneda': proyecto.PC_TIPO_CAMBIO.TC_CMONEDA,
+                    'fecha': proyecto.PC_TIPO_CAMBIO.TC_FFECHA.strftime('%Y-%m-%d'),
+                    'valor': float(proyecto.PC_TIPO_CAMBIO.TC_NTASA)
+                }
+            else:
+                tipos_cambio[proyecto.id] = None
+        
         ctx = {
-            'form': form
+            'form': form,
+            'tipos_cambio': json.dumps(tipos_cambio, cls=DjangoJSONEncoder),
         }
         return render(request, 'home/BOLETA_GARANTIA/boletagarantia_addone.html', ctx)
     except Exception as e:
         print(e)
-        messages.error(request, f'Error, {str(e)}')
+        messages.error(request, f'Error: {str(e)}')
         return redirect('/')
 
 def BOLETA_GARANTIA_UPDATE(request, pk):
@@ -4727,17 +4746,34 @@ def EDP_ADDONE(request):
                 crear_log(request.user, f'Crear Estado de Pago', f'Se creó el Estado de Pago: {edp.EP_CNUMERO}')
                 messages.success(request, 'Estado de Pago guardado correctamente')
                 return redirect('/edp_listall/')
-        form = formESTADO_DE_PAGO()
+            else:
+                messages.error(request, 'Por favor, corrija los errores en el formulario.')
+        else:
+            form = formESTADO_DE_PAGO()
+        
+        # Obtener todos los proyectos y sus tipos de cambio
+        proyectos = PROYECTO_CLIENTE.objects.all()
+        tipos_cambio = {}
+        for proyecto in proyectos:
+            if proyecto.PC_TIPO_CAMBIO:
+                tipos_cambio[proyecto.id] = {
+                    'moneda': proyecto.PC_TIPO_CAMBIO.TC_CMONEDA,
+                    'fecha': proyecto.PC_TIPO_CAMBIO.TC_FFECHA.strftime('%Y-%m-%d'),
+                    'valor': float(proyecto.PC_TIPO_CAMBIO.TC_NTASA)
+                }
+            else:
+                tipos_cambio[proyecto.id] = None
+        
         ctx = {
             'form': form,
-            'state': 'add'
+            'state': 'add',
+            'tipos_cambio': json.dumps(tipos_cambio, cls=DjangoJSONEncoder),
         }
         return render(request, 'home/ESTADO_DE_PAGO/edp_addone.html', ctx)
     except Exception as e:
         print(e)
-        messages.error(request, f'Error, {str(e)}')
+        messages.error(request, f'Error: {str(e)}')
         return redirect('/')
-
 def EDP_UPDATE(request, pk):
     if not has_auth(request.user, 'EDITAR_DOCUMENTOS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
@@ -4771,16 +4807,29 @@ def EDP_LISTONE(request, pk):
     try:
         edp = ESTADO_DE_PAGO.objects.get(id=pk)
         product_list = list(PRODUCTO.objects.filter(PR_BACTIVO=True).values_list('id', 'PR_CNOMBRE'))
+        
+        # Obtener el tipo de cambio del proyecto asociado al EDP
+        tipo_cambio = None
+        if edp.EP_PROYECTO and hasattr(edp.EP_PROYECTO, 'PC_TIPO_CAMBIO'):
+            tipo_cambio = edp.EP_PROYECTO.PC_TIPO_CAMBIO
+
         ctx = {
             'edp': edp,
-            'product_list': product_list
+            'product_list': product_list,
+            'tipos_cambio': {
+                edp.EP_PROYECTO.id: {
+                    'moneda': tipo_cambio.TC_CMONEDA if tipo_cambio else 'CLP',
+                    'valor': float(tipo_cambio.TC_NTASA) if tipo_cambio else 1,
+                    'fecha': tipo_cambio.TC_FFECHA.strftime('%Y-%m-%d') if tipo_cambio else None
+                }
+            } if edp.EP_PROYECTO else {}
         }
         return render(request, 'home/ESTADO_DE_PAGO/edp_listone.html', ctx)
     except Exception as e:
-        print(e)
+        print("ERROR:", e)
         messages.error(request, f'Error, {str(e)}')
         return redirect('/edp_listall/')
-
+    
 def EDP_LISTONE_FORMAT(request, pk):
     if not has_auth(request.user, 'VER_DOCUMENTOS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
