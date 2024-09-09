@@ -243,6 +243,12 @@ urlpatterns = [
     path('un_addone/', login_required(views.UNIDAD_NEGOCIO_ADDONE), name='un_addone'),
     path('un_update/<int:pk>', login_required(views.UNIDAD_NEGOCIO_UPDATE), name='un_update'),
     
+
+
+    #busqueda
+    path('global_search/<str:key>/', login_required(views.GLOBAL_SEARCH), name='global_search'),
+    path('goto_record/<str:table>/<int:pk>/', login_required(views.GOTO_RECORD), name='goto_record'),
+
     # Coincide con cualquier archivo html
     re_path(r'^.*\.*', views.pages, name='pages'),
 
