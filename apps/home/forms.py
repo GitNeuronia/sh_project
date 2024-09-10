@@ -1098,7 +1098,7 @@ class formTAREA_GENERAL(forms.ModelForm):
     class Meta:
         model = TAREA_GENERAL
         fields = [
-            'TG_CCODIGO', 'TG_PROYECTO_CLIENTE', 'TG_ETAPA', 'TG_CNOMBRE', 'TG_CDESCRIPCION', 'TG_FFECHA_INICIO',
+            'TG_CCODIGO', 'TG_PROYECTO_CLIENTE', 'TG_CNOMBRE', 'TG_CDESCRIPCION', 'TG_FFECHA_INICIO',
             'TG_FFECHA_FIN_ESTIMADA', 'TG_FFECHA_FIN_REAL', 'TG_CESTADO', 'TG_NPRESUPUESTO','TG_MONEDA',
             'TG_COBSERVACIONES', 'TG_BMILESTONE', 'TG_NPROGRESO', 'TG_NDURACION_PLANIFICADA',
             'TG_NDURACION_REAL', 'TG_BCRITICA'
@@ -1107,8 +1107,6 @@ class formTAREA_GENERAL(forms.ModelForm):
             'TG_PROYECTO_CLIENTE': forms.Select(attrs={'class': 'form-control'}),
             'TG_CNOMBRE': forms.TextInput(attrs={'class': 'form-control'}),
             'TG_CDESCRIPCION': forms.Textarea(attrs={'class': 'form-control'}),
-            
-            'TG_ETAPA': forms.Select(attrs={'class': 'form-control'}),
             'TG_FFECHA_INICIO': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'TG_FFECHA_FIN_ESTIMADA': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'TG_FFECHA_FIN_REAL': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
@@ -1182,7 +1180,7 @@ class formTAREA_INGENIERIA(forms.ModelForm):
     class Meta:
         model = TAREA_INGENIERIA
         fields = [
-            'TI_CCODIGO', 'TI_PROYECTO_CLIENTE', 'TI_CNOMBRE', 'TI_CDESCRIPCION', 'TI_ETAPA', 'TI_FFECHA_INICIO',
+            'TI_CCODIGO', 'TI_PROYECTO_CLIENTE', 'TI_CNOMBRE', 'TI_CDESCRIPCION',  'TI_FFECHA_INICIO',
             'TI_FFECHA_FIN_ESTIMADA', 'TI_FFECHA_FIN_REAL', 'TI_CESTADO', 'TI_NPRESUPUESTO','TI_MONEDA',
             'TI_COBSERVACIONES', 'TI_BMILESTONE', 'TI_NPROGRESO', 'TI_NDURACION_PLANIFICADA',
             'TI_NDURACION_REAL', 'TG_BCRITICA'
@@ -1191,7 +1189,6 @@ class formTAREA_INGENIERIA(forms.ModelForm):
             'TI_PROYECTO_CLIENTE': forms.Select(attrs={'class': 'form-control'}),
             'TI_CNOMBRE': forms.TextInput(attrs={'class': 'form-control'}),
             'TI_CDESCRIPCION': forms.Textarea(attrs={'class': 'form-control'}),
-            'TI_ETAPA': forms.Select(attrs={'class': 'form-control'}),
             'TI_FFECHA_INICIO': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'TI_FFECHA_FIN_ESTIMADA': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'TI_FFECHA_FIN_REAL': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
@@ -1265,7 +1262,7 @@ class formTAREA_FINANCIERA(forms.ModelForm):
     class Meta:
         model = TAREA_FINANCIERA
         fields = [
-            'TF_CCODIGO', 'TF_PROYECTO_CLIENTE', 'TF_CNOMBRE', 'TF_CDESCRIPCION', 'TF_ETAPA', 'TF_FFECHA_INICIO',
+            'TF_CCODIGO', 'TF_PROYECTO_CLIENTE', 'TF_CNOMBRE', 'TF_CDESCRIPCION',  'TF_FFECHA_INICIO',
             'TF_FFECHA_FIN_ESTIMADA', 'TF_FFECHA_FIN_REAL', 'TF_CESTADO', 'TF_NMONTO','TF_MONEDA',
             'TF_CTIPO_TRANSACCION', 'TF_COBSERVACIONES', 'TF_BMILESTONE', 'TF_NPROGRESO', 
             'TF_NDURACION_PLANIFICADA', 'TF_NDURACION_REAL', 'TG_BCRITICA'
@@ -1274,7 +1271,6 @@ class formTAREA_FINANCIERA(forms.ModelForm):
             'TF_PROYECTO_CLIENTE': forms.Select(attrs={'class': 'form-control'}),
             'TF_CNOMBRE': forms.TextInput(attrs={'class': 'form-control'}),
             'TF_CDESCRIPCION': forms.Textarea(attrs={'class': 'form-control'}),
-            'TF_ETAPA': forms.Select(attrs={'class': 'form-control'}),
             'TF_FFECHA_INICIO': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'TF_FFECHA_FIN_ESTIMADA': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'TF_FFECHA_FIN_REAL': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
