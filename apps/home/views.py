@@ -761,6 +761,67 @@ def ROL_UPDATE(request, pk):
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
+def ESTADO_TAREA_LISTALL(request):
+    if not has_auth(request.user, 'VER_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        object_list = ESTADO_TAREA.objects.all()
+        ctx = {
+            'object_list': object_list
+        }
+        return render(request, 'home/ESTADO_TAREA/et_listall.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def ESTADO_TAREA_ADDONE(request):
+    if not has_auth(request.user, 'ADD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        if request.method =='POST':
+            form = formESTADO_TAREA(request.POST)
+            if form.is_valid():
+                form.save()
+                crear_log(request.user, 'Crear Estado de Tarea', f'Se creó el estado de tarea: {form.instance.ET_CNOMBRE}')
+                messages.success(request, 'Estado de tarea guardado correctamente')
+                return redirect('/estar_listall/')
+        form = formESTADO_TAREA()
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/ESTADO_TAREA/et_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def ESTADO_TAREA_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        estado_tarea = ESTADO_TAREA.objects.get(id=pk)
+        if request.method == 'POST':
+            form = formESTADO_TAREA(request.POST, instance=estado_tarea)
+            if form.is_valid():
+                form.save()
+                crear_log(request.user, 'Actualizar Estado de Tarea', f'Se actualizó el estado de tarea: {form.instance.ET_CNOMBRE}')
+                messages.success(request, 'Estado de tarea actualizado correctamente')
+                return redirect('/estar_listall/')
+        form = formESTADO_TAREA(instance=estado_tarea)
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/ESTADO_TAREA/et_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+
 def CATEGORIA_PROYECTO_LISTALL(request):
     if not has_auth(request.user, 'VER_CONFIGURACIONES'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
@@ -1724,9 +1785,9 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
         return redirect('/')
     try:
         proyecto = PROYECTO_CLIENTE.objects.get(id=pk)
-        tareas_general = TAREA_GENERAL.objects.filter(TG_PROYECTO_CLIENTE=proyecto)
-        tareas_ingenieria = TAREA_INGENIERIA.objects.filter(TI_PROYECTO_CLIENTE=proyecto)
-        tareas_financiera = TAREA_FINANCIERA.objects.filter(TF_PROYECTO_CLIENTE=proyecto)
+        tareas_general = TAREA_GENERAL.objects.filter(TG_PROYECTO_CLIENTE=proyecto).order_by('id')
+        tareas_ingenieria = TAREA_INGENIERIA.objects.filter(TI_PROYECTO_CLIENTE=proyecto).order_by('id')
+        tareas_financiera = TAREA_FINANCIERA.objects.filter(TF_PROYECTO_CLIENTE=proyecto).order_by('id')
         
         dependencias_general = TAREA_GENERAL_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_general)
         dependencias_ingenieria = TAREA_INGENIERIA_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_ingenieria)
