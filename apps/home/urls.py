@@ -53,6 +53,11 @@ urlpatterns = [
     path('catproy_addone/', login_required(views.CATEGORIA_PROYECTO_ADDONE), name='catproy_addone'),
     path('catproy_update/<int:pk>/', login_required(views.CATEGORIA_PROYECTO_UPDATE), name='catproy_update'),
 
+    # URLs para la gestión de estados de tarea
+    path('estar_listall/', login_required(views.ESTADO_TAREA_LISTALL), name='estar_listall'),
+    path('estar_addone/', login_required(views.ESTADO_TAREA_ADDONE), name='estar_addone'),
+    path('estar_update/<int:pk>/', login_required(views.ESTADO_TAREA_UPDATE), name='estar_update'),
+
     # URLs para la gestión de categorías de cliente
     path('catcli_listall/', login_required(views.CATEGORIA_CLIENTE_LISTALL), name='catcli_listall'),
     path('catcli_addone/', login_required(views.CATEGORIA_CLIENTE_ADDONE), name='catcli_addone'),
