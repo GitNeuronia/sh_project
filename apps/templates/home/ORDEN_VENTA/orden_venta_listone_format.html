@@ -126,11 +126,9 @@
 												<tr>
 													<th>Total:</th>
 													<td>
-														{% if orden_venta.OV_TIPO_CAMBIO %}
-															<span>{{ orden_venta.OV_TIPO_CAMBIO.TC_CMONEDA }} {{ orden_venta.OV_NTOTAL_MONEDA_EXTRANJERA|floatformat:2|intcomma }}</span>
-														{% else %}
-															<span>CLP {{ orden_venta.OV_NTOTAL|floatformat:0|intcomma }}</span>
-														{% endif %}
+														
+														<span>{{ orden_venta.OV_MONEDA|default_if_none:"" }} {{ orden_venta.OV_NTOTAL|floatformat:0|intcomma }}</span>
+														
 													</td>
 												</tr>
 											</tbody>
@@ -170,25 +168,16 @@
 															</td>
 															<td style="text-align: right;">{{ detalle.OVD_NCANTIDAD|floatformat:0|intcomma }}</td>
 															<td style="text-align: right;">
-																{% if orden_venta.OV_TIPO_CAMBIO %}
-																	{{ orden_venta.OV_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.OVD_NPRECIO_UNITARIO|div:orden_venta.OV_TIPO_CAMBIO.TC_NTASA|floatformat:2|intcomma }}
-																{% else %}
-																	CLP {{ detalle.OVD_NPRECIO_UNITARIO|floatformat:0|intcomma }}
-																{% endif %}
+																{{ detalle.OVD_NPRECIO_UNITARIO|floatformat:0|intcomma }}
+																
 															</td>
 															<td style="text-align: right;">
-																{% if orden_venta.OV_TIPO_CAMBIO %}
-																	{{ orden_venta.OV_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.OVD_NDESCUENTO|div:orden_venta.OV_TIPO_CAMBIO.TC_NTASA|floatformat:2|intcomma }}
-																{% else %}
-																	CLP {{ detalle.OVD_NDESCUENTO|floatformat:0|intcomma }}
-																{% endif %}
+																{{ detalle.OVD_NDESCUENTO|floatformat:0|intcomma }}
+																
 															</td>
 															<td style="text-align: right;">
-																{% if orden_venta.OV_TIPO_CAMBIO %}
-																	{{ orden_venta.OV_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.OVD_NTOTAL|div:orden_venta.OV_TIPO_CAMBIO.TC_NTASA|floatformat:2|intcomma }}
-																{% else %}
-																	CLP {{ detalle.OVD_NTOTAL|floatformat:0|intcomma }}
-																{% endif %}
+																{{ detalle.OVD_NTOTAL|floatformat:0|intcomma }}
+																
 															</td>
 														</tr>
 													{% endfor %}
@@ -204,11 +193,8 @@
 												<tr>
 													<th>Sub Total :</th>
 													<td style="text-align: right;">
-														{% if orden_venta.OV_TIPO_CAMBIO %}
-															{{ orden_venta.OV_TIPO_CAMBIO.TC_CMONEDA }} {{ orden_venta.OV_NTOTAL_MONEDA_EXTRANJERA|floatformat:2|intcomma }}
-														{% else %}
-															CLP {{ orden_venta.OV_NTOTAL|floatformat:0|intcomma }}
-														{% endif %}
+														{{ orden_venta.OV_NTOTAL|floatformat:0|intcomma }}
+														
 													</td>
 												</tr>
 												<tr class="text-info">
@@ -219,11 +205,9 @@
 													<td style="text-align: right;">
 														<hr />
 														<h5 class="text-primary">
-															{% if orden_venta.OV_TIPO_CAMBIO %}
-																{{ orden_venta.OV_TIPO_CAMBIO.TC_CMONEDA }} {{ orden_venta.OV_NTOTAL_MONEDA_EXTRANJERA|floatformat:2|intcomma }}
-															{% else %}
-																CLP {{ orden_venta.OV_NTOTAL|floatformat:0|intcomma }}
-															{% endif %}
+															
+															{{ orden_venta.OV_MONEDA|default_if_none:"" }} {{ orden_venta.OV_NTOTAL|floatformat:0|intcomma }}
+															
 														</h5>
 													</td>
 												</tr>

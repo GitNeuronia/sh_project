@@ -160,11 +160,9 @@
                                     <ul class="list-unstyled">
                                         <li class="mb-2">
                                             <i class="fas fa-money-bill-wave mr-2 text-muted"></i><strong>Presupuesto:</strong>
-                                            {% if proyecto.PC_TIPO_CAMBIO %}
-                                                {{ proyecto.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ proyecto.PC_NPRESUPUESTO|floatformat:2|intcomma }}
-                                            {% else %}
-                                                CLP ${{ proyecto.PC_NPRESUPUESTO|floatformat:2|intcomma }}
-                                            {% endif %}
+                                            
+                                            {{ proyecto.PC_MONEDA|default_if_none:" " }} {{ proyecto.PC_NPRESUPUESTO|floatformat:2|intcomma }}
+                                            
                                         </li>
                                         {% comment %} <li class="mb-2"><i class="fas fa-clock mr-2 text-muted"></i><strong>Valor/hora:</strong> ${{ proyecto.PC_NVALOR_HORA|floatformat:0|intcomma }}</li> {% endcomment %}
                                         <li class="mb-2"><i class="fas fa-percentage mr-2 text-muted"></i><strong>Margen:</strong> {{ proyecto.PC_NMARGEN|floatformat:2 }}%</li>
@@ -178,20 +176,16 @@
                                     <div class="progress-group">
                                         <div class="mb-2">
                                             <strong>Costo Real:</strong>
-                                            {% if proyecto.PC_TIPO_CAMBIO %}
-                                                {{ proyecto.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ proyecto.PC_NCOSTO_REAL|floatformat:2|intcomma }}
-                                            {% else %}
-                                                CLP ${{ proyecto.PC_NCOSTO_REAL|floatformat:2|intcomma }}
-                                            {% endif %}
+                                            
+                                            {{ proyecto.PC_MONEDA|default_if_none:" " }} {{ proyecto.PC_NCOSTO_REAL|floatformat:2|intcomma }}
+                                            
                                             {% if proyecto.PC_NCOSTO_REAL > proyecto.PC_NCOSTO_ESTIMADO %}
                                                 <span class="text-danger ml-2">
                                                     <i class="fas fa-exclamation-triangle"></i>
                                                     Exceso: 
-                                                    {% if proyecto.PC_TIPO_CAMBIO %}
-                                                        {{ proyecto.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ proyecto.PC_NCOSTO_REAL|subtract:proyecto.PC_NCOSTO_ESTIMADO|floatformat:2|intcomma }}
-                                                    {% else %}
-                                                        CLP ${{ proyecto.PC_NCOSTO_REAL|subtract:proyecto.PC_NCOSTO_ESTIMADO|floatformat:2|intcomma }}
-                                                    {% endif %}
+                                                    
+                                                    {{ proyecto.PC_MONEDA|default_if_none:" " }} {{ proyecto.PC_NCOSTO_REAL|subtract:proyecto.PC_NCOSTO_ESTIMADO|floatformat:2|intcomma }}
+                                                    
                                                 </span>
                                             {% endif %}
                                         </div>
@@ -201,11 +195,9 @@
                                         </div>
                                         <div class="mb-2">
                                             <strong>Costo Estimado:</strong>
-                                            {% if proyecto.PC_TIPO_CAMBIO %}
-                                                {{ proyecto.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ proyecto.PC_NCOSTO_ESTIMADO|floatformat:2|intcomma }}
-                                            {% else %}
-                                                CLP ${{ proyecto.PC_NCOSTO_ESTIMADO|floatformat:2|intcomma }}
-                                            {% endif %}
+                                            
+                                            {{ proyecto.PC_MONEDA|default_if_none:" " }} {{ proyecto.PC_NCOSTO_ESTIMADO|floatformat:2|intcomma }}
+                                            
                                         </div>
                                         <div class="progress mb-3" style="height: 20px;">
                                             <div class="progress-bar bg-info" role="progressbar" style="width: {% widthratio proyecto.PC_NCOSTO_ESTIMADO max_costo 100 %}%" aria-valuenow="{{ proyecto.PC_NCOSTO_ESTIMADO }}" aria-valuemin="0" aria-valuemax="{{ max_costo }}">

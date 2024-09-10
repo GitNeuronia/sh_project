@@ -86,11 +86,9 @@
                                   <tr>
                                     <th>Total:</th>
                                     <td>
-                                        {% if orden_venta.OV_TIPO_CAMBIO %}
-                                            {{ orden_venta.OV_TIPO_CAMBIO.TC_CMONEDA }} : {{ orden_venta.OV_NTOTAL_MONEDA_EXTRANJERA|floatformat:2 }}
-                                        {% else %}
-                                            CLP : {{ orden_venta.OV_NTOTAL|floatformat:2 }}
-                                        {% endif %}
+                                        
+                                        {{ orden_venta.OV_MONEDA|default_if_none:"" }} {{ orden_venta.OV_NTOTAL|floatformat:2 }}
+                                        
                                     </td>
                                   </tr>
                                   <tr>
@@ -135,32 +133,20 @@
                                         <td>{{ detalle.OVD_PRODUCTO }}</td>
                                         <td>{{ detalle.OVD_NCANTIDAD }}</td>
                                         <td>
-                                            {% if orden_venta.OV_TIPO_CAMBIO %}
-                                                {{ orden_venta.OV_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.OVD_NPRECIO_UNITARIO|div:orden_venta.OV_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
-                                            {% else %}
-                                                CLP {{ detalle.OVD_NPRECIO_UNITARIO|floatformat:2 }}
-                                            {% endif %}
+                                            {{ detalle.OVD_NPRECIO_UNITARIO|floatformat:2 }}
+                                            
                                         </td>
                                         <td>
-                                            {% if orden_venta.OV_TIPO_CAMBIO %}
-                                                {{ orden_venta.OV_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.OVD_NSUBTOTAL|div:orden_venta.OV_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
-                                            {% else %}
-                                                CLP {{ detalle.OVD_NSUBTOTAL|floatformat:2 }}
-                                            {% endif %}
+                                            {{ detalle.OVD_NSUBTOTAL|floatformat:2 }}
+                                            
                                         </td>
                                         <td>
-                                            {% if orden_venta.OV_TIPO_CAMBIO %}
-                                                {{ orden_venta.OV_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.OVD_NDESCUENTO|div:orden_venta.OV_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
-                                            {% else %}
-                                                CLP {{ detalle.OVD_NDESCUENTO|floatformat:2 }}
-                                            {% endif %}
+                                            {{ detalle.OVD_NDESCUENTO|floatformat:2 }}
+                                            
                                         </td>
                                         <td>
-                                            {% if orden_venta.OV_TIPO_CAMBIO %}
-                                                {{ orden_venta.OV_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.OVD_NTOTAL|div:orden_venta.OV_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
-                                            {% else %}
-                                                CLP {{ detalle.OVD_NTOTAL|floatformat:2 }}
-                                            {% endif %}
+                                            {{ detalle.OVD_NTOTAL|floatformat:2 }}
+                                            
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -246,7 +232,7 @@
 
         // Function to set the currency
         function setCurrency() {
-            var currency = "{% if orden_venta.OV_TIPO_CAMBIO %}{{ orden_venta.OV_TIPO_CAMBIO.TC_CMONEDA }}{% else %}CLP{% endif %}";
+            var currency = "{{ orden_venta.OV_MONEDA }}";
             $('#currency').text('(' + currency + ')');
         }
 

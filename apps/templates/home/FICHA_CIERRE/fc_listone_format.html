@@ -114,21 +114,17 @@
 												<tr>
 													<th>Excedentes:</th>
 													<td>
-														{% if fc.FC_NOMBRE_DE_PROYECTO.PC_TIPO_CAMBIO %}
-															{{ fc.FC_NOMBRE_DE_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ fc.FC_EXCEDENTES|floatformat:2|intcomma }}
-														{% else %}
-															CLP ${{ fc.FC_EXCEDENTES|floatformat:0|intcomma }}
-														{% endif %}
+														
+														{{fc.FC_MONEDA|default_if_none:" "}} {{ fc.FC_EXCEDENTES|floatformat:0|intcomma }}
+														
 													</td>
 												</tr>
 												<tr>
 													<th>Proyección con el Cliente:</th>
 													<td>
-														{% if fc.FC_NOMBRE_DE_PROYECTO.PC_TIPO_CAMBIO %}
-															{{ fc.FC_NOMBRE_DE_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ fc.FC_PROYECCION_CON_EL_CLIENTE|floatformat:2|intcomma }}
-														{% else %}
-															CLP ${{ fc.FC_PROYECCION_CON_EL_CLIENTE|floatformat:0|intcomma }}
-														{% endif %}
+														
+														{{fc.FC_MONEDA|default_if_none:" "}}  {{ fc.FC_PROYECCION_CON_EL_CLIENTE|floatformat:0|intcomma }}
+														
 													</td>
 												</tr>
 											</tbody>

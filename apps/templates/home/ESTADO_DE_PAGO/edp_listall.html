@@ -85,20 +85,16 @@
                                             <td>{{object.EP_FFECHA|date:"d/m/Y"|default_if_none:""}}</td>
                                             <td>{{object.EP_CESTADO|default_if_none:""}}</td>
                                             <td>
-                                                {% if object.EP_PROYECTO.PC_TIPO_CAMBIO %}
-                                                    {{object.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA}} ${{object.EP_NTOTAL|floatformat:2}}
-                                                {% else %}                                                
-                                                    CLP ${{object.EP_NTOTAL|floatformat:2}}                                                    
-                                                {% endif %}
+                                                                                              
+                                                {{object.EP_MONEDA|default_if_none:""}} {{object.EP_NTOTAL|floatformat:2}}                                                    
+                                                
                                             </td>
                                             <td>{{object.EP_COBSERVACIONES|default_if_none:""}}</td>
                                             <td>{{object.EP_CESTADO_PAGO|default_if_none:""}}</td>
                                             <td>
-                                                {% if object.EP_PROYECTO.PC_TIPO_CAMBIO %}
-                                                    {{object.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA}} ${{object.EP_NMONTO_PAGADO|floatformat:2}}
-                                                {% else %}                                                
-                                                    CLP ${{object.EP_NMONTO_PAGADO|floatformat:2}}                                                    
-                                                {% endif %}
+                                                                                             
+                                                {{object.EP_MONEDA|default_if_none:""}} {{object.EP_NMONTO_PAGADO|floatformat:2}}                                                    
+                                                
                                             </td>
                                             <td>{{object.EP_FFECHA_ULTIMO_PAGO|date:"d/m/Y"|default_if_none:""}}</td>
                                         </tr>

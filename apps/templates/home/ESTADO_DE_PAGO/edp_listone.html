@@ -83,11 +83,9 @@
                                   <tr>
                                     <th>Total:</th>
                                     <td>
-                                        {% if edp.EP_PROYECTO.PC_TIPO_CAMBIO %}
-                                            {{ edp.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ edp.EP_NTOTAL|floatformat:2 }}
-                                        {% else %}
-                                            CLP ${{ edp.EP_NTOTAL|floatformat:2 }}
-                                        {% endif %}
+                                        
+                                        {{edp.EP_MONEDA|default_if_none:""}} {{ edp.EP_NTOTAL|floatformat:2 }}
+                                        
                                     </td>
                                   </tr>
                                   <tr>
@@ -128,32 +126,20 @@
                                         <td>{{ detalle.EDD_PRODUCTO }}</td>
                                         <td>{{ detalle.EDD_NCANTIDAD }}</td>
                                         <td>
-                                            {% if edp.EP_PROYECTO.PC_TIPO_CAMBIO %}
-                                                {{ edp.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.EDD_NPRECIO_UNITARIO|floatformat:2 }}
-                                            {% else %}
-                                                CLP ${{ detalle.EDD_NPRECIO_UNITARIO|floatformat:2 }}
-                                            {% endif %}
+                                            {{ detalle.EDD_NPRECIO_UNITARIO|floatformat:2 }}
+                                            
                                         </td>
                                         <td>
-                                            {% if edp.EP_PROYECTO.PC_TIPO_CAMBIO %}
-                                                {{ edp.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.EDD_NSUBTOTAL|floatformat:2 }}
-                                            {% else %}
-                                                CLP ${{ detalle.EDD_NSUBTOTAL|floatformat:2 }}
-                                            {% endif %}
+                                            {{ detalle.EDD_NSUBTOTAL|floatformat:2 }}
+                                            
                                         </td>
                                         <td>
-                                            {% if edp.EP_PROYECTO.PC_TIPO_CAMBIO %}
-                                                {{ edp.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.EDD_NDESCUENTO|floatformat:2 }}
-                                            {% else %}
-                                                CLP ${{ detalle.EDD_NDESCUENTO|floatformat:2 }}
-                                            {% endif %}
+                                            {{ detalle.EDD_NDESCUENTO|floatformat:2 }}
+                                            
                                         </td>
                                         <td>
-                                            {% if edp.EP_PROYECTO.PC_TIPO_CAMBIO %}
-                                                {{ edp.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.EDD_NTOTAL|floatformat:2 }}
-                                            {% else %}
-                                                CLP ${{ detalle.EDD_NTOTAL|floatformat:2 }}
-                                            {% endif %}
+                                            {{ detalle.EDD_NTOTAL|floatformat:2 }}
+                                            
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -238,7 +224,7 @@
             });
         
             function setCurrency() {
-                var currency = "{% if edp.EP_PROYECTO.PC_TIPO_CAMBIO %}{{ edp.EP_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }}{% else %}CLP{% endif %}";
+                var currency = "{{ edp.EP_PROYECTO.PC_MONEDA }}";
                 $('#currency').text('(' + currency + ')');
             }
 
