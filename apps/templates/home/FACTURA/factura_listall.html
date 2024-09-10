@@ -86,11 +86,9 @@
                                             <td>{{object.FA_FFECHA_VENCIMIENTO|date:"d/m/Y"|default_if_none:""}}</td>
                                             <td>{{object.FA_CESTADO|default_if_none:""}}</td>
                                             <td>
-                                                {% if object.FA_TIPO_CAMBIO %}
-                                                    {{object.FA_TIPO_CAMBIO.TC_CMONEDA}} : {{object.FA_NTOTAL_MONEDA_EXTRANJERA|floatformat:2}}
-                                                {% else %}                                                
-                                                    CLP : {{object.FA_NTOTAL|floatformat:2}}                                                    
-                                                {% endif %}
+                                                                                               
+                                                {{object.FA_MONEDA|default_if_none:""}}    {{object.FA_NTOTAL|floatformat:2}}                                                    
+                                                
                                             </td>
                                             <td>{{object.FA_COBSERVACIONES|default_if_none:""}}</td>
                                         </tr>

@@ -86,18 +86,14 @@
                                             <td>{{object.FC_HH_GASTADAS|default:"-"|floatformat:2}}</td>
                                             <td>{{object.FC_HH_COBRADAS|default:"-"|floatformat:2}}</td>
                                             <td>
-                                                {% if object.FC_NOMBRE_DE_PROYECTO.PC_TIPO_CAMBIO %}
-                                                    {{object.FC_NOMBRE_DE_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA}} ${{object.FC_EXCEDENTES|floatformat:2}}
-                                                {% else %}
-                                                    CLP ${{object.FC_EXCEDENTES|floatformat:2}}
-                                                {% endif %}
+                                                
+                                                {{object.FC_MONEDA|default_if_none:" "}} {{object.FC_EXCEDENTES|floatformat:2}}
+                                                
                                             </td>
                                             <td>
-                                                {% if object.FC_NOMBRE_DE_PROYECTO.PC_TIPO_CAMBIO %}
-                                                    {{object.FC_NOMBRE_DE_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA}} ${{object.FC_PROYECCION_CON_EL_CLIENTE|floatformat:2}}
-                                                {% else %}
-                                                    CLP ${{object.FC_PROYECCION_CON_EL_CLIENTE|floatformat:2}}
-                                                {% endif %}
+                                                
+                                                {{object.FC_MONEDA|default_if_none:" "}} {{object.FC_PROYECCION_CON_EL_CLIENTE|floatformat:2}}
+                                                
                                             </td>
                                             <td>
                                                 <span class="d-inline-block text-truncate" style="max-width: 150px;" title="{{object.FC_OBSERVACIONES}}">

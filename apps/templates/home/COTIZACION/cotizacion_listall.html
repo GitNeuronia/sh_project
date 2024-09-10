@@ -85,12 +85,8 @@
                                             <td>{{object.CO_FFECHA|date:"d/m/Y"|default_if_none:""}}</td>
                                             <td>{{object.CO_CVALIDO_HASTA|date:"d/m/Y"|default_if_none:""}}</td>
                                             <td>{{object.CO_CESTADO|default_if_none:""}}</td>                                                                            
-                                            <td>
-                                                {% if object.CO_TIPO_CAMBIO %}
-                                                    {{object.CO_TIPO_CAMBIO.TC_CMONEDA}} : {{object.CO_NTOTAL_MONEDA_EXTRANJERA|floatformat:2}}
-                                                {% else %}                                                
-                                                    CLP : {{object.CO_NTOTAL|floatformat:2}}                                                    
-                                                {% endif %}
+                                            <td>                                          
+                                                {{object.CO_MONEDA|default_if_none:""}} {{object.CO_NTOTAL|floatformat:2}}                                                    
                                             </td>
                                             <td>{{object.CO_COBSERVACIONES|default_if_none:""}}</td>
                                         </tr>

@@ -396,6 +396,70 @@ def has_auth(user, permission_name):
         print(f"Error checking authorization: {str(e)}")
         return False
 
+def MONEDA_LISTALL(request):
+    if not has_auth(request.user, 'VER_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        object_list = MONEDA.objects.all()
+        ctx = {
+            'object_list': object_list
+        }
+        return render(request, 'home/MONEDA/mon_listall.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def MONEDA_ADDONE(request):
+    if not has_auth(request.user, 'ADD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        if request.method =='POST':
+            form = formMONEDA(request.POST)
+            if form.is_valid():
+                form.save()
+                crear_log(request.user, 'Crear Moneda', f'Se creó la moneda: {form.instance.MO_CMONEDA}')
+                messages.success(request, 'Moneda guardada correctamente')
+                return redirect('/mon_listall/')
+            else:
+                print(f"Form is not valid: {form.errors}")
+                
+        form = formMONEDA()
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/MONEDA/mon_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def MONEDA_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        moneda = MONEDA.objects.get(id=pk)
+        if request.method == 'POST':
+            form = formMONEDA(request.POST, instance=moneda)
+            if form.is_valid():
+                form.save()
+                crear_log(request.user, 'Actualizar Moneda', f'Se actualizó la moneda: {form.instance.MO_CMONEDA}')
+                messages.success(request, 'Moneda actualizada correctamente')
+                return redirect('/mon_listall/')
+        form = formMONEDA(instance=moneda)
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/MONEDA/mon_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+
 def REGION_LISTALL(request):
     if not has_auth(request.user, 'VER_UBICACIONES'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
@@ -458,7 +522,7 @@ def REGION_UPDATE(request, pk):
         return redirect('/')
 
 def PROVINCIA_LISTALL(request):
-    if not has_auth(request.user, 'VER_UBICACIONES'):
+    if not has_auth(request.user, 'VER_CONFIGURACIONES'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
         return redirect('/')
     try:
@@ -473,7 +537,7 @@ def PROVINCIA_LISTALL(request):
         return redirect('/')
 
 def PROVINCIA_ADDONE(request):
-    if not has_auth(request.user, 'ADD_UBICACIONES'):
+    if not has_auth(request.user, 'ADD_CONFIGURACIONES'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
         return redirect('/')
     try:
@@ -1594,7 +1658,7 @@ def PROYECTO_CLIENTE_ADDONE(request):
     try:
         if request.method == 'POST':
             form = formPROYECTO_CLIENTE(request.POST)
-            print(form.instance.PC_NPRESUPUESTO_MONEDA_EXTRANJERA)
+           
             if form.is_valid():
                 proyecto = form.save(commit=False)
                 proyecto.PC_CUSUARIO_CREADOR = request.user
@@ -2027,25 +2091,14 @@ def TAREA_GENERAL_ADDONE(request, page):
             else:
                 messages.error(request, 'Por favor, corrija los errores en el formulario.')
         
-        # Obtener todos los proyectos y sus tipos de cambio
-        proyectos = PROYECTO_CLIENTE.objects.all()
-        tipos_cambio = {}
-        for proyecto in proyectos:
-            if proyecto.PC_TIPO_CAMBIO:
-                tipos_cambio[proyecto.id] = {
-                    'moneda': proyecto.PC_TIPO_CAMBIO.TC_CMONEDA,
-                    'fecha': proyecto.PC_TIPO_CAMBIO.TC_FFECHA.strftime('%Y-%m-%d'),
-                    'valor': float(proyecto.PC_TIPO_CAMBIO.TC_NTASA)
-                }
-            else:
-                tipos_cambio[proyecto.id] = None
+
 
         ctx = {
             'form': form,
             'form_asignacion_empleado': form_asignacion_empleado,
             'form_asignacion_contratista': form_asignacion_contratista,
             'form_asignacion_recurso': form_asignacion_recurso,
-            'tipos_cambio': json.dumps(tipos_cambio, cls=DjangoJSONEncoder)
+            
         }
         return render(request, 'home/TAREA/GENERAL/tarea_general_addone.html', ctx)
     except Exception as e:
@@ -2349,18 +2402,7 @@ def TAREA_INGENIERIA_ADDONE(request, page):
             else:
                 messages.error(request, 'Por favor, corrija los errores en el formulario.')
         
-        # Obtener todos los proyectos y sus tipos de cambio
-        proyectos = PROYECTO_CLIENTE.objects.all()
-        tipos_cambio = {}
-        for proyecto in proyectos:
-            if proyecto.PC_TIPO_CAMBIO:
-                tipos_cambio[proyecto.id] = {
-                    'moneda': proyecto.PC_TIPO_CAMBIO.TC_CMONEDA,
-                    'fecha': proyecto.PC_TIPO_CAMBIO.TC_FFECHA.strftime('%Y-%m-%d'),
-                    'valor': float(proyecto.PC_TIPO_CAMBIO.TC_NTASA)
-                }
-            else:
-                tipos_cambio[proyecto.id] = None
+
         
         ctx = {
             'form': form,
@@ -2368,7 +2410,6 @@ def TAREA_INGENIERIA_ADDONE(request, page):
             'form_asignacion_contratista': form_asignacion_contratista,
             'form_asignacion_recurso': form_asignacion_recurso,
             'page': page,
-            'tipos_cambio': json.dumps(tipos_cambio, cls=DjangoJSONEncoder),
         }
         return render(request, 'home/TAREA/INGENIERIA/tarea_ingenieria_addone.html', ctx)
     except Exception as e:
@@ -2675,19 +2716,7 @@ def TAREA_FINANCIERA_ADDONE(request, page):
                     return redirect('/tarea_financiera_listall/')
             else:
                 messages.error(request, 'Por favor, corrija los errores en el formulario.')
-        
-        # Obtener todos los proyectos y sus tipos de cambio
-        proyectos = PROYECTO_CLIENTE.objects.all()
-        tipos_cambio = {}
-        for proyecto in proyectos:
-            if proyecto.PC_TIPO_CAMBIO:
-                tipos_cambio[proyecto.id] = {
-                    'moneda': proyecto.PC_TIPO_CAMBIO.TC_CMONEDA,
-                    'fecha': proyecto.PC_TIPO_CAMBIO.TC_FFECHA.strftime('%Y-%m-%d'),
-                    'valor': float(proyecto.PC_TIPO_CAMBIO.TC_NTASA)
-                }
-            else:
-                tipos_cambio[proyecto.id] = None
+
         
         ctx = {
             'form': form,
@@ -2695,7 +2724,7 @@ def TAREA_FINANCIERA_ADDONE(request, page):
             'form_asignacion_contratista': form_asignacion_contratista,
             'form_asignacion_recurso': form_asignacion_recurso,            
             'page': page,
-            'tipos_cambio': json.dumps(tipos_cambio, cls=DjangoJSONEncoder),
+            
         }
         return render(request, 'home/TAREA/FINANCIERA/tarea_financiera_addone.html', ctx)
     except Exception as e:
@@ -2955,7 +2984,6 @@ def tarea_update_data(request, tipo_tarea, pk):
 
     tarea = get_object_or_404(Tarea, id=pk)
     proyecto = getattr(tarea, proyecto_field)
-    tipo_cambio = proyecto.PC_TIPO_CAMBIO if proyecto.PC_TIPO_CAMBIO else None
     
     empleados_asignados = AsignacionEmpleado.objects.filter(AE_TAREA=tarea)
     contratistas_asignados = AsignacionContratista.objects.filter(AEC_TAREA=tarea)
@@ -3066,7 +3094,6 @@ def tarea_update_data(request, tipo_tarea, pk):
         'porcentaje_avance': format_decimal(getattr(tarea, progreso_field)),
         'horas_tarea': format_decimal(getattr(tarea, duracion_real_field)),
         'tipo_tarea': tipo_tarea,
-        'tipo_cambio': tipo_cambio
     }
     return render(request, 'home/TAREA/tarea_update_data.html', ctx)
 # ----------TAREA UPDATE DATA--------------
@@ -3339,16 +3366,12 @@ def COTIZACION_ADDONE(request):
     try:
         if request.method == 'POST':
             form = formCOTIZACION(request.POST)
-            print(form.instance.CO_NTOTAL_MONEDA_EXTRANJERA)
+            
             if form.is_valid():
                 cotizacion = form.save(commit=False)
                 cotizacion.CO_CUSUARIO_CREADOR = request.user
                 
-                # Calcular CO_NTOTAL_MONEDA_EXTRANJERA si es necesario
-                if cotizacion.CO_TIPO_CAMBIO and cotizacion.CO_NTOTAL:
-                    cotizacion.CO_NTOTAL_MONEDA_EXTRANJERA = Decimal(cotizacion.CO_NTOTAL) / Decimal(cotizacion.CO_TIPO_CAMBIO.TC_NTASA)
-                else:
-                    cotizacion.CO_NTOTAL_MONEDA_EXTRANJERA = None
+
                 
                 cotizacion.save()
                 crear_log(request.user, f'Crear Cotización', f'Se creó la cotización: {cotizacion.CO_CNUMERO}')
@@ -3392,17 +3415,9 @@ def COTIZACION_ADD_LINE(request):
             cantidad = max(1, int(cantidad or 0))
             precio_unitario = max(Decimal('1'), Decimal(precio_unitario or '0'))
 
-            # Check if there's a foreign currency exchange rate
-            if cotizacion.CO_TIPO_CAMBIO:
-                # If there's a foreign currency, we assume the input is in the foreign currency
-                exchange_rate = cotizacion.CO_TIPO_CAMBIO.TC_NTASA
-                # Convert to local currency for storage
-                precio_unitario_local = precio_unitario * exchange_rate
-                descuento_local = Decimal(descuento or '0') * exchange_rate
-            else:
-                # If there's no foreign currency, use the input values directly
-                precio_unitario_local = precio_unitario
-                descuento_local = Decimal(descuento or '0')
+            
+            precio_unitario_local = precio_unitario
+            descuento_local = Decimal(descuento or '0')
 
             # Recalculate subtotal in local currency
             subtotal_local = Decimal(cantidad) * precio_unitario_local
@@ -3435,9 +3450,7 @@ def COTIZACION_ADD_LINE(request):
             total_cotizacion_local = COTIZACION_DETALLE.objects.filter(CD_COTIZACION=cotizacion).aggregate(Sum('CD_NTOTAL'))['CD_NTOTAL__sum'] or 0
             cotizacion.CO_NTOTAL = total_cotizacion_local
 
-            # If there's a foreign currency, calculate and store the foreign currency total
-            if cotizacion.CO_TIPO_CAMBIO:
-                cotizacion.CO_NTOTAL_MONEDA_EXTRANJERA = total_cotizacion_local / exchange_rate
+           
 
             crear_log(request.user, f'Actualizar Cotización', f'Se actualizó la cotización: {cotizacion.CO_CNUMERO}')
             cotizacion.save()
@@ -3516,10 +3529,7 @@ def COTIZACION_GET_DATA(request, pk):
                 'CO_NTOTAL': str(cotizacion.CO_NTOTAL),
                 'CO_COBSERVACIONES': cotizacion.CO_COBSERVACIONES,
                 'CO_CCOMENTARIO': cotizacion.CO_CCOMENTARIO,
-                'CO_TIPO_CAMBIO': {
-                    'id': cotizacion.CO_TIPO_CAMBIO.id if cotizacion.CO_TIPO_CAMBIO else None,
-                    'tasa': str(cotizacion.CO_TIPO_CAMBIO.TC_NTASA) if cotizacion.CO_TIPO_CAMBIO else None
-                }
+
             }
         }
         return JsonResponse(data)
@@ -3624,9 +3634,7 @@ def ORDEN_VENTA_ADDONE(request):
                 orden_venta = form.save(commit=False)
                 orden_venta.OV_CUSUARIO_CREADOR = request.user
                 
-                # Si hay una cotización relacionada, copiar el tipo de cambio si no se ha especificado uno nuevo
-                if orden_venta.OV_COTIZACION and not orden_venta.OV_TIPO_CAMBIO:
-                    orden_venta.OV_TIPO_CAMBIO = orden_venta.OV_COTIZACION.CO_TIPO_CAMBIO
+                
                 
                 orden_venta.save()
                 
@@ -3695,17 +3703,9 @@ def ORDEN_VENTA_ADD_LINE(request):
             cantidad = max(1, int(cantidad or 0))
             precio_unitario = max(Decimal('1'), Decimal(precio_unitario or '0'))
 
-            # Check if there's a foreign currency exchange rate
-            if orden_venta.OV_TIPO_CAMBIO:
-                # If there's a foreign currency, we assume the input is in the foreign currency
-                exchange_rate = orden_venta.OV_TIPO_CAMBIO.TC_NTASA
-                # Convert to local currency for storage
-                precio_unitario_local = precio_unitario * exchange_rate
-                descuento_local = Decimal(descuento or '0') * exchange_rate
-            else:
-                # If there's no foreign currency, use the input values directly
-                precio_unitario_local = precio_unitario
-                descuento_local = Decimal(descuento or '0')
+            
+            precio_unitario_local = precio_unitario
+            descuento_local = Decimal(descuento or '0')
 
             # Recalculate subtotal in local currency
             subtotal_local = Decimal(cantidad) * precio_unitario_local
@@ -3739,9 +3739,7 @@ def ORDEN_VENTA_ADD_LINE(request):
             total_orden_venta_local = ORDEN_VENTA_DETALLE.objects.filter(OVD_ORDEN_VENTA=orden_venta).aggregate(Sum('OVD_NTOTAL'))['OVD_NTOTAL__sum'] or 0
             orden_venta.OV_NTOTAL = total_orden_venta_local
 
-            # If there's a foreign currency, calculate and store the foreign currency total
-            if orden_venta.OV_TIPO_CAMBIO:
-                orden_venta.OV_NTOTAL_MONEDA_EXTRANJERA = total_orden_venta_local / exchange_rate
+            
 
             crear_log(request.user, f'Actualizar Orden de Venta', f'Se actualizó la orden de venta: {orden_venta.OV_CNUMERO}')
             orden_venta.save()
@@ -3924,9 +3922,7 @@ def FACTURA_ADDONE(request):
                 factura = form.save(commit=False)
                 factura.FA_CUSUARIO_CREADOR = request.user
                 
-                # Si hay una orden de venta relacionada, copiar el tipo de cambio si no se ha especificado uno nuevo
-                if factura.FA_CORDEN_VENTA and not factura.FA_TIPO_CAMBIO:
-                    factura.FA_TIPO_CAMBIO = factura.FA_CORDEN_VENTA.OV_TIPO_CAMBIO
+                
                 
                 factura.save()
                 
@@ -3986,17 +3982,9 @@ def FACTURA_ADD_LINE(request):
             cantidad = max(1, int(cantidad or 0))
             precio_unitario = max(Decimal('1'), Decimal(precio_unitario or '0'))
 
-            # Check if there's a foreign currency exchange rate
-            if factura.FA_TIPO_CAMBIO:
-                # If there's a foreign currency, we assume the input is in the foreign currency
-                exchange_rate = factura.FA_TIPO_CAMBIO.TC_NTASA
-                # Convert to local currency for storage
-                precio_unitario_local = precio_unitario * exchange_rate
-                descuento_local = Decimal(descuento or '0') * exchange_rate
-            else:
-                # If there's no foreign currency, use the input values directly
-                precio_unitario_local = precio_unitario
-                descuento_local = Decimal(descuento or '0')
+            
+            precio_unitario_local = precio_unitario
+            descuento_local = Decimal(descuento or '0')
 
             # Recalculate subtotal in local currency
             subtotal_local = Decimal(cantidad) * precio_unitario_local
@@ -4030,9 +4018,7 @@ def FACTURA_ADD_LINE(request):
             total_factura_local = FACTURA_DETALLE.objects.filter(FAD_FACTURA=factura).aggregate(Sum('FAD_NTOTAL'))['FAD_NTOTAL__sum'] or 0
             factura.FA_NTOTAL = total_factura_local
 
-            # If there's a foreign currency, calculate and store the foreign currency total
-            if factura.FA_TIPO_CAMBIO:
-                factura.FA_NTOTAL_MONEDA_EXTRANJERA = total_factura_local / exchange_rate
+            
 
             crear_log(request.user, f'Actualizar Factura', f'Se actualizó la factura: {factura.FA_CNUMERO}')
             factura.save()
@@ -4732,22 +4718,10 @@ def BOLETA_GARANTIA_ADDONE(request):
         else:
             form = formBOLETA_GARANTIA()
         
-        # Obtener todos los proyectos y sus tipos de cambio
-        proyectos = PROYECTO_CLIENTE.objects.all()
-        tipos_cambio = {}
-        for proyecto in proyectos:
-            if proyecto.PC_TIPO_CAMBIO:
-                tipos_cambio[proyecto.id] = {
-                    'moneda': proyecto.PC_TIPO_CAMBIO.TC_CMONEDA,
-                    'fecha': proyecto.PC_TIPO_CAMBIO.TC_FFECHA.strftime('%Y-%m-%d'),
-                    'valor': float(proyecto.PC_TIPO_CAMBIO.TC_NTASA)
-                }
-            else:
-                tipos_cambio[proyecto.id] = None
+        
         
         ctx = {
             'form': form,
-            'tipos_cambio': json.dumps(tipos_cambio, cls=DjangoJSONEncoder),
         }
         return render(request, 'home/BOLETA_GARANTIA/boletagarantia_addone.html', ctx)
     except Exception as e:
@@ -4808,23 +4782,11 @@ def EDP_ADDONE(request):
         else:
             form = formESTADO_DE_PAGO()
         
-        # Obtener todos los proyectos y sus tipos de cambio
-        proyectos = PROYECTO_CLIENTE.objects.all()
-        tipos_cambio = {}
-        for proyecto in proyectos:
-            if proyecto.PC_TIPO_CAMBIO:
-                tipos_cambio[proyecto.id] = {
-                    'moneda': proyecto.PC_TIPO_CAMBIO.TC_CMONEDA,
-                    'fecha': proyecto.PC_TIPO_CAMBIO.TC_FFECHA.strftime('%Y-%m-%d'),
-                    'valor': float(proyecto.PC_TIPO_CAMBIO.TC_NTASA)
-                }
-            else:
-                tipos_cambio[proyecto.id] = None
+       
         
         ctx = {
             'form': form,
             'state': 'add',
-            'tipos_cambio': json.dumps(tipos_cambio, cls=DjangoJSONEncoder),
         }
         return render(request, 'home/ESTADO_DE_PAGO/edp_addone.html', ctx)
     except Exception as e:
@@ -4865,21 +4827,12 @@ def EDP_LISTONE(request, pk):
         edp = ESTADO_DE_PAGO.objects.get(id=pk)
         product_list = list(PRODUCTO.objects.filter(PR_BACTIVO=True).values_list('id', 'PR_CNOMBRE'))
         
-        # Obtener el tipo de cambio del proyecto asociado al EDP
-        tipo_cambio = None
-        if edp.EP_PROYECTO and hasattr(edp.EP_PROYECTO, 'PC_TIPO_CAMBIO'):
-            tipo_cambio = edp.EP_PROYECTO.PC_TIPO_CAMBIO
+        
 
         ctx = {
             'edp': edp,
             'product_list': product_list,
-            'tipos_cambio': {
-                edp.EP_PROYECTO.id: {
-                    'moneda': tipo_cambio.TC_CMONEDA if tipo_cambio else 'CLP',
-                    'valor': float(tipo_cambio.TC_NTASA) if tipo_cambio else 1,
-                    'fecha': tipo_cambio.TC_FFECHA.strftime('%Y-%m-%d') if tipo_cambio else None
-                }
-            } if edp.EP_PROYECTO else {}
+            
         }
         return render(request, 'home/ESTADO_DE_PAGO/edp_listone.html', ctx)
     except Exception as e:

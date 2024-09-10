@@ -38,6 +38,11 @@ urlpatterns = [
     path('rol_addone/', login_required(views.ROL_ADDONE), name='rol_addone'),
     path('rol_update/<int:pk>/', login_required(views.ROL_UPDATE), name='rol_update'),
 
+    # URLs para la gestión de monedas
+    path('mon_listall/', login_required(views.MONEDA_LISTALL), name='mon_listall'),
+    path('mon_addone/', login_required(views.MONEDA_ADDONE), name='mon_addone'),
+    path('mon_update/<int:pk>/', login_required(views.MONEDA_UPDATE), name='mon_update'),
+
     # URLs para la gestión de tipos de cambio
     path('tc_listall/', login_required(views.TC_LISTALL), name='tc_listall'),
     path('tc_addone/', login_required(views.TC_ADDONE), name='tc_addone'),

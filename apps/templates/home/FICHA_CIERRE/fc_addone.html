@@ -53,7 +53,7 @@
                                                 {% if field.name == 'FC_FECHA_DE_CIERRE' %}
                                                     <input type="date" name="{{ field.name }}" id="{{ field.id_for_label }}" class="form-control" style="width: 480px;" value="{{ field.value|date:'Y-m-d' }}" required>
                                                 {% elif field.name == 'FC_NOMBRE_DE_PROYECTO' %}
-                                                    <select name="{{ field.name }}" id="{{ field.id_for_label }}" class="form-control" style="width: 100%;">
+                                                    <select  name="{{ field.name }}" id="{{ field.id_for_label }}" class="form-control" style="width: 480px;">
                                                         <option></option>
                                                         {% for proyecto in proyectos %}
                                                             <option value="{{ proyecto.id }}" data-codigo="{{ proyecto.PC_CCODIGO }}" data-tipo-cambio="{{ proyecto.PC_TIPO_CAMBIO.TC_CMONEDA }}" data-tasa="{{ proyecto.PC_TIPO_CAMBIO.TC_NTASA }}">
@@ -62,16 +62,13 @@
                                                         {% endfor %}
                                                     </select>
                                                 {% elif field.name == 'FC_NUMERO_DE_PROYECTO' %}
-                                                    <input type="text" name="{{ field.name }}" id="{{ field.id_for_label }}" class="form-control" readonly>
+                                                    <input type="text" name="{{ field.name }}" id="{{ field.id_for_label }}" class="form-control" readonly style="width: 480px;">
                                                 {% else %}
                                                     {{ field }}
                                                 {% endif %}
                                             </div>
                                         {% endfor %}
-                                        <div class="fieldWrapper">
-                                            <label class="my-1 me-2" for="id_tipo_cambio">Tipo de Cambio:</label>
-                                            <input type="text" id="id_tipo_cambio" class="form-control" readonly>
-                                        </div>
+                                        
                                         {{ form.errors }}
                                         <br>
                                         <div class="form-group nav justify-content-end">
@@ -131,11 +128,7 @@
                 $('#id_FC_NUMERO_DE_PROYECTO').val('');
             }
 
-            if (tipoCambio && tasa) {
-                $('#id_tipo_cambio').val(tipoCambio + ' - Tasa: ' + tasa);
-            } else {
-                $('#id_tipo_cambio').val('CLP');
-            }
+           
         });
 
         // Validación del formulario
