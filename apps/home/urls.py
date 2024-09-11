@@ -13,6 +13,7 @@ urlpatterns = [
     path('', login_required(views.proyecto_index), name='proyecto_index'),
     path('api/proyectos-edp/', login_required(views.api_proyectos_edp), name='api_proyectos_edp'),
     path('', views.index, name='home'),
+    path('pro_closed_list/', login_required(views.PROYECTOS_CERRADOS), name='pro_closed_list'),
     # URLs para la gestión de regiones
     path('reg_listall/', login_required(views.REGION_LISTALL), name='reg_listall'),
     path('reg_addone/', login_required(views.REGION_ADDONE), name='reg_addone'),

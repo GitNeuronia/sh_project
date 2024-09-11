@@ -12,6 +12,7 @@ import logging
 import base64
 import requests
 import traceback
+import datetime
 from django.conf import settings
 from decimal import Decimal
 from xhtml2pdf import pisa
@@ -47,6 +48,7 @@ from django.views.decorators.http import require_http_methods
 from apps.home.models import *
 from .forms import *
 from .models import *
+from .general_postgresql import *
 
 logger = logging.getLogger(__name__)
 
@@ -135,6 +137,21 @@ class WeightedAvg(Func):
         )
 
 def proyecto_index(request):
+    from_date = request.GET.get('fecha_desde', None)
+    to_date = request.GET.get('fecha_hasta', None)
+    filtrado = 0
+    if from_date or to_date:
+        filtrado = 1
+
+    if not from_date:
+        from_date = datetime.datetime.now().replace(day=1).strftime('%Y-%m-%d')
+    if not to_date:
+        to_date = datetime.datetime.now().strftime('%Y-%m-%d')
+
+    if from_date > to_date:
+        from_date, to_date = to_date, from_date
+    
+
     fecha_actual = datetime.datetime.now()
     proyectos = PROYECTO_CLIENTE.objects.all()
 
@@ -142,10 +159,15 @@ def proyecto_index(request):
     estadisticas = proyectos.aggregate(
         total_proyectos=Count('id'),
         proyectos_activos=Count('id', filter=~Q(PC_CESTADO__iexact='Cerrado')),
-        total_presupuesto=Coalesce(Sum('PC_NPRESUPUESTO'), Decimal('0')),
-        total_costo_real=Coalesce(Sum('PC_NCOSTO_REAL'), Decimal('0')),
         promedio_margen=Coalesce(Avg('PC_NMARGEN'), Decimal('0')),
     )
+
+    estadisticas['proyectos_cerrados'] = get_projects_closed(from_date, to_date)
+    estadisticas['total_costo_proyectado'] = get_sum_costo_proyectado(from_date, to_date)
+    estadisticas['total_costo_real'] = get_sum_costo_real(from_date, to_date)
+    estadisticas['total_horas_proyectadas'] = get_sum_horas_proyectadas(from_date, to_date)
+    estadisticas['total_horas_reales'] = get_sum_horas_reales(from_date, to_date)
+    estadisticas['total_presupuesto'] = get_sum_presupuesto(from_date, to_date)
 
     # Agregar estadísticas de EdP
     estadisticas_edp = ESTADO_DE_PAGO.objects.aggregate(
@@ -260,6 +282,9 @@ def proyecto_index(request):
         'chart_costos_reales': [float(p['PC_NCOSTO_REAL']) for p in proyectos_data],
         'proyectos_activos': json.dumps(proyectos_activos, cls=DecimalEncoder),
         'proyectos_edp': proyectos_edp,
+        'filtrado': filtrado,
+        'from_date': from_date,
+        'to_date': to_date
     }
 
     return render(request, 'home/proyecto_index.html', context)
@@ -333,7 +358,36 @@ def api_proyectos_edp(request):
     except Exception as e:
         logger.exception("Error in api_proyectos_edp")
         return JsonResponse({'error': str(e)}, status=500)
-    
+
+def PROYECTOS_CERRADOS(request):
+    try:
+        from_date = request.GET.get('fecha_desde', None)
+        to_date = request.GET.get('fecha_hasta', None)
+        if not from_date:
+            from_date = datetime.datetime.now().replace(day=1).strftime('%Y-%m-%d')
+        if not to_date:
+            to_date = datetime.datetime.now().strftime('%Y-%m-%d')
+
+        proyectos = list(PROYECTO_CLIENTE.objects.filter(
+            PC_CESTADO='Cerrado', 
+            PC_FFECHA_FIN_REAL__range=(from_date, to_date)
+        ).values_list(
+            'PC_CCODIGO', 'PC_CNOMBRE', 'PC_FFECHA_INICIO', 'PC_FFECHA_FIN_ESTIMADA', 
+            'PC_FFECHA_FIN_REAL', 'PC_NPRESUPUESTO', 'PC_NCOSTO_REAL', 'PC_NCOSTO_ESTIMADO', 
+            'PC_NHORAS_REALES', 'PC_NHORAS_ESTIMADAS', 'id'
+        ))
+
+        return JsonResponse({
+            "success": True,
+            "proyectos": proyectos
+        })
+    except Exception as e:
+        print(e)
+        return JsonResponse({
+            "success": False,
+            "msg": str(e)
+        })
+
 @login_required(login_url="/login/")
 def pages(request):
     context = {}
