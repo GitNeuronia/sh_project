@@ -51,6 +51,11 @@
                         <li><a href="{% url 'empleado_externo_listall' %}">Lista de Empleados Externos</a></li>
                     </ul>
                 </li>
+                <li><a href="#!"><i class="fas fa-upload fa-xs mr-2"></i>Carga Masiva</a>
+                    <ul class="pcoded-submenu">
+                        <li><a href="{% url 'carga_data' %}">Subir Archivo</a></li>                        
+                    </ul>
+                </li>
                 <li><a href="{% url 'query_listall' %}"><i class="fas fa-database fa-xs mr-2"></i>Consultas</a></li>
             </ul>
         </li>

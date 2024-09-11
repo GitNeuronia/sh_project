@@ -254,6 +254,11 @@ urlpatterns = [
     path('un_addone/', login_required(views.UNIDAD_NEGOCIO_ADDONE), name='un_addone'),
     path('un_update/<int:pk>', login_required(views.UNIDAD_NEGOCIO_UPDATE), name='un_update'),
     
+    #Url para carga masiva
+    path('carga_data/', login_required(views.CARGA_DATA_PROYECTO), name='carga_data'),
+    path('cargar-excel-proyectos/', login_required(views.cargar_excel_proyectos), name='cargar_excel_proyectos'),
+    path('seleccionar-datos/', login_required(views.seleccionar_datos), name='seleccionar_datos'),
+    path('agregar-proyectos/', login_required(views.agregar_proyectos), name='agregar_proyectos'),
 
 
     #busqueda
