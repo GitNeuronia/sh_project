@@ -1,5 +1,7 @@
 from django import template
 from decimal import Decimal
+import locale
+
 register = template.Library()
 
 @register.filter
@@ -17,3 +19,29 @@ def div(value, arg):
     except (ValueError, ZeroDivisionError):
         return None
     
+@register.filter
+def custom_number_format(value):
+    # Establecer la localización para usar separadores de miles según sea necesario
+    locale.setlocale(locale.LC_ALL, 'es_CL.UTF-8')
+
+    # Si value es None o no se puede convertir a float, se trata como 0
+    try:
+        valor = float(value)
+    except (TypeError, ValueError):
+        valor = 0
+
+    # Comprobamos si el número es entero comparándolo con su versión entera
+    if valor == int(valor):
+        # Formatear como número entero (sin decimales)
+        formatted_number = locale.format_string('%d', int(valor), grouping=True)
+    else:
+        # Formatear como número con decimales (hasta 3)
+        formatted_number = locale.format_string('%.3f', valor, grouping=True)
+        
+        # Eliminar ceros innecesarios al final
+        while formatted_number.endswith('0'):
+            formatted_number = formatted_number[:-1]
+        if formatted_number.endswith(','):
+            formatted_number = formatted_number[:-1]
+
+    return formatted_number
