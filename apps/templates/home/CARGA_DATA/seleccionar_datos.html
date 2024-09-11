@@ -1,0 +1,314 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Seleccionar Datos de Proyectos {% endblock %} 
+
+{% block stylesheets %}
+{% load custom_filters %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.19/dist/sweetalert2.min.css">
+<style>
+    .card {
+        border-radius: 20px;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 20px rgba(0,0,0,0.15);
+    }
+    .card-header {
+        background: linear-gradient(45deg, #3498db, #2980b9);
+        color: white;
+        border-radius: 20px 20px 0 0;
+        padding: 20px;
+    }
+    .btn-primary {
+        background: linear-gradient(45deg, #3498db, #2980b9);
+        border: none;
+        transition: all 0.3s ease;
+    }
+    .btn-primary:hover {
+        background: linear-gradient(45deg, #2980b9, #3498db);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .data-list {
+        max-height: 600px;
+        overflow-y: auto;
+        border: 1px solid #e0e0e0;
+        border-radius: 15px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .data-item {
+        padding: 15px;
+        border-bottom: 1px solid #eee;
+        transition: background-color 0.3s;
+    }
+    .data-item:hover {
+        background-color: #f5f5f5;
+    }
+    .data-item:last-child {
+        border-bottom: none;
+    }
+    .checkbox-custom {
+        display: none;
+    }
+    .checkbox-custom-label {
+        position: relative;
+        padding-left: 35px;
+        cursor: pointer;
+        display: inline-block;
+        line-height: 25px;
+        font-weight: 500;
+    }
+    .checkbox-custom + .checkbox-custom-label:before {
+        content: '';
+        background: #fff;
+        border: 2px solid #3498db;
+        display: inline-block;
+        vertical-align: middle;
+        width: 25px;
+        height: 25px;
+        padding: 2px;
+        margin-right: 10px;
+        text-align: center;
+        position: absolute;
+        left: 0;
+        top: 0;
+        border-radius: 5px;
+    }
+    .checkbox-custom:checked + .checkbox-custom-label:before {
+        content: "\2713";
+        background: #3498db;
+        color: #fff;
+        font-size: 16px;
+        line-height: 21px;
+    }
+    .project-info {
+        margin-left: 35px;
+        font-size: 0.9em;
+        color: #666;
+    }
+    .project-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 10px;
+    }
+    .project-info-item {
+        background-color: #f8f9fa;
+        padding: 10px;
+        border-radius: 5px;
+    }
+    .project-info-item strong {
+        display: block;
+        margin-bottom: 5px;
+        color: #3498db;
+    }
+    .search-container {
+        margin-bottom: 20px;
+    }
+    #searchInput {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 16px;
+    }
+</style>
+{% endblock stylesheets %}
+
+{% block content %}	
+<section class="pcoded-main-container">
+    <div class="pcoded-content">
+        <div class="page-header">
+            <div class="page-block">
+                <div class="row align-items-center">
+                    <div class="col-md-12">
+                        <div class="page-header-title">
+                            <h3 class="m-b-10">Seleccionar Datos de Proyectos</h3>
+                        </div>
+                        <ul class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{% url 'home' %}"><i class="feather icon-home"></i></a></li>
+                            <li class="breadcrumb-item"><a href="#!">Seleccionar Datos de Proyectos</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row justify-content-center">
+            <div class="col-sm-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">Selección de Datos de Proyectos</h4>
+                        <div class="alert alert-info" role="alert">
+                            <h5 class="alert-heading">Instrucciones de uso:</h5>
+                            <p>Esta vista le permite seleccionar los datos de proyectos que desea agregar al sistema:</p>
+                            <ul>
+                                <li>Revise cuidadosamente la información de cada proyecto.</li>
+                                <li>Marque las casillas de los proyectos que desea agregar.</li>
+                                <li>Puede seleccionar múltiples proyectos a la vez.</li>
+                                <li>Una vez seleccionados, haga clic en el botón "Agregar Proyectos Seleccionados".</li>
+                            </ul>
+                            <p>Asegúrese de revisar toda la información antes de agregar los proyectos al sistema.</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <form id="seleccion-form" method="post" action="{% url 'agregar_proyectos' %}">
+                            {% csrf_token %}
+                            
+                            <div class="search-container">
+                                <input type="text" id="searchInput" placeholder="Buscar proyectos...">
+                            </div>
+                            
+                            <div class="form-group">
+                                <h5>Proyectos Disponibles para Agregar</h5>
+                                <div class="data-list">
+                                    {% for proyecto in datos %}
+                                        <div class="data-item">
+                                            <input type="checkbox" name="datos_seleccionados" value="{{ forloop.counter0 }}" id="dato_{{ forloop.counter }}" class="checkbox-custom">
+                                            <label for="dato_{{ forloop.counter }}" class="checkbox-custom-label">Proyecto {{ proyecto.Col_0 }}</label>
+                                            <div class="project-info">
+                                                <div class="project-info-grid">
+                                                    <div class="project-info-item">
+                                                        <strong>Código Prop.</strong>
+                                                        <span class="searchable">{{ proyecto.Col_0|default:"N/A" }}</span>
+                                                    </div>
+                                                    <div class="project-info-item">
+                                                        <strong>Cliente Directo</strong>
+                                                        <span class="searchable">{{ proyecto.Col_2|default:"N/A" }}</span>
+                                                    </div>
+                                                    <div class="project-info-item">
+                                                        <strong>Contacto</strong>
+                                                        <span class="searchable">{{ proyecto.Col_4|default:"N/A" }}</span>
+                                                    </div>
+                                                    <div class="project-info-item">
+                                                        <strong>Título</strong>
+                                                        <span class="searchable">{{ proyecto.Col_6|default:"N/A" }}</span>
+                                                    </div>
+                                                    <div class="project-info-item">
+                                                        <strong>Fecha Entrega</strong>
+                                                        <span class="searchable">{{ proyecto.Col_11|default:"N/A" }}</span>
+                                                    </div>
+                                                    <div class="project-info-item">
+                                                        <strong>Líder Técnico</strong>
+                                                        <span class="searchable">{{ proyecto.Col_12|default:"N/A" }}</span>
+                                                    </div>
+                                                    <div class="project-info-item">
+                                                        <strong>Código Proy.</strong>
+                                                        <span class="searchable">{{ proyecto.Col_23|default:"N/A" }}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <input type="hidden" name="proyecto_data_{{ forloop.counter0 }}" value="{{ proyecto|json_encode }}">
+                                        </div>
+                                    {% empty %}
+                                        <p class="text-center">No hay datos de proyectos disponibles para seleccionar.</p>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            
+                            <div class="text-center m-t-20">
+                                <button type="submit" class="btn btn-primary btn-lg" id="submit-all">
+                                    <i class="feather icon-plus-circle"></i> Agregar Proyectos Seleccionados
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock content %}
+
+{% block javascripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.19/dist/sweetalert2.all.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var form = document.getElementById('seleccion-form');
+        var searchInput = document.getElementById('searchInput');
+
+        // Función de búsqueda
+        searchInput.addEventListener('input', function() {
+            var searchTerm = this.value.toLowerCase();
+            var dataItems = document.querySelectorAll('.data-item');
+
+            dataItems.forEach(function(item) {
+                var searchableFields = item.querySelectorAll('.searchable');
+                var found = false;
+                searchableFields.forEach(function(field) {
+                    if (field.textContent.toLowerCase().includes(searchTerm)) {
+                        found = true;
+                    }
+                });
+                if (found) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            var formData = new FormData();
+
+            // Agregar CSRF token
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+            // Recoger datos de proyectos seleccionados
+            var selectedProjects = [];
+            var checkboxes = form.querySelectorAll('input[name="datos_seleccionados"]:checked');
+            
+            checkboxes.forEach(function(checkbox) {
+                var projectId = checkbox.value;
+                var projectDataInput = form.querySelector(`input[name="proyecto_data_${projectId}"]`);
+                if (projectDataInput) {
+                    selectedProjects.push(JSON.parse(projectDataInput.value));
+                }
+            });
+            
+            // Añadir los datos de los proyectos seleccionados al FormData
+            formData.append('selected_projects', JSON.stringify(selectedProjects));
+
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: data.message,
+                        confirmButtonText: 'OK'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = "{% url 'proycli_listall' %}";
+                        }
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.error || 'Ha ocurrido un error al procesar la solicitud.',
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Ha ocurrido un error al procesar la solicitud.',
+                });
+            });
+        });
+    });
+</script>
+{% endblock javascripts %}

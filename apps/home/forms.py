@@ -1,4 +1,5 @@
 import datetime
+import os
 from django import forms
 from django.contrib.auth.models import *
 from apps.home.models import *
@@ -1976,4 +1977,32 @@ class formFICHA_CIERRE_DETALLE(forms.ModelForm):
             if existing_detail:
                 raise forms.ValidationError("Ya existe un detalle con este número de actividad para esta ficha de cierre.")
 
-        return cleaned_data            
+        return cleaned_data  
+
+class formCargaData(forms.Form):
+    
+    archivo = forms.FileField(
+        widget=forms.FileInput(attrs={
+            'class': 'form-control',
+            'id': 'file-input',
+            'style': 'display: none;'
+        }),
+        label='Archivo Excel',
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        archivo = cleaned_data.get('archivo')
+        if archivo:
+            ext = os.path.splitext(archivo.name)[1].lower()
+            if ext not in ['.xlsx', '.xls']:
+                self.add_error('archivo', 'El archivo debe ser un Excel válido (.xlsx o .xls)')
+            elif archivo.size > 5 * 1024 * 1024:  # 5 MB
+                self.add_error('archivo', 'El tamaño del archivo no debe exceder 5 MB')
+        return cleaned_data
+
+    class Media:
+        js = ('https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.js',)
+        css = {
+            'all': ('https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.css',)
+        }          
