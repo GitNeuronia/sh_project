@@ -1,6 +1,6 @@
 {% extends "layouts/base.html" %}
 
-{% block title %} Cotizaciones {% endblock %} 
+{% block title %} Monedas {% endblock %} 
 
 <!-- Specific CSS goes HERE -->
 {% block stylesheets %}
@@ -22,12 +22,12 @@
                     <div class="row align-items-center">
                         <div class="col-md-12">
                             <div class="page-header-title">
-                                <h5 class="m-b-10">Cotizaciones</h5>
+                                <h5 class="m-b-10">Monedas</h5>
                             </div>
                             <ul class="breadcrumb">
                                 <li class="breadcrumb-item"><a href="/"><i class="feather icon-home"></i></a></li>
-                                <li class="breadcrumb-item"><a href="/">Gestión de Cotizaciones</a></li>
-                                <li class="breadcrumb-item"><a href="{% url 'cotizacion_listall' %}">Cotizaciones</a></li>
+                                <li class="breadcrumb-item"><a href="/">Gestión de Proyectos</a></li>
+                                <li class="breadcrumb-item"><a href="{% url 'mon_listall' %}">Monedas</a></li>
                             </ul>
                         </div>
                     </div>
@@ -44,8 +44,8 @@
                                 <h5>Opciones de exportación</h5>
                             </div>
                             <div class=" mb-2 mb-md-0" style="margin-right: 50px;margin-top: 20px;">
-                                <a href="{% url 'cotizacion_addone' %}" class="btn  btn-primary d-inline-flex align-items-center"><i class="fas fa-plus"></i>
-                                    &nbsp&nbsp Nueva Cotización
+                                <a href="{% url 'mon_addone' %}" class="btn  btn-primary d-inline-flex align-items-center"><i class="fas fa-user-plus"></i>
+                                    &nbsp&nbsp Nueva Moneda
                                 </a>
                             </div>
                         </div>
@@ -55,13 +55,11 @@
                                     <thead>
                                         <tr>
                                             <th>ACCIONES</th>
-                                            <th>CLIENTE</th>
-                                            <th>NÚMERO</th>
-                                            <th>FECHA</th>
-                                            <th>VÁLIDO HASTA</th>
-                                            <th>ESTADO</th>
-                                            <th>TOTAL</th>
-                                            <th>OBSERVACIONES</th>
+                                            <th>MONEDA</th>
+                                            <th>DESCRIPCIÓN</th>
+                                            <th>ACTIVO</th>
+                                            <th>FECHA DE CREACIÓN</th>
+                                            <th>FECHA DE MODIFICACIÓN</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -69,26 +67,19 @@
                                         <tr>
                                             <td>
                                                 {% if request.user.is_superuser == 1 %}
-                                                <a class="btn btn-primary" href="{% url 'cotizacion_update' object.pk %}">
+                                                <a class="btn btn-primary" href="{% url 'mon_update' object.pk %}">
                                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
                                                         <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
                                                         <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
                                                     </svg>
                                                 </a>
-                                                <a class="btn btn-primary" href="{% url 'cotizacion_listone' object.pk %}">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
                                                 {% endif %}
                                             </td>
-                                            <td>{{object.CO_CLIENTE|default_if_none:""}}</td>
-                                            <td>{{object.CO_CNUMERO|default_if_none:""}}</td>
-                                            <td>{{object.CO_FFECHA|date:"d/m/Y"|default_if_none:""}}</td>
-                                            <td>{{object.CO_CVALIDO_HASTA|date:"d/m/Y"|default_if_none:""}}</td>
-                                            <td>{{object.CO_CESTADO|default_if_none:""}}</td>                                                                            
-                                            <td>                                          
-                                                {{object.CO_MONEDA|default_if_none:""}} {{object.CO_NTOTAL|floatformat:2}}                                                    
-                                            </td>
-                                            <td>{{object.CO_COBSERVACIONES|default_if_none:""}}</td>
+                                            <td>{{object.MO_CMONEDA|default_if_none:""}}</td>
+                                            <td>{{object.MO_CDESCRIPCION|default_if_none:""}}</td>
+                                            <td>{{object.MO_BACTIVA|yesno:"Sí,No"}}</td>
+                                            <td>{{object.MO_FFECHA_CREACION|date:"d/m/Y H:i:s"}}</td>
+                                            <td>{{object.MO_FFECHA_MODIFICACION|date:"d/m/Y H:i:s"}}</td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>

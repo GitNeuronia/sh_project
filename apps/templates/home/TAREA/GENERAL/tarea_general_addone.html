@@ -72,10 +72,7 @@
                                                     <label for="{{ form.TG_PROYECTO_CLIENTE.id_for_label }}">{{ form.TG_PROYECTO_CLIENTE.label }}:</label>
                                                     {{ form.TG_PROYECTO_CLIENTE }}
                                                 </div>
-                                                <div class="form-group">
-                                                    <label for="{{ form.TG_ETAPA.id_for_label }}">{{ form.TG_ETAPA.label }}:</label>
-                                                    {{ form.TG_ETAPA }}
-                                                </div>
+                                                
                                                 <div class="form-group">
                                                     <label for="{{ form.TG_CNOMBRE.id_for_label }}">{{ form.TG_CNOMBRE.label }}:</label>
                                                     {{ form.TG_CNOMBRE }}
@@ -113,11 +110,12 @@
                                             <div class="col-md-6">
                                                 <h6 class="mt-3">Detalles de la Tarea</h6>
                                                 <div class="form-group">
+                                                    <label for="{{ form.TG_MONEDA.id_for_label }}">{{ form.TG_MONEDA.label }}:</label>
+                                                    {{ form.TG_MONEDA }}
+                                                </div>
+                                                <div class="form-group">
                                                     <label for="{{ form.TG_NPRESUPUESTO.id_for_label }}">{{ form.TG_NPRESUPUESTO.label }}:</label>
                                                     {{ form.TG_NPRESUPUESTO }}
-                                                    <div class="input-group-append">
-                                                        <span class="input-group-text" id="tipo-cambio-info">Tipo de cambio: N/A</span>
-                                                    </div>
                                                 </div>
                                                 <div class="form-group">
                                                     <label for="{{ form.TG_NPROGRESO.id_for_label }}">{{ form.TG_NPROGRESO.label }}:</label>

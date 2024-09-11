@@ -57,12 +57,7 @@
                                             <th>ACCIONES</th>
                                             <th>CÓDIGO</th>
                                             <th>NOMBRE</th>
-                                            <th>PROYECTO</th>
-                                            <th>FECHA INICIO</th>
-                                            <th>FECHA FIN ESTIMADA</th>
-                                            <th>FECHA FIN REAL</th>
-                                            <th>ESTADO</th>
-                                            <th>PRESUPUESTO</th>
+                                            
                                             <th>FECHA DE CREACIÓN</th>
                                             <th>FECHA DE MODIFICACIÓN</th>
                                         </tr>
@@ -82,12 +77,7 @@
                                             </td>
                                             <td>{{object.ET_CCODIGO|default_if_none:""}}</td>
                                             <td>{{object.ET_CNOMBRE|default_if_none:""}}</td>
-                                            <td>{{object.ET_PROYECTO.PC_CNOMBRE|default_if_none:""}}</td>
-                                            <td>{{object.ET_FFECHA_INICIO|date:"d/m/Y"}}</td>
-                                            <td>{{object.ET_FFECHA_FIN_ESTIMADA|date:"d/m/Y"}}</td>
-                                            <td>{{object.ET_FFECHA_FIN_REAL|date:"d/m/Y"|default_if_none:""}}</td>
-                                            <td>{{object.ET_CESTADO|default_if_none:""}}</td>
-                                            <td>{{object.ET_NPRESUPUESTO|floatformat:2|intcomma}}</td>
+                                            
                                             <td>{{object.ET_FFECHA_CREACION|date:"d/m/Y H:i"}}</td>
                                             <td>{{object.ET_FFECHA_MODIFICACION|date:"d/m/Y H:i"}}</td>
                                         </tr>

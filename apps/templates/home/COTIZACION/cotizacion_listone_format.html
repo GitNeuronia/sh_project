@@ -126,11 +126,9 @@
 												<tr>
 													<th>Total:</th>
 													<td>
-														{% if cotizacion.CO_TIPO_CAMBIO %}
-															<span>{{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} {{ cotizacion.CO_NTOTAL_MONEDA_EXTRANJERA|floatformat:2|intcomma }}</span>
-														{% else %}
-															<span>CLP {{ cotizacion.CO_NTOTAL|floatformat:0|intcomma }}</span>
-														{% endif %}
+														
+															<span> {{ cotizacion.CO_MONEDA|default_if_none:""}} {{ cotizacion.CO_NTOTAL|floatformat:0|intcomma }}</span>
+														
 													</td>
 												</tr>
 											</tbody>
@@ -170,25 +168,16 @@
 															</td>
 															<td style="text-align: right;">{{ detalle.CD_NCANTIDAD|floatformat:0|intcomma }}</td>
 															<td style="text-align: right;">
-																{% if cotizacion.CO_TIPO_CAMBIO %}
-																	{{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.CD_NPRECIO_UNITARIO|div:cotizacion.CO_TIPO_CAMBIO.TC_NTASA|floatformat:2|intcomma }}
-																{% else %}
-																	CLP {{ detalle.CD_NPRECIO_UNITARIO|floatformat:0|intcomma }}
-																{% endif %}
+																{{ detalle.CD_NPRECIO_UNITARIO|floatformat:0|intcomma }}
+																
 															</td>
 															<td style="text-align: right;">
-																{% if cotizacion.CO_TIPO_CAMBIO %}
-																	{{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.CD_NDESCUENTO|div:cotizacion.CO_TIPO_CAMBIO.TC_NTASA|floatformat:2|intcomma }}
-																{% else %}
-																	CLP {{ detalle.CD_NDESCUENTO|floatformat:0|intcomma }}
-																{% endif %}
+																{{ detalle.CD_NDESCUENTO|floatformat:0|intcomma }}
+																
 															</td>
 															<td style="text-align: right;">
-																{% if cotizacion.CO_TIPO_CAMBIO %}
-																	{{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.CD_NTOTAL|div:cotizacion.CO_TIPO_CAMBIO.TC_NTASA|floatformat:2|intcomma }}
-																{% else %}
-																	CLP {{ detalle.CD_NTOTAL|floatformat:0|intcomma }}
-																{% endif %}
+																{{ detalle.CD_NTOTAL|floatformat:0|intcomma }}
+																
 															</td>
 														</tr>
 													{% endfor %}
@@ -204,11 +193,9 @@
 												<tr>
 													<th>Sub Total :</th>
 													<td style="text-align: right;">
-														{% if cotizacion.CO_TIPO_CAMBIO %}
-															{{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} {{ cotizacion.CO_NTOTAL_MONEDA_EXTRANJERA|floatformat:2|intcomma }}
-														{% else %}
-															CLP {{ cotizacion.CO_NTOTAL|floatformat:0|intcomma }}
-														{% endif %}
+														
+														{{ cotizacion.CO_MONEDA|default_if_none:"" }} {{ cotizacion.CO_NTOTAL|floatformat:0|intcomma }}
+														
 													</td>
 												</tr>
 												<tr class="text-info">
@@ -219,11 +206,9 @@
 													<td style="text-align: right;">
 														<hr />
 														<h5 class="text-primary">
-															{% if cotizacion.CO_TIPO_CAMBIO %}
-																{{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} {{ cotizacion.CO_NTOTAL_MONEDA_EXTRANJERA|floatformat:2|intcomma }}
-															{% else %}
-																CLP {{ cotizacion.CO_NTOTAL|floatformat:0|intcomma }}
-															{% endif %}
+															
+															{{ cotizacion.CO_MONEDA|default_if_none:""}} {{ cotizacion.CO_NTOTAL|floatformat:0|intcomma }}
+															
 														</h5>
 													</td>
 												</tr>

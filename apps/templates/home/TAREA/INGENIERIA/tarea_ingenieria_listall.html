@@ -58,7 +58,6 @@
                                             <th>ACCIONES</th>
                                             <th>CÓDIGO</th>
                                             <th>NOMBRE</th>
-                                            <th>ETAPA</th>
                                             <th>FECHA INICIO</th>
                                             <th>FECHA FIN ESTIMADA</th>
                                             <th>ESTADO</th>
@@ -92,7 +91,6 @@
                                             </td>
                                             <td>{{tarea.TI_CCODIGO|default_if_none:""}}</td>
                                             <td>{{tarea.TI_CNOMBRE|default_if_none:""}}</td>
-                                            <td>{{tarea.TI_ETAPA.ET_CNOMBRE|default_if_none:""}}</td>
                                             <td>{{tarea.TI_FFECHA_INICIO|date:"d/m/Y"|default_if_none:""}}</td>
                                             <td>{{tarea.TI_FFECHA_FIN_ESTIMADA|date:"d/m/Y"|default_if_none:""}}</td>
                                             <td>{{tarea.TI_CESTADO|default_if_none:""}}</td>

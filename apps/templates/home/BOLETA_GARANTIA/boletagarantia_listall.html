@@ -81,7 +81,7 @@
                                             </td>
                                             <td>{{object.BG_PROYECTO|default_if_none:""}}</td>
                                             <td>{{object.BG_CNUMERO|default_if_none:""}}</td>
-                                            <td>{% if object.BG_PROYECTO.PC_TIPO_CAMBIO %}{{ object.BG_PROYECTO.PC_TIPO_CAMBIO.TC_CMONEDA }} ${{ object.BG_CMONTO|floatformat:2|intcomma }}{% else %}CLP ${{ object.BG_CMONTO|floatformat:2|intcomma }}{% endif %}</td>
+                                            <td>{{ object.BG_MONEDA|default_if_none:"" }} {{ object.BG_CMONTO|floatformat:2|intcomma }}</td>
                                             <td>{{object.BG_CENTIDAD_EMISORA|default_if_none:""}}</td>
                                             <td>{{object.BG_FFECHA_EMISION|date:"d/m/Y"}}</td>
                                             <td>{{object.BG_FFECHA_VENCIMIENTO|date:"d/m/Y"}}</td>

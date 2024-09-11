@@ -86,11 +86,8 @@
                                   <tr>
                                     <th>Total:</th>
                                     <td>
-                                        {% if cotizacion.CO_TIPO_CAMBIO %}
-                                            {{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} : {{ cotizacion.CO_NTOTAL_MONEDA_EXTRANJERA|floatformat:2 }}
-                                        {% else %}
-                                            CLP : {{ cotizacion.CO_NTOTAL|floatformat:2 }}
-                                        {% endif %}
+                                        {{ cotizacion.CO_MONEDA|default_if_none:"" }} {{ cotizacion.CO_NTOTAL|floatformat:2 }}
+                                        
                                     </td>
                                 </tr>
                                   <tr>
@@ -136,32 +133,20 @@
                                         <td>{{ detalle.CD_PRODUCTO }}</td>
                                         <td>{{ detalle.CD_NCANTIDAD }}</td>
                                         <td>
-                                            {% if cotizacion.CO_TIPO_CAMBIO %}
-                                                {{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.CD_NPRECIO_UNITARIO|div:cotizacion.CO_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
-                                            {% else %}
-                                                CLP ${{ detalle.CD_NPRECIO_UNITARIO|floatformat:2 }}
-                                            {% endif %}
+                                            {{ detalle.CD_NPRECIO_UNITARIO|floatformat:2 }}
+                                            
                                         </td>
                                         <td>
-                                            {% if cotizacion.CO_TIPO_CAMBIO %}
-                                                {{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.CD_NSUBTOTAL|div:cotizacion.CO_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
-                                            {% else %}
-                                                CLP ${{ detalle.CD_NSUBTOTAL|floatformat:2 }}
-                                            {% endif %}
+                                            {{ detalle.CD_NSUBTOTAL|floatformat:2 }}
+                                            
                                         </td>
                                         <td>
-                                            {% if cotizacion.CO_TIPO_CAMBIO %}
-                                                {{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.CD_NDESCUENTO|div:cotizacion.CO_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
-                                            {% else %}
-                                                CLP ${{ detalle.CD_NDESCUENTO|floatformat:2 }}
-                                            {% endif %}
+                                            {{ detalle.CD_NDESCUENTO|floatformat:2 }}
+                                            
                                         </td>
                                         <td>
-                                            {% if cotizacion.CO_TIPO_CAMBIO %}
-                                                {{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }} ${{ detalle.CD_NTOTAL|div:cotizacion.CO_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
-                                            {% else %}
-                                                CLP ${{ detalle.CD_NTOTAL|floatformat:2 }}
-                                            {% endif %}
+                                            {{ detalle.CD_NTOTAL|floatformat:2 }}
+                                            
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -247,7 +232,7 @@
         
             // Function to set the currency
             function setCurrency() {
-                var currency = "{% if cotizacion.CO_TIPO_CAMBIO %}{{ cotizacion.CO_TIPO_CAMBIO.TC_CMONEDA }}{% else %}CLP{% endif %}";
+                var currency = "{{ cotizacion.CO_MONEDA }}";
                 $('#currency').text('(' + currency + ')');
             }
         

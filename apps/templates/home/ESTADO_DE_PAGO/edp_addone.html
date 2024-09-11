@@ -76,11 +76,12 @@
                                             <div class="col-md-6">
                                                 <h6 class="mt-3">Detalles Financieros</h6>
                                                 <div class="form-group">
+                                                    <label for="{{ form.EP_MONEDA.id_for_label }}">{{ form.EP_MONEDA.label }}:</label>
+                                                    {{ form.EP_MONEDA }}
+                                                </div>
+                                                <div class="form-group">
                                                     <label for="{{ form.EP_NTOTAL.id_for_label }}">{{ form.EP_NTOTAL.label }}:</label>
                                                     {{ form.EP_NTOTAL }}
-                                                    <div class="input-group-append">
-                                                        <span class="input-group-text" id="tipo-cambio-info">Tipo de cambio: N/A</span>
-                                                    </div>
                                                 </div>
                                                 <div class="form-group">
                                                     <label for="{{ form.EP_CESTADO_PAGO.id_for_label }}">{{ form.EP_CESTADO_PAGO.label }}:</label>

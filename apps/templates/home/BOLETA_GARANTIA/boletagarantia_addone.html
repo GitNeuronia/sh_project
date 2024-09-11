@@ -63,11 +63,12 @@
                                                     {{ form.BG_CNUMERO }}
                                                 </div>
                                                 <div class="form-group">
+                                                    <label for="{{ form.BG_MONEDA.id_for_label }}">{{ form.BG_MONEDA.label }}:</label>
+                                                    {{ form.BG_MONEDA }}
+                                                </div>
+                                                <div class="form-group">
                                                     <label for="{{ form.BG_CMONTO.id_for_label }}">{{ form.BG_CMONTO.label }}:</label>
                                                     {{ form.BG_CMONTO }}
-                                                    <div class="input-group-append">
-                                                        <span class="input-group-text" id="tipo-cambio-info">Tipo de cambio: N/A</span>
-                                                    </div>
                                                 </div>
                                                 <div class="form-group">
                                                     <label for="{{ form.BG_CENTIDAD_EMISORA.id_for_label }}">{{ form.BG_CENTIDAD_EMISORA.label }}:</label>

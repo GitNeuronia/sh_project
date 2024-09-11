@@ -87,11 +87,9 @@
                                   <tr>
                                     <th>Total:</th>
                                     <td>
-                                        {% if factura.FA_TIPO_CAMBIO %}
-                                            {{ factura.FA_TIPO_CAMBIO.TC_CMONEDA }} : {{ factura.FA_NTOTAL_MONEDA_EXTRANJERA|floatformat:2 }}
-                                        {% else %}
-                                            CLP : {{ factura.FA_NTOTAL|floatformat:2 }}
-                                        {% endif %}
+                                        
+                                            {{ factura.FA_MONEDA|default_if_none:"" }} {{ factura.FA_NTOTAL|floatformat:2 }}
+                                        
                                     </td>
                                   </tr>
                                   <tr>
@@ -132,32 +130,20 @@
                                         <td>{{ detalle.FAD_PRODUCTO }}</td>
                                         <td>{{ detalle.FAD_NCANTIDAD }}</td>
                                         <td>
-                                            {% if factura.FA_TIPO_CAMBIO %}
-                                                {{ factura.FA_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.FAD_NPRECIO_UNITARIO|div:factura.FA_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
-                                            {% else %}
-                                                CLP {{ detalle.FAD_NPRECIO_UNITARIO|floatformat:2 }}
-                                            {% endif %}
+                                             {{ detalle.FAD_NPRECIO_UNITARIO|floatformat:2 }}
+                                            
                                         </td>
                                         <td>
-                                            {% if factura.FA_TIPO_CAMBIO %}
-                                                {{ factura.FA_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.FAD_NSUBTOTAL|div:factura.FA_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
-                                            {% else %}
-                                                CLP {{ detalle.FAD_NSUBTOTAL|floatformat:2 }}
-                                            {% endif %}
+                                            {{ detalle.FAD_NSUBTOTAL|floatformat:2 }}
+                                            
                                         </td>
                                         <td>
-                                            {% if factura.FA_TIPO_CAMBIO %}
-                                                {{ factura.FA_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.FAD_NDESCUENTO|div:factura.FA_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
-                                            {% else %}
-                                                CLP {{ detalle.FAD_NDESCUENTO|floatformat:2 }}
-                                            {% endif %}
+                                             {{ detalle.FAD_NDESCUENTO|floatformat:2 }}
+                                            
                                         </td>
                                         <td>
-                                            {% if factura.FA_TIPO_CAMBIO %}
-                                                {{ factura.FA_TIPO_CAMBIO.TC_CMONEDA }} {{ detalle.FAD_NTOTAL|div:factura.FA_TIPO_CAMBIO.TC_NTASA|floatformat:2 }}
-                                            {% else %}
-                                                CLP {{ detalle.FAD_NTOTAL|floatformat:2 }}
-                                            {% endif %}
+                                            {{ detalle.FAD_NTOTAL|floatformat:2 }}
+                                            
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -243,7 +229,7 @@
 
         // Function to set the currency
         function setCurrency() {
-            var currency = "{% if factura.FA_TIPO_CAMBIO %}{{ factura.FA_TIPO_CAMBIO.TC_CMONEDA }}{% else %}CLP{% endif %}";
+            var currency = "{{ factura.FA_MONEDA }}";
             $('#currency').text('(' + currency + ')');
         }
 

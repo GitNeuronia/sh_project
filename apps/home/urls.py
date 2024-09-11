@@ -39,6 +39,11 @@ urlpatterns = [
     path('rol_addone/', login_required(views.ROL_ADDONE), name='rol_addone'),
     path('rol_update/<int:pk>/', login_required(views.ROL_UPDATE), name='rol_update'),
 
+    # URLs para la gestión de monedas
+    path('mon_listall/', login_required(views.MONEDA_LISTALL), name='mon_listall'),
+    path('mon_addone/', login_required(views.MONEDA_ADDONE), name='mon_addone'),
+    path('mon_update/<int:pk>/', login_required(views.MONEDA_UPDATE), name='mon_update'),
+
     # URLs para la gestión de tipos de cambio
     path('tc_listall/', login_required(views.TC_LISTALL), name='tc_listall'),
     path('tc_addone/', login_required(views.TC_ADDONE), name='tc_addone'),
@@ -48,6 +53,11 @@ urlpatterns = [
     path('catproy_listall/', login_required(views.CATEGORIA_PROYECTO_LISTALL), name='catproy_listall'),
     path('catproy_addone/', login_required(views.CATEGORIA_PROYECTO_ADDONE), name='catproy_addone'),
     path('catproy_update/<int:pk>/', login_required(views.CATEGORIA_PROYECTO_UPDATE), name='catproy_update'),
+
+    # URLs para la gestión de estados de tarea
+    path('estar_listall/', login_required(views.ESTADO_TAREA_LISTALL), name='estar_listall'),
+    path('estar_addone/', login_required(views.ESTADO_TAREA_ADDONE), name='estar_addone'),
+    path('estar_update/<int:pk>/', login_required(views.ESTADO_TAREA_UPDATE), name='estar_update'),
 
     # URLs para la gestión de categorías de cliente
     path('catcli_listall/', login_required(views.CATEGORIA_CLIENTE_LISTALL), name='catcli_listall'),
@@ -244,6 +254,12 @@ urlpatterns = [
     path('un_addone/', login_required(views.UNIDAD_NEGOCIO_ADDONE), name='un_addone'),
     path('un_update/<int:pk>', login_required(views.UNIDAD_NEGOCIO_UPDATE), name='un_update'),
     
+
+
+    #busqueda
+    path('global_search/<str:key>/', login_required(views.GLOBAL_SEARCH), name='global_search'),
+    path('goto_record/<str:table>/<int:pk>/', login_required(views.GOTO_RECORD), name='goto_record'),
+
     # Coincide con cualquier archivo html
     re_path(r'^.*\.*', views.pages, name='pages'),
 
