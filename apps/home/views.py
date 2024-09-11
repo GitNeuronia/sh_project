@@ -17,6 +17,7 @@ import traceback
 import warnings
 import openpyxl
 import uuid
+import datetime
 from django.conf import settings
 from decimal import Decimal
 from xhtml2pdf import pisa
@@ -57,6 +58,7 @@ from django.views.decorators.http import require_POST
 from apps.home.models import *
 from .forms import *
 from .models import *
+from .general_postgresql import *
 
 logger = logging.getLogger(__name__)
 
@@ -145,6 +147,21 @@ class WeightedAvg(Func):
         )
 
 def proyecto_index(request):
+    from_date = request.GET.get('fecha_desde', None)
+    to_date = request.GET.get('fecha_hasta', None)
+    filtrado = 0
+    if from_date or to_date:
+        filtrado = 1
+
+    if not from_date:
+        from_date = datetime.datetime.now().replace(day=1).strftime('%Y-%m-%d')
+    if not to_date:
+        to_date = datetime.datetime.now().strftime('%Y-%m-%d')
+
+    if from_date > to_date:
+        from_date, to_date = to_date, from_date
+    
+
     fecha_actual = datetime.datetime.now()
     proyectos = PROYECTO_CLIENTE.objects.all()
 
@@ -152,17 +169,23 @@ def proyecto_index(request):
     estadisticas = proyectos.aggregate(
         total_proyectos=Count('id'),
         proyectos_activos=Count('id', filter=~Q(PC_CESTADO__iexact='Cerrado')),
-        total_presupuesto=Coalesce(Sum('PC_NPRESUPUESTO'), Decimal('0')),
-        total_costo_real=Coalesce(Sum('PC_NCOSTO_REAL'), Decimal('0')),
         promedio_margen=Coalesce(Avg('PC_NMARGEN'), Decimal('0')),
     )
 
+    estadisticas['proyectos_cerrados'] = get_count_projects_closed(from_date, to_date)
+    estadisticas['total_costo_proyectado'] = get_sum_costo_proyectado(from_date, to_date)
+    estadisticas['total_costo_real'] = get_sum_costo_real(from_date, to_date)
+    estadisticas['total_horas_proyectadas'] = get_sum_horas_proyectadas(from_date, to_date)
+    estadisticas['total_horas_reales'] = get_sum_horas_reales(from_date, to_date)
+    estadisticas['total_presupuesto'] = get_sum_presupuesto(from_date, to_date)
+
     # Agregar estadísticas de EdP
-    estadisticas_edp = ESTADO_DE_PAGO.objects.aggregate(
-        total_edp=Coalesce(Sum('EP_NTOTAL'), Decimal('0')),
-        total_pagado=Coalesce(Sum('EP_NMONTO_PAGADO'), Decimal('0')),
-    )
-    estadisticas['total_saldo_edp'] = estadisticas_edp['total_edp'] - estadisticas_edp['total_pagado']
+    # estadisticas_edp = ESTADO_DE_PAGO.objects.aggregate(
+    #     total_edp=Coalesce(Sum('EP_NTOTAL'), Decimal('0')),
+    #     total_pagado=Coalesce(Sum('EP_NMONTO_PAGADO'), Decimal('0')),
+    # )
+    # estadisticas['total_saldo_edp'] = estadisticas_edp['total_edp'] - estadisticas_edp['total_pagado']
+    estadisticas['total_saldo_edp'] = get_sum_edp(from_date, to_date)
 
     # Preparar datos para el gráfico y la tabla de proyectos
     proyectos_data = proyectos.annotate(
@@ -270,6 +293,9 @@ def proyecto_index(request):
         'chart_costos_reales': [float(p['PC_NCOSTO_REAL']) for p in proyectos_data],
         'proyectos_activos': json.dumps(proyectos_activos, cls=DecimalEncoder),
         'proyectos_edp': proyectos_edp,
+        'filtrado': filtrado,
+        'from_date': from_date,
+        'to_date': to_date
     }
 
     return render(request, 'home/proyecto_index.html', context)
@@ -343,7 +369,29 @@ def api_proyectos_edp(request):
     except Exception as e:
         logger.exception("Error in api_proyectos_edp")
         return JsonResponse({'error': str(e)}, status=500)
-    
+
+def PROYECTOS_CERRADOS(request):
+    try:
+        from_date = request.POST.get('fecha_desde', None)
+        to_date = request.POST.get('fecha_hasta', None)
+        if not from_date:
+            from_date = datetime.datetime.now().replace(day=1).strftime('%Y-%m-%d')
+        if not to_date:
+            to_date = datetime.datetime.now().strftime('%Y-%m-%d') 
+
+        proyectos = get_projects_closed_by_date(from_date, to_date)
+
+        return JsonResponse({
+            "success": True,
+            "proyectos": proyectos
+        })
+    except Exception as e:
+        print(e)
+        return JsonResponse({
+            "success": False,
+            "msg": str(e)
+        })
+
 @login_required(login_url="/login/")
 def pages(request):
     context = {}
@@ -770,6 +818,67 @@ def ROL_UPDATE(request, pk):
         print(e)
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
+
+def ESTADO_TAREA_LISTALL(request):
+    if not has_auth(request.user, 'VER_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        object_list = ESTADO_TAREA.objects.all()
+        ctx = {
+            'object_list': object_list
+        }
+        return render(request, 'home/ESTADO_TAREA/et_listall.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def ESTADO_TAREA_ADDONE(request):
+    if not has_auth(request.user, 'ADD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        if request.method =='POST':
+            form = formESTADO_TAREA(request.POST)
+            if form.is_valid():
+                form.save()
+                crear_log(request.user, 'Crear Estado de Tarea', f'Se creó el estado de tarea: {form.instance.ET_CNOMBRE}')
+                messages.success(request, 'Estado de tarea guardado correctamente')
+                return redirect('/estar_listall/')
+        form = formESTADO_TAREA()
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/ESTADO_TAREA/et_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def ESTADO_TAREA_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        estado_tarea = ESTADO_TAREA.objects.get(id=pk)
+        if request.method == 'POST':
+            form = formESTADO_TAREA(request.POST, instance=estado_tarea)
+            if form.is_valid():
+                form.save()
+                crear_log(request.user, 'Actualizar Estado de Tarea', f'Se actualizó el estado de tarea: {form.instance.ET_CNOMBRE}')
+                messages.success(request, 'Estado de tarea actualizado correctamente')
+                return redirect('/estar_listall/')
+        form = formESTADO_TAREA(instance=estado_tarea)
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/ESTADO_TAREA/et_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
 
 def CATEGORIA_PROYECTO_LISTALL(request):
     if not has_auth(request.user, 'VER_CONFIGURACIONES'):
@@ -1734,9 +1843,9 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
         return redirect('/')
     try:
         proyecto = PROYECTO_CLIENTE.objects.get(id=pk)
-        tareas_general = TAREA_GENERAL.objects.filter(TG_PROYECTO_CLIENTE=proyecto)
-        tareas_ingenieria = TAREA_INGENIERIA.objects.filter(TI_PROYECTO_CLIENTE=proyecto)
-        tareas_financiera = TAREA_FINANCIERA.objects.filter(TF_PROYECTO_CLIENTE=proyecto)
+        tareas_general = TAREA_GENERAL.objects.filter(TG_PROYECTO_CLIENTE=proyecto).order_by('id')
+        tareas_ingenieria = TAREA_INGENIERIA.objects.filter(TI_PROYECTO_CLIENTE=proyecto).order_by('id')
+        tareas_financiera = TAREA_FINANCIERA.objects.filter(TF_PROYECTO_CLIENTE=proyecto).order_by('id')
         
         dependencias_general = TAREA_GENERAL_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_general)
         dependencias_ingenieria = TAREA_INGENIERIA_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_ingenieria)

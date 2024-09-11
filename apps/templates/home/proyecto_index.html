@@ -4,6 +4,7 @@
 
 {% block stylesheets %}
 {{ block.super }}
+{% load custom_filters %}
 <style>
     .card-counter {
         box-shadow: 2px 2px 10px #DADADA;
@@ -129,34 +130,102 @@
         </div>
         
         <div class="row">
-            <div class="col-md-3">
-                <div class="card-counter primary">
-                    <i class="fa fa-code-fork"></i>
-                    <span class="count-numbers">{{ estadisticas.total_proyectos }}</span>
-                    <span class="count-name">Total Proyectos</span>
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h4 class="m-0">Filtros</h4>
+                            <div class="d-flex">
+                                <button class="btn btn-outline-primary mr-2" type="button" data-toggle="collapse" data-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
+                                    <i class="fas fa-filter"></i> Mostrar/Ocultar Filtros
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="collapse show " id="collapseExample" >
+                            <form method="GET" onsubmit="return validacion()">
+                                {% csrf_token %}
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label for="fecha_desde" style="font-weight: bold;">Fecha desde:</label>
+                                        <input type="date" id="fecha_desde" name="fecha_desde" class="form-control" value="{{from_date}}">
+                                    </div>
+                                    <div class="form-group col-md-6">
+                                        <label for="fecha_hasta" style="font-weight: bold;">Fecha hasta:</label>
+                                        <input type="date" id="fecha_hasta" name="fecha_hasta" class="form-control" value="{{to_date}}">
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-end ">
+                                    <button type="submit" class="btn btn-primary mr-2">Aplicar filtros</button>
+                                </div>                    
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="card order-card" style="background-color: #007bff;">
+                    <div class="card-body">
+                        <h6 class="text-white">Proyectos totales</h6>
+                        <h2 class="text-right text-white"><i class="fas fa-ticket-alt float-left"></i><span>{{ estadisticas.total_proyectos|custom_number_format }}</span></h2>
+                        <p class="m-b-0"><span class="float-right"></span></p>
+                    </div>
                 </div>
             </div>
 
-            <div class="col-md-3">
-                <div class="card-counter danger" id="proyectos-activos-card" style="cursor: pointer;">
-                    <i class="fa fa-ticket"></i>
-                    <span class="count-numbers">{{ estadisticas.proyectos_activos }}</span>
-                    <span class="count-name">Proyectos Activos</span>
+            <div class="col-md-6 col-xl-3">
+                <div class="card bg-c-red order-card">
+                    <div class="card-body" id="proyectos-activos-card">
+                        <h6 class="text-white">Proyectos Activos</h6>
+                        <h2 class="text-right text-white"><i class="fas fa-ticket-alt float-left"></i><span>{{ estadisticas.proyectos_activos|custom_number_format }}</span></h2>
+                        <p class="m-b-0"><span class="float-right"></span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="card bg-c-blue order-card">
+                    <div class="card-body" id="proyectos-cerrados-card">
+                        <h6 class="text-white">Proyectos Cerrados</h6>
+                        <h2 class="text-right text-white"><i class="feather icon-layers float-left"></i><span>{{ estadisticas.proyectos_cerrados|custom_number_format }}</span></h2>
+                        <p class="m-b-0"><span class="float-right"></span></p>
+                    </div>
                 </div>
             </div>
 
-            <div class="col-md-3">
-                <div class="card-counter success">
-                    <i class="fa fa-database"></i>
-                    <span class="count-numbers">${{ estadisticas.total_presupuesto|floatformat:2 }}</span>
-                    <span class="count-name">Presupuesto Total</span>
+            <div class="col-md-6 col-xl-3">
+                <div class="card order-card" style="background-color: #66bb6a;">
+                    <div class="card-body">
+                        <h6 class="text-white">Presupuesto total</h6>
+                        <h2 class="text-right text-white"><i class="fas fa-calculator float-left"></i><span>${{ estadisticas.total_presupuesto|custom_number_format }}</span></h2>
+                        <p class="m-b-0"><span class="float-right"></span></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-xl-3">
+                <div class="card bg-c-green order-card">
+                    <div class="card-body">
+                        <h6 class="text-white">Costos</h6>
+                        <h2 class="text-right text-white"><i class="fas fa-money-bill float-left"></i><span>${{ estadisticas.total_costo_real|custom_number_format }}</span></h2>
+                        <p class="m-b-0">Proyectado<span class="float-right">${{ estadisticas.total_costo_proyectado|custom_number_format }}</span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="card bg-c-yellow order-card">
+                    <div class="card-body">
+                        <h6 class="text-white">Horas</h6>
+                        <h2 class="text-right text-white"><i class="fas fa-clock float-left"></i><span>{{ estadisticas.total_horas_reales|custom_number_format }}</span></h2>
+                        <p class="m-b-0">Proyectado<span class="float-right">{{ estadisticas.total_horas_proyectadas|custom_number_format }}</span></p>
+                    </div>
                 </div>
             </div>
 
             <div class="col-md-3">
                 <div class="card-counter info">
                     <i class="fa fa-users"></i>
-                    <span class="count-numbers">{{ estadisticas.promedio_margen|floatformat:2 }}%</span>
+                    <span class="count-numbers">{{ estadisticas.promedio_margen|custom_number_format }}%</span>
                     <span class="count-name">Margen Promedio</span>
                 </div>
             </div>
@@ -164,7 +233,7 @@
             <div class="col-md-3">
                 <div class="card-counter warning">
                     <i class="fa fa-file-text-o"></i>
-                    <span class="count-numbers">${{ estadisticas.total_saldo_edp|floatformat:2 }}</span>
+                    <span class="count-numbers">${{ estadisticas.total_saldo_edp|custom_number_format  }}</span>
                     <span class="count-name">Saldo Total EdP</span>
                 </div>
             </div>
@@ -238,6 +307,47 @@
                                 <th>Fecha Fin Estimada</th>
                                 <th>Presupuesto</th>
                                 <th>Costo Real</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Los datos se cargarán aquí dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Proyectos Cerrados -->
+<div class="modal fade" id="proyectosCerradosModal" tabindex="-1" role="dialog" aria-labelledby="proyectosCerradosModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="proyectosCerradosModalLabel">Proyectos Cerrados</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="tablaProyectosCerrados">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th>Fecha Inicio</th>
+                                <th>Fecha Fin Estimada</th>
+                                <th>Fecha Fin Real</th>
+                                <th>Presupuesto</th>
+                                <th>Costo Real</th>
+                                <th>Costo Proyectado</th>
+                                <th>Horas Reales</th>
+                                <th>Horas Proyectadas</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
@@ -419,5 +529,57 @@
         function formatNumber(number) {
             return parseFloat(number).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
+
+        $("#proyectos-cerrados-card").click(function() {
+            const from_date = $('#fecha_desde').val();
+            const to_date = $('#fecha_hasta').val();
+
+            var tbody = document.querySelector('#tablaProyectosCerrados tbody');
+            tbody.innerHTML = ''; // Limpiar tabla existente
+
+            $.ajax({
+                url: "{% url 'pro_closed_list' %}",
+                type: 'POST',
+                data: {
+                    'csrfmiddlewaretoken': '{{ csrf_token }}',
+                    'fecha_desde': from_date,
+                    'fecha_hasta': to_date
+                },
+                success: function(data) {
+                    if(data.success == true){
+                        data.proyectos.forEach(function(proyecto) {
+                            var row = `
+                                <tr>
+                                    <td>${proyecto[0]}</td>
+                                    <td>${proyecto[1]}</td>
+                                    <td>${formatDate(proyecto[2])}</td>
+                                    <td>${formatDate(proyecto[3])}</td>
+                                    <td>${formatDate(proyecto[4])}</td>
+                                    <td>$ ${formatNumber(proyecto[5])}</td>
+                                    <td>$ ${formatNumber(proyecto[6])}</td>
+                                    <td>$ ${formatNumber(proyecto[7])}</td>
+                                    <td>${formatNumber(proyecto[8])}</td>
+                                    <td>${formatNumber(proyecto[9])}</td>
+                                    <td>
+                                        <button class="btn btn-primary btn-sm" onclick="verProyecto(${proyecto[10]})">Ver</button>
+                                    </td>
+                                </tr>
+                            `;
+                            tbody.innerHTML += row;
+                        });
+                        $('#proyectosCerradosModal').modal('show');
+                    } else {
+                        Swal.fire({
+                            title: 'Error',
+                            text: msg,
+                            icon: 'error'
+                        });
+                    }
+                },
+                error: function(xhr, error, thrown) {
+                    console.error("Error en la llamada AJAX:", error);
+                }
+            });
+        });
     </script>
 {% endblock javascripts %}

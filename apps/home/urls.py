@@ -13,6 +13,7 @@ urlpatterns = [
     path('', login_required(views.proyecto_index), name='proyecto_index'),
     path('api/proyectos-edp/', login_required(views.api_proyectos_edp), name='api_proyectos_edp'),
     path('', views.index, name='home'),
+    path('pro_closed_list/', login_required(views.PROYECTOS_CERRADOS), name='pro_closed_list'),
     # URLs para la gestión de regiones
     path('reg_listall/', login_required(views.REGION_LISTALL), name='reg_listall'),
     path('reg_addone/', login_required(views.REGION_ADDONE), name='reg_addone'),
@@ -52,6 +53,11 @@ urlpatterns = [
     path('catproy_listall/', login_required(views.CATEGORIA_PROYECTO_LISTALL), name='catproy_listall'),
     path('catproy_addone/', login_required(views.CATEGORIA_PROYECTO_ADDONE), name='catproy_addone'),
     path('catproy_update/<int:pk>/', login_required(views.CATEGORIA_PROYECTO_UPDATE), name='catproy_update'),
+
+    # URLs para la gestión de estados de tarea
+    path('estar_listall/', login_required(views.ESTADO_TAREA_LISTALL), name='estar_listall'),
+    path('estar_addone/', login_required(views.ESTADO_TAREA_ADDONE), name='estar_addone'),
+    path('estar_update/<int:pk>/', login_required(views.ESTADO_TAREA_UPDATE), name='estar_update'),
 
     # URLs para la gestión de categorías de cliente
     path('catcli_listall/', login_required(views.CATEGORIA_CLIENTE_LISTALL), name='catcli_listall'),
