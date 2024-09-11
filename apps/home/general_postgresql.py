@@ -53,6 +53,7 @@ def get_sum_costo_real(from_date, to_date):
                 WHERE
                     "PC_FFECHA_INICIO" BETWEEN %s AND %s
             """
+            print(query)
             cursor.execute(query, [from_date, to_date])
             result = cursor.fetchone()
             if not result:
@@ -105,7 +106,7 @@ def get_sum_presupuesto(from_date, to_date):
         with connection.cursor() as cursor:
             query = """
                 SELECT
-                    SUM("PC_NCOSTO_ESTIMADO")
+                    SUM("PC_NPRESUPUESTO")
                 FROM "PROYECTO_CLIENTE"
                 WHERE
                     "PC_FFECHA_INICIO" BETWEEN %s AND %s

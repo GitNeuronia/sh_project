@@ -38,7 +38,9 @@ def make_list(value):
 
 @register.filter(name='json_encode')
 def json_encode(value):
-    return json.dumps(value)@register.filter
+    return json.dumps(value)
+
+@register.filter
 def custom_number_format(value):
     # Establecer la localización para usar separadores de miles según sea necesario
     locale.setlocale(locale.LC_ALL, 'es_CL.UTF-8')
