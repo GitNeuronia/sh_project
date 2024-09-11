@@ -2693,6 +2693,10 @@ def TAREA_FINANCIERA_LISTALL(request):
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
+def Construir_codigo_tarea(request, proyecto_cliente):
+    codigo = proyecto_cliente.PC_CCODIGO + '-TF' + str(TAREA_FINANCIERA.objects.filter(TF_PROYECTO_CLIENTE=proyecto_cliente).count() + 1)
+    return codigo
+
 def TAREA_FINANCIERA_ADDONE(request, page):
     if not has_auth(request.user, 'ADD_TAREAS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
@@ -2704,6 +2708,7 @@ def TAREA_FINANCIERA_ADDONE(request, page):
         form_asignacion_recurso = formASIGNACION_RECURSO_TAREA_FINANCIERA()        
         if request.method == 'POST':
             form = formTAREA_FINANCIERA(request.POST)
+            
             if form.is_valid():
                 tarea = form.save(commit=False)
                 tarea.TF_CUSUARIO_CREADOR = request.user

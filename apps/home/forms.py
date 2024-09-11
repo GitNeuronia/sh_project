@@ -1133,11 +1133,11 @@ class formTAREA_GENERAL(forms.ModelForm):
             self.generate_code()
 
     def generate_code(self):
-        if self.data.get('TG_PROYECTO_CLIENTE') and self.data.get('TG_ETAPA'):
+        if self.data.get('TG_PROYECTO_CLIENTE') :
             proyecto = PROYECTO_CLIENTE.objects.get(id=self.data['TG_PROYECTO_CLIENTE'])
-            etapa = ETAPA.objects.get(id=self.data['TG_ETAPA'])
-            tarea_count = TAREA_GENERAL.objects.filter(TG_PROYECTO_CLIENTE=proyecto, TG_ETAPA=etapa).count() + 1
-            self.initial['TG_CCODIGO'] = f"{proyecto.PC_CCODIGO}-{etapa.ET_CCODIGO}-TG{tarea_count:03d}"
+            
+            tarea_count = TAREA_GENERAL.objects.filter(TG_PROYECTO_CLIENTE=proyecto, ).count() + 1
+            self.initial['TG_CCODIGO'] = f"{proyecto.PC_CCODIGO}-TG{tarea_count:03d}"
 
     def clean(self):
         cleaned_data = super().clean()
@@ -1215,11 +1215,11 @@ class formTAREA_INGENIERIA(forms.ModelForm):
             self.generate_code()
 
     def generate_code(self):
-        if self.data.get('TI_PROYECTO_CLIENTE') and self.data.get('TI_ETAPA'):
+        if self.data.get('TI_PROYECTO_CLIENTE') :
             proyecto = PROYECTO_CLIENTE.objects.get(id=self.data['TI_PROYECTO_CLIENTE'])
-            etapa = ETAPA.objects.get(id=self.data['TI_ETAPA'])
-            tarea_count = TAREA_INGENIERIA.objects.filter(TI_PROYECTO_CLIENTE=proyecto, TI_ETAPA=etapa).count() + 1
-            self.initial['TI_CCODIGO'] = f"{proyecto.PC_CCODIGO}-{etapa.ET_CCODIGO}-TI{tarea_count:03d}"
+            
+            tarea_count = TAREA_INGENIERIA.objects.filter(TI_PROYECTO_CLIENTE=proyecto).count() + 1
+            self.initial['TI_CCODIGO'] = f"{proyecto.PC_CCODIGO}-TI{tarea_count:03d}"
 
     def clean(self):
         cleaned_data = super().clean()
@@ -1298,11 +1298,11 @@ class formTAREA_FINANCIERA(forms.ModelForm):
             self.generate_code()
 
     def generate_code(self):
-        if self.data.get('TF_PROYECTO_CLIENTE') and self.data.get('TF_ETAPA'):
+        if self.data.get('TF_PROYECTO_CLIENTE'):
             proyecto = PROYECTO_CLIENTE.objects.get(id=self.data['TF_PROYECTO_CLIENTE'])
-            etapa = ETAPA.objects.get(id=self.data['TF_ETAPA'])
-            tarea_count = TAREA_FINANCIERA.objects.filter(TF_PROYECTO_CLIENTE=proyecto, TF_ETAPA=etapa).count() + 1
-            self.initial['TF_CCODIGO'] = f"{proyecto.PC_CCODIGO}-{etapa.ET_CCODIGO}-TF{tarea_count:03d}"
+            
+            tarea_count = TAREA_FINANCIERA.objects.filter(TF_PROYECTO_CLIENTE=proyecto).count() + 1
+            self.initial['TF_CCODIGO'] = f"{proyecto.PC_CCODIGO}-TF{tarea_count:03d}"
 
     def clean(self):
         cleaned_data = super().clean()
