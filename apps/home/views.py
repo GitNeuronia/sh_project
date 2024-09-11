@@ -151,6 +151,8 @@ def proyecto_index(request):
     if from_date > to_date:
         from_date, to_date = to_date, from_date
     
+    # Asumiendo que tienes las variables fecha_inicio y fecha_fin definidas
+    fecha_filter = Q(PC_FFECHA_INICIO__gte=from_date) & Q(PC_FFECHA_FIN_REAL__lte=to_date)
 
     fecha_actual = datetime.datetime.now()
     proyectos = PROYECTO_CLIENTE.objects.all()
@@ -180,23 +182,23 @@ def proyecto_index(request):
     # Preparar datos para el gráfico y la tabla de proyectos
     proyectos_data = proyectos.annotate(
         alerta_fecha=Case(
-            When(PC_FFECHA_FIN_REAL__isnull=True, PC_FFECHA_FIN_ESTIMADA__lt=fecha_actual, then=Value(1)),
+            When(fecha_filter & Q(PC_FFECHA_FIN_REAL__isnull=True, PC_FFECHA_FIN_ESTIMADA__lt=fecha_actual), then=Value(1)),
             default=Value(0),
             output_field=IntegerField()
         ),
         alerta_costo=Case(
-            When(PC_NCOSTO_REAL__gt=F('PC_NCOSTO_ESTIMADO'), then=Value(1)),
+            When(fecha_filter & Q(PC_NCOSTO_REAL__gt=F('PC_NCOSTO_ESTIMADO')), then=Value(1)),
             default=Value(0),
             output_field=IntegerField()
         ),
         porcentaje_avance=Coalesce(
             Avg(
                 Case(
-                    When(tareas_generales_proyecto__TG_NPROGRESO__isnull=False, 
+                    When(fecha_filter & Q(tareas_generales_proyecto__TG_NPROGRESO__isnull=False), 
                             then='tareas_generales_proyecto__TG_NPROGRESO'),
-                    When(tareas_ingenieria_proyecto__TI_NPROGRESO__isnull=False, 
+                    When(fecha_filter & Q(tareas_ingenieria_proyecto__TI_NPROGRESO__isnull=False), 
                             then='tareas_ingenieria_proyecto__TI_NPROGRESO'),
-                    When(tareas_financieras_proyecto__TF_NPROGRESO__isnull=False, 
+                    When(fecha_filter & Q(tareas_financieras_proyecto__TF_NPROGRESO__isnull=False), 
                             then='tareas_financieras_proyecto__TF_NPROGRESO'),
                     output_field=DecimalField()
                 )
@@ -219,17 +221,17 @@ def proyecto_index(request):
     proyectos_edp = PROYECTO_CLIENTE.objects.annotate(
         total_edp=Coalesce(Sum('estados_de_pago__EP_NTOTAL'), Decimal('0')),
         pendiente=Coalesce(Sum(Case(
-            When(estados_de_pago__EP_CESTADO='PENDIENTE', then=F('estados_de_pago__EP_NTOTAL')),
+            When(fecha_filter & Q(estados_de_pago__EP_CESTADO='PENDIENTE'), then=F('estados_de_pago__EP_NTOTAL')),
             default=0,
             output_field=DecimalField()
         )), Decimal('0')),
         aprobado=Coalesce(Sum(Case(
-            When(estados_de_pago__EP_CESTADO='APROBADO', then=F('estados_de_pago__EP_NTOTAL')),
+            When(fecha_filter & Q(estados_de_pago__EP_CESTADO='APROBADO'), then=F('estados_de_pago__EP_NTOTAL')),
             default=0,
             output_field=DecimalField()
         )), Decimal('0')),
         rechazado=Coalesce(Sum(Case(
-            When(estados_de_pago__EP_CESTADO='RECHAZADO', then=F('estados_de_pago__EP_NTOTAL')),
+            When(fecha_filter & Q(estados_de_pago__EP_CESTADO='RECHAZADO'), then=F('estados_de_pago__EP_NTOTAL')),
             default=0,
             output_field=DecimalField()
         )), Decimal('0')),
