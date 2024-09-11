@@ -162,7 +162,7 @@ def proyecto_index(request):
         promedio_margen=Coalesce(Avg('PC_NMARGEN'), Decimal('0')),
     )
 
-    estadisticas['proyectos_cerrados'] = get_projects_closed(from_date, to_date)
+    estadisticas['proyectos_cerrados'] = get_count_projects_closed(from_date, to_date)
     estadisticas['total_costo_proyectado'] = get_sum_costo_proyectado(from_date, to_date)
     estadisticas['total_costo_real'] = get_sum_costo_real(from_date, to_date)
     estadisticas['total_horas_proyectadas'] = get_sum_horas_proyectadas(from_date, to_date)
@@ -170,11 +170,12 @@ def proyecto_index(request):
     estadisticas['total_presupuesto'] = get_sum_presupuesto(from_date, to_date)
 
     # Agregar estadísticas de EdP
-    estadisticas_edp = ESTADO_DE_PAGO.objects.aggregate(
-        total_edp=Coalesce(Sum('EP_NTOTAL'), Decimal('0')),
-        total_pagado=Coalesce(Sum('EP_NMONTO_PAGADO'), Decimal('0')),
-    )
-    estadisticas['total_saldo_edp'] = estadisticas_edp['total_edp'] - estadisticas_edp['total_pagado']
+    # estadisticas_edp = ESTADO_DE_PAGO.objects.aggregate(
+    #     total_edp=Coalesce(Sum('EP_NTOTAL'), Decimal('0')),
+    #     total_pagado=Coalesce(Sum('EP_NMONTO_PAGADO'), Decimal('0')),
+    # )
+    # estadisticas['total_saldo_edp'] = estadisticas_edp['total_edp'] - estadisticas_edp['total_pagado']
+    estadisticas['total_saldo_edp'] = get_sum_edp(from_date, to_date)
 
     # Preparar datos para el gráfico y la tabla de proyectos
     proyectos_data = proyectos.annotate(
@@ -361,21 +362,14 @@ def api_proyectos_edp(request):
 
 def PROYECTOS_CERRADOS(request):
     try:
-        from_date = request.GET.get('fecha_desde', None)
-        to_date = request.GET.get('fecha_hasta', None)
+        from_date = request.POST.get('fecha_desde', None)
+        to_date = request.POST.get('fecha_hasta', None)
         if not from_date:
             from_date = datetime.datetime.now().replace(day=1).strftime('%Y-%m-%d')
         if not to_date:
-            to_date = datetime.datetime.now().strftime('%Y-%m-%d')
+            to_date = datetime.datetime.now().strftime('%Y-%m-%d') 
 
-        proyectos = list(PROYECTO_CLIENTE.objects.filter(
-            PC_CESTADO='Cerrado', 
-            PC_FFECHA_FIN_REAL__range=(from_date, to_date)
-        ).values_list(
-            'PC_CCODIGO', 'PC_CNOMBRE', 'PC_FFECHA_INICIO', 'PC_FFECHA_FIN_ESTIMADA', 
-            'PC_FFECHA_FIN_REAL', 'PC_NPRESUPUESTO', 'PC_NCOSTO_REAL', 'PC_NCOSTO_ESTIMADO', 
-            'PC_NHORAS_REALES', 'PC_NHORAS_ESTIMADAS', 'id'
-        ))
+        proyectos = get_projects_closed_by_date(from_date, to_date)
 
         return JsonResponse({
             "success": True,
