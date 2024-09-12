@@ -241,12 +241,14 @@
                             </ul>
                             <div class="dropdown">
                                 <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                    Agregar Tarea
+                                    Agregar
                                 </button>
                                 <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
                                     <a class="dropdown-item" href="{% url 'tarea_financiera_addone' 1 %}">Tarea Financiera</a>
                                     <a class="dropdown-item" href="{% url 'tarea_general_addone' 1 %}">Tarea General</a>
                                     <a class="dropdown-item" href="{% url 'tarea_ingenieria_addone' 1%}">Tarea de Ingeniería</a>
+                                    <div class="dropdown-divider"></div>
+                                    <a class="dropdown-item" href="#" data-toggle="modal" data-target="#edpModal">Agregar EDP</a>
                                 </div>
                             </div>
                         </div>
@@ -505,6 +507,61 @@
 
     <!-- Include del modal de adjuntos -->
     {% include "home/TAREA/tarea_documents.html" %}
+
+    <!-- Modal EDP -->
+    <div class="modal fade" id="edpModal" tabindex="-1" role="dialog" aria-labelledby="edpModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="edpModalLabel">Agregar EDP</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="edpForm">
+                        <div class="form-row">
+                            <div class="form-group col-md-4">
+                                <label for="cantidadEdp">Cantidad de EDP</label>
+                                <input type="number" class="form-control" id="cantidadEdp" min="1" max="50" required>
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label for="diaEmision">Día de emisión</label>
+                                <input type="number" class="form-control" id="diaEmision" min="1" max="31" required>
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label for="fechaInicio">Fecha de inicio</label>
+                                <input type="date" class="form-control" id="fechaInicio" required>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="edpTable">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Monto</th>
+                                        <th>Moneda</th>
+                                        <th>Medio de Pago</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Las filas se generarán dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="form-group">
+                            <label for="comentarioGeneral">Comentario General</label>
+                            <textarea class="form-control" id="comentarioGeneral" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-primary" id="guardarEdp">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock content %}
 
 <!-- Specific Page JS goes HERE  -->
@@ -1196,5 +1253,143 @@
                 });
             }
         }
+    </script>
+
+    <!-- Modal EDP-->
+    <script>
+        $(document).ready(function() {
+            let monedaOptions = [];
+            let clpPresente = false;
+        
+            {% for md in moneda %}
+                monedaOptions.push('<option value="{{ md.id }}">{{ md.MO_CMONEDA }}</option>');
+                if ('{{ md.MO_CMONEDA }}'.toUpperCase() === 'CLP') {
+                    clpPresente = true;
+                }
+            {% endfor %}
+        
+            if (!clpPresente) {
+                monedaOptions.unshift('<option value="CLP" selected>CLP</option>');
+            }
+        
+            function generarFilasTabla() {
+                let cantidad = parseInt($('#cantidadEdp').val());
+                let diaEmision = parseInt($('#diaEmision').val());
+                let fechaInicio = $('#fechaInicio').val();
+                
+                if (!cantidad || !diaEmision || !fechaInicio) {
+                    $('#edpTable tbody').empty();
+                    return;
+                }
+        
+                fechaInicio = new Date(fechaInicio + 'T00:00:00');
+                let tbody = $('#edpTable tbody');
+                tbody.empty();
+            
+                for (let i = 0; i < cantidad; i++) {
+                    let fecha = new Date(fechaInicio);
+                    fecha.setMonth(fecha.getMonth() + i);
+                    
+                    let ultimoDiaMes = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0).getDate();
+                    let diaAjustado = Math.min(diaEmision, ultimoDiaMes);
+                    fecha.setDate(diaAjustado);
+            
+                    let fechaFormateada = fecha.getFullYear() + '-' + 
+                                          String(fecha.getMonth() + 1).padStart(2, '0') + '-' + 
+                                          String(fecha.getDate()).padStart(2, '0');
+                    
+                    let fila = `<tr>
+                        <td>${fechaFormateada}</td>
+                        <td><input type="number" class="form-control monto" required></td>
+                        <td><select class="form-control moneda">${monedaOptions.join('')}</select></td>
+                        <td><input type="text" class="form-control medio-pago" required></td>
+                    </tr>`;
+                    tbody.append(fila);
+                }
+        
+                $('.moneda').val('CLP');
+            }
+        
+            $('#cantidadEdp, #diaEmision').on('change', function() {
+                if ($('#fechaInicio').val()) {
+                    generarFilasTabla();
+                }
+            });
+        
+            $('#fechaInicio').on('change', generarFilasTabla);
+        
+            $('#guardarEdp').click(function() {
+                let datos = {
+                    cantidad: $('#cantidadEdp').val(),
+                    diaEmision: $('#diaEmision').val(),
+                    fechaInicio: $('#fechaInicio').val(),
+                    montos: [],
+                    mediosPago: [],
+                    fechasEmision: [],
+                    monedas: [],
+                    comentarioGeneral: $('#comentarioGeneral').val(),
+                    idProyecto: {{ proyecto.id }},
+                };
+        
+                let datosValidos = true;
+        
+                $('#edpTable tbody tr').each(function() {
+                    let monto = $(this).find('.monto').val();
+                    let medioPago = $(this).find('.medio-pago').val();
+                    let fechaEmision = $(this).find('td:first-child').text();
+                    let moneda = $(this).find('.moneda').val();
+        
+                    if (!monto || !medioPago) {
+                        datosValidos = false;
+                        return false;
+                    }
+        
+                    datos.montos.push(monto);
+                    datos.mediosPago.push(medioPago);
+                    datos.fechasEmision.push(fechaEmision);
+                    datos.monedas.push(moneda);
+                });
+        
+                if (!datosValidos) {
+                    alert('Por favor, complete todos los campos antes de guardar.');
+                    return;
+                }
+        
+                console.log('Datos a enviar:', datos);  // Imprimir datos antes de enviar
+        
+                $.ajax({
+                    type: 'POST',
+                    url: '/tarea_financiera_add_edp/',
+                    data: JSON.stringify(datos),
+                    contentType: 'application/json',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    success: function(response) {
+                        console.log('Respuesta del servidor:', response);
+                        $('#edpModal').modal('hide');
+                        // Aquí puedes agregar código para actualizar la interfaz de usuario
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error al guardar los datos:', error);
+                        alert('Hubo un error al guardar los datos. Por favor, inténtelo de nuevo.');
+                    }
+                });
+            });
+        
+            $('#diaEmision').on('input', function() {
+                let valor = $(this).val();
+                if (valor < 1) $(this).val(1);
+                if (valor > 31) $(this).val(31);
+            });
+        
+            $('#edpModal').on('shown.bs.modal', function() {
+                $('#edpTable tbody').empty();
+                $('#cantidadEdp').val('');
+                $('#diaEmision').val('');
+                $('#fechaInicio').val('');
+                $('#comentarioGeneral').val('');
+            });
+        });
     </script>
 {% endblock javascripts %}
