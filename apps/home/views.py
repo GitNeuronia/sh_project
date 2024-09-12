@@ -39,6 +39,7 @@ from django.db.models import (
     Avg, Case, Count, DecimalField, ExpressionWrapper, F, Func,
     IntegerField, Q, Sum, Value, When
 )
+from django.db.models import Max
 from django.db.models.functions import Coalesce, Least, Cast, Greatest
 from django.http import (
     FileResponse, HttpResponse, HttpResponseBadRequest,
@@ -53,6 +54,7 @@ from django.utils.encoding import smart_str
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
 
 # Módulos locales
 from apps.home.models import *
@@ -1942,6 +1944,8 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
             proyecto.PC_NCOSTO_REAL = costo_real_proyecto
             proyecto.save()
         max_costo = max(proyecto.PC_NCOSTO_REAL, proyecto.PC_NCOSTO_ESTIMADO)
+
+        moneda = MONEDA.objects.filter(MO_BACTIVA=True)
         ctx = {
             'proyecto': proyecto,
             'tareas_general': tareas_general,
@@ -1952,7 +1956,8 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
             'dependencias_financiera': dependencias_financiera,
             'costo_real_proyecto': costo_real_proyecto,
             'horas_reales_proyecto': horas_reales_proyecto,
-            'max_costo': max_costo
+            'max_costo': max_costo,
+            'moneda': moneda
         }
         return render(request, 'home/PROYECTO_CLIENTE/proycli_listone.html', ctx)
     except Exception as e:
@@ -3063,6 +3068,115 @@ def TAREA_FINANCIERA_DEPENDENCIA_ADDONE(request, pk):
         messages.error(request, f'Error: {str(e)}')
         return redirect('/')
 
+def extraer_numero_tarea(codigo):
+    partes_codigo = codigo.split('-')
+    if len(partes_codigo) > 4:
+        numero_tarea = int(partes_codigo[4])
+    else:
+        numero_tarea = 0
+    return numero_tarea
+
+def generar_codigo_tarea_unico(proyecto, ultimo_numero):
+    while True:
+        ultimo_numero += 1
+        codigo_propuesto = f"{proyecto.PC_CCODIGO}-{proyecto.PC_CESTADO}-TF{ultimo_numero:03d}"
+        if not TAREA_FINANCIERA.objects.filter(TF_CCODIGO=codigo_propuesto).exists():
+            return codigo_propuesto, ultimo_numero
+
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def TAREA_FINANCIERA_EDP(request):
+    try:
+        data = json.loads(request.body)
+        logger.info(f"Datos recibidos: {data}")
+
+        with transaction.atomic():
+            proyecto = PROYECTO_CLIENTE.objects.get(id=data['idProyecto'])
+            estado_tarea = ESTADO_TAREA.objects.get(ET_CNOMBRE='Pendiente')
+            
+            # Obtener el último número de tarea financiera para este proyecto
+            ultima_tarea = TAREA_FINANCIERA.objects.filter(
+                TF_PROYECTO_CLIENTE=proyecto
+            ).order_by('-TF_CCODIGO').first()
+
+            if ultima_tarea:
+                ultimo_numero = extraer_numero_tarea(ultima_tarea.TF_CCODIGO)
+            else:
+                ultimo_numero = 0
+
+            logger.debug(f"Último número de tarea encontrado: {ultimo_numero}")
+
+            # Obtener el último número de estado de pago
+            ultimo_edp = ESTADO_DE_PAGO.objects.order_by('-EP_CNUMERO').first()
+            if ultimo_edp:
+                match = re.search(r'-(\d+)$', ultimo_edp.EP_CNUMERO)
+                ultimo_numero_edp = int(match.group(1)) if match else 0
+            else:
+                ultimo_numero_edp = 0
+
+            tareas_creadas = []
+            año_actual = datetime.datetime.now().year
+
+            for i, fecha_emision in enumerate(data['fechasEmision']):
+                moneda = MONEDA.objects.get(id=data['monedas'][i])
+                fecha_emision_date = datetime.datetime.strptime(fecha_emision, '%Y-%m-%d').date()
+
+                # Incrementar y formatear el número de EDP
+                ultimo_numero_edp += 1
+                numero_edp_formateado = f"{ultimo_numero_edp:04d}"
+
+                # Crear ESTADO_DE_PAGO
+                estado_pago = ESTADO_DE_PAGO.objects.create(
+                    EP_PROYECTO=proyecto,
+                    EP_CNUMERO=f"EP-{año_actual}-{numero_edp_formateado}",
+                    EP_FFECHA=fecha_emision_date,
+                    EP_CESTADO='PENDIENTE',
+                    EP_NTOTAL=data['montos'][i],
+                    EP_MONEDA=moneda,
+                    EP_COBSERVACIONES=data['comentarioGeneral'],
+                    EP_CUSUARIO_CREADOR=request.user,
+                    EP_CESTADO_PAGO='PENDIENTE'
+                )
+
+                # Generar código único para la tarea financiera
+                codigo_tarea, ultimo_numero = generar_codigo_tarea_unico(proyecto, ultimo_numero)
+
+                # Crear TAREA_FINANCIERA asociada
+                tarea_financiera = TAREA_FINANCIERA.objects.create(
+                    TF_CCODIGO=codigo_tarea,
+                    TF_CNOMBRE=f"EDP {numero_edp_formateado}",
+                    TF_CDESCRIPCION=f"Estado de Pago {numero_edp_formateado}",
+                    TF_FFECHA_INICIO=fecha_emision_date,
+                    TF_FFECHA_FIN_ESTIMADA=fecha_emision_date,
+                    TF_CESTADO=estado_tarea,
+                    TF_NMONTO=data['montos'][i],
+                    TF_MONEDA=moneda,
+                    TF_CTIPO_TRANSACCION='Estado de Pago',
+                    TF_COBSERVACIONES=f"Medio de pago: {data['mediosPago'][i]}",
+                    TF_CUSUARIO_CREADOR=request.user,
+                    TF_PROYECTO_CLIENTE=proyecto,
+                    TF_NDURACION_PLANIFICADA=1,
+                    TF_BMILESTONE=True,
+                )
+
+                tareas_creadas.append(tarea_financiera.id)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Se crearon {len(tareas_creadas)} Estados de Pago y Tareas Financieras con éxito',
+            'tareas_ids': tareas_creadas
+        })
+
+    except json.JSONDecodeError:
+        logger.error("Error al decodificar JSON")
+        return JsonResponse({'success': False, 'error': 'Formato de datos inválido'}, status=400)
+    except PROYECTO_CLIENTE.DoesNotExist:
+        logger.error(f"Proyecto con ID {data['idProyecto']} no encontrado")
+        return JsonResponse({'success': False, 'error': 'Proyecto no encontrado'}, status=404)
+    except Exception as e:
+        logger.error(f"Error inesperado: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'Error interno del servidor'}, status=500)
 # ----------TAREA UPDATE DATA--------------
 
 def format_decimal(value):

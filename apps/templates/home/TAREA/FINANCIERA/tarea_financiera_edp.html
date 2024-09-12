@@ -1,0 +1,113 @@
+
+<div class="modal fade" id="modalEDP" tabindex="-1" role="dialog" aria-labelledby="modalEDPLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEDPLabel">Agregar EDP</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="formEDP">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="cantidadEDP">Cantidad de EDP (1-50):</label>
+                        <input type="number" class="form-control" id="cantidadEDP" name="cantidadEDP" min="1" max="50" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="diaEmision">Día de emisión (1-31):</label>
+                        <select class="form-control" id="diaEmision" name="diaEmision" required>
+                            {% for i in "x"|rjust:"31" %}
+                                <option value="{{ forloop.counter }}">{{ forloop.counter }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="fechaInicio">Fecha de inicio:</label>
+                        <input type="date" class="form-control" id="fechaInicio" name="fechaInicio" required>
+                    </div>
+                    <table class="table table-bordered" id="tablaEDP">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Monto</th>
+                                <th>Tipo Cambio</th>
+                                <th>Medio Pago</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Las filas se generarán dinámicamente con JavaScript -->
+                        </tbody>
+                    </table>
+                    <div class="form-group">
+                        <label for="comentarioGeneral">Comentario General:</label>
+                        <textarea class="form-control" id="comentarioGeneral" name="comentarioGeneral" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-primary" id="btnGuardarEDP">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const cantidadEDP = document.getElementById('cantidadEDP');
+    const diaEmision = document.getElementById('diaEmision');
+    const fechaInicio = document.getElementById('fechaInicio');
+    const tablaEDP = document.getElementById('tablaEDP').getElementsByTagName('tbody')[0];
+    const btnGuardarEDP = document.getElementById('btnGuardarEDP');
+
+    function generarFilasTabla() {
+        tablaEDP.innerHTML = '';
+        const cantidad = parseInt(cantidadEDP.value);
+        const dia = parseInt(diaEmision.value);
+        let fecha = new Date(fechaInicio.value);
+        fecha.setDate(dia);
+
+        for (let i = 0; i < cantidad; i++) {
+            const fila = tablaEDP.insertRow();
+            fila.insertCell(0).textContent = fecha.toLocaleDateString('es-ES');
+            fila.insertCell(1).innerHTML = '<input type="number" class="form-control" name="monto[]" required>';
+            fila.insertCell(2).innerHTML = `
+                <select class="form-control" name="tipoCambio[]" required>
+                    <option value="clp">CLP</option>
+                    <option value="usd">USD</option>
+                </select>
+            `;
+            fila.insertCell(3).innerHTML = '<input type="text" class="form-control" name="medioPago[]" required>';
+
+            fecha.setMonth(fecha.getMonth() + 1);
+            if (fecha.getDate() !== dia) {
+                fecha = new Date(fecha.getFullYear(), fecha.getMonth(), 0);
+            }
+        }
+    }
+
+    cantidadEDP.addEventListener('change', generarFilasTabla);
+    diaEmision.addEventListener('change', generarFilasTabla);
+    fechaInicio.addEventListener('change', generarFilasTabla);
+
+    diaEmision.addEventListener('keyup', function(e) {
+        const valor = parseInt(this.value);
+        if (valor >= 1 && valor <= 31) {
+            this.value = valor;
+        } else {
+            this.value = '';
+        }
+    });
+
+    btnGuardarEDP.addEventListener('click', function() {
+        if (document.getElementById('formEDP').checkValidity()) {
+            // Aquí iría la lógica para enviar los datos al servidor
+            console.log('Formulario válido, datos listos para enviar');
+        } else {
+            console.log('Por favor, complete todos los campos requeridos');
+        }
+    });
+});
+</script>
