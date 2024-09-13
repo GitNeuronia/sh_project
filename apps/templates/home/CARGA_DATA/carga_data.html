@@ -1,0 +1,288 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Carga de Datos de Proyectos {% endblock %} 
+
+{% block stylesheets %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/dropzone.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.19/dist/sweetalert2.min.css">
+<style>
+    .card {
+        border-radius: 20px;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 20px rgba(0,0,0,0.15);
+    }
+    .card-header {
+        
+        color: white;
+        border-radius: 20px 20px 0 0;
+        padding: 20px;
+    }
+    .btn-primary {
+        background: linear-gradient(45deg, #28a745, #4CAF50);
+        border: none;
+        transition: all 0.3s ease;
+    }
+    .btn-primary:hover {
+        background: linear-gradient(45deg, #218838, #43A047);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .dropzone {
+        border: 3px dashed #007bff;
+        border-radius: 15px;
+        background: #f8f9fa;
+        min-height: 200px;
+        padding: 30px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    .dropzone:hover {
+        background: #e9ecef;
+        border-color: #00bcd4;
+    }
+    .dropzone .dz-message {
+        font-weight: 500;
+        text-align: center;
+        margin: 2em 0;
+        color: #007bff;
+    }
+    .dropzone .dz-message .note {
+        font-size: 0.9em;
+        font-weight: 300;
+        display: block;
+        margin-top: 1.4rem;
+        color: #6c757d;
+    }
+    .dz-preview {
+        margin: 15px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .dz-image {
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .dz-details {
+        padding: 10px;
+    }
+    .form-control {
+        border-radius: 10px;
+        border: 2px solid #ced4da;
+        transition: all 0.3s ease;
+    }
+    .form-control:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+    }
+    .btn-info {
+        background: linear-gradient(45deg, #17a2b8, #00bcd4);
+        border: none;
+        transition: all 0.3s ease;
+    }
+    .btn-info:hover {
+        background: linear-gradient(45deg, #138496, #0097a7);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .loading-indicator {
+        display: none;
+        text-align: center;
+        margin-top: 20px;
+    }
+    .loading-indicator .spinner-border {
+        width: 3rem;
+        height: 3rem;
+    }
+</style>
+{% endblock stylesheets %}
+{% block content %}	
+<section class="pcoded-main-container">
+    <div class="pcoded-content">
+        <div class="page-header">
+            <div class="page-block">
+                <div class="row align-items-center">
+                    <div class="col-md-12">
+                        <div class="page-header-title">
+                            <h3 class="m-b-10">Carga de Datos de Proyectos</h3>
+                        </div>
+                        <ul class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{% url 'home' %}"><i class="feather icon-home"></i></a></li>
+                            <li class="breadcrumb-item"><a href="#!">Carga de Datos de Proyectos</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row justify-content-center">
+            <div class="col-sm-10">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">Carga de Datos de Proyectos mediante Excel</h4>
+                        <div class="alert alert-info" role="alert">
+                            <h5 class="alert-heading">Instrucciones de uso:</h5>
+                            <p>Esta vista le permite cargar datos de proyectos mediante un archivo Excel:</p>
+                            <ul>
+                                <li>Asegúrese de utilizar la plantilla proporcionada para el archivo Excel.</li>
+                                <li>El archivo debe contener la información de los proyectos en el formato especificado.</li>
+                                <li>Los datos cargados se añadirán o actualizarán en el sistema de gestión de proyectos.</li>
+                            </ul>
+                            <p>Siga cuidadosamente las instrucciones para garantizar una carga de datos exitosa.</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" enctype="multipart/form-data" id="upload-form">
+                            {% csrf_token %}
+                            
+                            <div class="form-group">
+                                <h5>Cargue el Archivo Excel de Proyectos</h5>
+                                <p>Arrastre y suelte su archivo aquí o haga clic para seleccionarlo.</p>
+                                <div id="myDropzone" class="dropzone">
+                                    <div class="dz-message needsclick">
+                                        <i class="feather icon-upload-cloud" style="font-size: 3em;"></i>
+                                        <h4>Suelte los archivos aquí o haga clic para cargar.</h4>
+                                        <span class="note">(Solo se permiten archivos Excel. Tamaño máximo: 5MB)</span>
+                                    </div>
+                                </div>
+                                {{ form.archivo }}
+                            </div>
+                            
+                            <div class="text-center m-t-20">
+                                <button type="submit" class="btn btn-primary btn-lg" id="submit-all">
+                                    <i class="feather icon-upload"></i> Cargar Datos de Proyectos
+                                </button>
+                                <!-- Nuevo indicador de carga -->
+                                <div class="loading-indicator">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="sr-only">Cargando...</span>
+                                    </div>
+                                    <p class="mt-2">Procesando el documento...</p>
+                                </div>
+                            </div>
+
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock content %}
+
+{% block javascripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/dropzone.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.19/dist/sweetalert2.all.min.js"></script>
+
+<script>
+    Dropzone.autoDiscover = false;
+    
+    document.addEventListener("DOMContentLoaded", function() {
+        var myDropzone = new Dropzone("#upload-form", {
+            url: "{% url 'cargar_excel_proyectos' %}",
+            paramName: "archivo",
+            maxFilesize: 5,
+            acceptedFiles: ".xlsx,.xls",
+            autoProcessQueue: false,
+            uploadMultiple: false,
+            maxFiles: 1,
+            addRemoveLinks: true,
+            dictDefaultMessage: "Arrastre un archivo aquí o haga clic para seleccionar",
+            previewsContainer: "#myDropzone",
+            clickable: "#myDropzone",
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            init: function() {
+                var submitButton = document.querySelector("#submit-all");
+                var loadingIndicator = document.querySelector(".loading-indicator");
+                var myDropzone = this;
+    
+                this.on("addedfile", function(file) {
+                    if (this.files.length > 1) {
+                        this.removeFile(this.files[0]);
+                    }
+                });
+    
+                submitButton.addEventListener("click", function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (myDropzone.getAcceptedFiles().length > 0) {
+                        // Mostrar indicador de carga y deshabilitar botón
+                        loadingIndicator.style.display = 'block';
+                        submitButton.disabled = true;
+                        myDropzone.processQueue();
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Por favor, seleccione un archivo para cargar.',
+                        });
+                    }
+                });
+    
+                this.on("success", function(file, response) {
+                    // Ocultar indicador de carga y habilitar botón
+                    loadingIndicator.style.display = 'none';
+                    submitButton.disabled = false;
+                    console.log("Respuesta del servidor:", response);
+                    if (response.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Éxito!',
+                            text: response.message,
+                            confirmButtonText: 'OK'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                window.location.href = response.redirect;
+                            }
+                        });
+                    } else if (response.warning) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Advertencia',
+                            text: response.warning,
+                            confirmButtonText: 'OK'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                window.location.href = response.redirect;
+                            }
+                        });
+                    }
+                    this.removeAllFiles();
+                });
+    
+                this.on("error", function(file, errorMessage, xhr) {
+                    // Ocultar indicador de carga y habilitar botón en caso de error
+                    loadingIndicator.style.display = 'none';
+                    submitButton.disabled = false;
+                    console.error("Error al cargar el archivo de proyectos:", errorMessage);
+                    let errorText = 'Error al cargar el archivo de proyectos';
+                    if (xhr && xhr.responseText) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            errorText = response.error || errorText;
+                        } catch (e) {
+                            errorText = xhr.responseText;
+                        }
+                    } else if (typeof errorMessage === 'string') {
+                        errorText = errorMessage;
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: errorText,
+                        html: `<p>${errorText}</p><p>Si el problema persiste, contacte al administrador.</p>`
+                    });
+                });
+            }
+        });
+    
+        console.log("URL de Dropzone para proyectos:", myDropzone.options.url);
+    });
+</script>
+{% endblock javascripts %}

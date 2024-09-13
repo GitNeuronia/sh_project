@@ -10,13 +10,20 @@ import os
 import re
 import logging
 import base64
+import numpy as np
+import pandas as pd
 import requests
 import traceback
+import warnings
+import openpyxl
+import uuid
 import datetime
 from django.conf import settings
 from decimal import Decimal
 from xhtml2pdf import pisa
 from io import BytesIO
+from datetime import date, datetime, timedelta
+from dateutil import parser
 # Módulos de Django
 from django import template
 from django.contrib import messages
@@ -25,11 +32,14 @@ from django.contrib.staticfiles.storage import staticfiles_storage
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.exceptions import FieldError
 from django.db import connection
+from django.db import transaction
 from django.db.utils import DatabaseError
+from django.db.utils import IntegrityError
 from django.db.models import (
     Avg, Case, Count, DecimalField, ExpressionWrapper, F, Func,
     IntegerField, Q, Sum, Value, When
 )
+from django.db.models import Max
 from django.db.models.functions import Coalesce, Least, Cast, Greatest
 from django.http import (
     FileResponse, HttpResponse, HttpResponseBadRequest,
@@ -43,6 +53,8 @@ from django.urls import reverse
 from django.utils.encoding import smart_str
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
 
 # Módulos locales
 from apps.home.models import *
@@ -162,7 +174,7 @@ def proyecto_index(request):
         promedio_margen=Coalesce(Avg('PC_NMARGEN'), Decimal('0')),
     )
 
-    estadisticas['proyectos_cerrados'] = get_projects_closed(from_date, to_date)
+    estadisticas['proyectos_cerrados'] = get_count_projects_closed(from_date, to_date)
     estadisticas['total_costo_proyectado'] = get_sum_costo_proyectado(from_date, to_date)
     estadisticas['total_costo_real'] = get_sum_costo_real(from_date, to_date)
     estadisticas['total_horas_proyectadas'] = get_sum_horas_proyectadas(from_date, to_date)
@@ -170,11 +182,12 @@ def proyecto_index(request):
     estadisticas['total_presupuesto'] = get_sum_presupuesto(from_date, to_date)
 
     # Agregar estadísticas de EdP
-    estadisticas_edp = ESTADO_DE_PAGO.objects.aggregate(
-        total_edp=Coalesce(Sum('EP_NTOTAL'), Decimal('0')),
-        total_pagado=Coalesce(Sum('EP_NMONTO_PAGADO'), Decimal('0')),
-    )
-    estadisticas['total_saldo_edp'] = estadisticas_edp['total_edp'] - estadisticas_edp['total_pagado']
+    # estadisticas_edp = ESTADO_DE_PAGO.objects.aggregate(
+    #     total_edp=Coalesce(Sum('EP_NTOTAL'), Decimal('0')),
+    #     total_pagado=Coalesce(Sum('EP_NMONTO_PAGADO'), Decimal('0')),
+    # )
+    # estadisticas['total_saldo_edp'] = estadisticas_edp['total_edp'] - estadisticas_edp['total_pagado']
+    estadisticas['total_saldo_edp'] = get_sum_edp(from_date, to_date)
 
     # Preparar datos para el gráfico y la tabla de proyectos
     proyectos_data = proyectos.annotate(
@@ -361,21 +374,14 @@ def api_proyectos_edp(request):
 
 def PROYECTOS_CERRADOS(request):
     try:
-        from_date = request.GET.get('fecha_desde', None)
-        to_date = request.GET.get('fecha_hasta', None)
+        from_date = request.POST.get('fecha_desde', None)
+        to_date = request.POST.get('fecha_hasta', None)
         if not from_date:
             from_date = datetime.datetime.now().replace(day=1).strftime('%Y-%m-%d')
         if not to_date:
-            to_date = datetime.datetime.now().strftime('%Y-%m-%d')
+            to_date = datetime.datetime.now().strftime('%Y-%m-%d') 
 
-        proyectos = list(PROYECTO_CLIENTE.objects.filter(
-            PC_CESTADO='Cerrado', 
-            PC_FFECHA_FIN_REAL__range=(from_date, to_date)
-        ).values_list(
-            'PC_CCODIGO', 'PC_CNOMBRE', 'PC_FFECHA_INICIO', 'PC_FFECHA_FIN_ESTIMADA', 
-            'PC_FFECHA_FIN_REAL', 'PC_NPRESUPUESTO', 'PC_NCOSTO_REAL', 'PC_NCOSTO_ESTIMADO', 
-            'PC_NHORAS_REALES', 'PC_NHORAS_ESTIMADAS', 'id'
-        ))
+        proyectos = get_projects_closed_by_date(from_date, to_date)
 
         return JsonResponse({
             "success": True,
@@ -1938,6 +1944,8 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
             proyecto.PC_NCOSTO_REAL = costo_real_proyecto
             proyecto.save()
         max_costo = max(proyecto.PC_NCOSTO_REAL, proyecto.PC_NCOSTO_ESTIMADO)
+
+        moneda = MONEDA.objects.filter(MO_BACTIVA=True)
         ctx = {
             'proyecto': proyecto,
             'tareas_general': tareas_general,
@@ -1948,7 +1956,8 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
             'dependencias_financiera': dependencias_financiera,
             'costo_real_proyecto': costo_real_proyecto,
             'horas_reales_proyecto': horas_reales_proyecto,
-            'max_costo': max_costo
+            'max_costo': max_costo,
+            'moneda': moneda
         }
         return render(request, 'home/PROYECTO_CLIENTE/proycli_listone.html', ctx)
     except Exception as e:
@@ -3064,6 +3073,115 @@ def TAREA_FINANCIERA_DEPENDENCIA_ADDONE(request, pk):
         messages.error(request, f'Error: {str(e)}')
         return redirect('/')
 
+def extraer_numero_tarea(codigo):
+    partes_codigo = codigo.split('-')
+    if len(partes_codigo) > 4:
+        numero_tarea = int(partes_codigo[4])
+    else:
+        numero_tarea = 0
+    return numero_tarea
+
+def generar_codigo_tarea_unico(proyecto, ultimo_numero):
+    while True:
+        ultimo_numero += 1
+        codigo_propuesto = f"{proyecto.PC_CCODIGO}-{proyecto.PC_CESTADO}-TF{ultimo_numero:03d}"
+        if not TAREA_FINANCIERA.objects.filter(TF_CCODIGO=codigo_propuesto).exists():
+            return codigo_propuesto, ultimo_numero
+
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def TAREA_FINANCIERA_EDP(request):
+    try:
+        data = json.loads(request.body)
+        logger.info(f"Datos recibidos: {data}")
+
+        with transaction.atomic():
+            proyecto = PROYECTO_CLIENTE.objects.get(id=data['idProyecto'])
+            estado_tarea = ESTADO_TAREA.objects.get(ET_CNOMBRE='Pendiente')
+            
+            # Obtener el último número de tarea financiera para este proyecto
+            ultima_tarea = TAREA_FINANCIERA.objects.filter(
+                TF_PROYECTO_CLIENTE=proyecto
+            ).order_by('-TF_CCODIGO').first()
+
+            if ultima_tarea:
+                ultimo_numero = extraer_numero_tarea(ultima_tarea.TF_CCODIGO)
+            else:
+                ultimo_numero = 0
+
+            logger.debug(f"Último número de tarea encontrado: {ultimo_numero}")
+
+            # Obtener el último número de estado de pago
+            ultimo_edp = ESTADO_DE_PAGO.objects.order_by('-EP_CNUMERO').first()
+            if ultimo_edp:
+                match = re.search(r'-(\d+)$', ultimo_edp.EP_CNUMERO)
+                ultimo_numero_edp = int(match.group(1)) if match else 0
+            else:
+                ultimo_numero_edp = 0
+
+            tareas_creadas = []
+            año_actual = datetime.datetime.now().year
+
+            for i, fecha_emision in enumerate(data['fechasEmision']):
+                moneda = MONEDA.objects.get(id=data['monedas'][i])
+                fecha_emision_date = datetime.datetime.strptime(fecha_emision, '%Y-%m-%d').date()
+
+                # Incrementar y formatear el número de EDP
+                ultimo_numero_edp += 1
+                numero_edp_formateado = f"{ultimo_numero_edp:04d}"
+
+                # Crear ESTADO_DE_PAGO
+                estado_pago = ESTADO_DE_PAGO.objects.create(
+                    EP_PROYECTO=proyecto,
+                    EP_CNUMERO=f"EP-{año_actual}-{numero_edp_formateado}",
+                    EP_FFECHA=fecha_emision_date,
+                    EP_CESTADO='PENDIENTE',
+                    EP_NTOTAL=data['montos'][i],
+                    EP_MONEDA=moneda,
+                    EP_COBSERVACIONES=data['comentarioGeneral'],
+                    EP_CUSUARIO_CREADOR=request.user,
+                    EP_CESTADO_PAGO='PENDIENTE'
+                )
+
+                # Generar código único para la tarea financiera
+                codigo_tarea, ultimo_numero = generar_codigo_tarea_unico(proyecto, ultimo_numero)
+
+                # Crear TAREA_FINANCIERA asociada
+                tarea_financiera = TAREA_FINANCIERA.objects.create(
+                    TF_CCODIGO=codigo_tarea,
+                    TF_CNOMBRE=f"EDP {numero_edp_formateado}",
+                    TF_CDESCRIPCION=f"Estado de Pago {numero_edp_formateado}",
+                    TF_FFECHA_INICIO=fecha_emision_date,
+                    TF_FFECHA_FIN_ESTIMADA=fecha_emision_date,
+                    TF_CESTADO=estado_tarea,
+                    TF_NMONTO=data['montos'][i],
+                    TF_MONEDA=moneda,
+                    TF_CTIPO_TRANSACCION='Estado de Pago',
+                    TF_COBSERVACIONES=f"Medio de pago: {data['mediosPago'][i]}",
+                    TF_CUSUARIO_CREADOR=request.user,
+                    TF_PROYECTO_CLIENTE=proyecto,
+                    TF_NDURACION_PLANIFICADA=1,
+                    TF_BMILESTONE=True,
+                )
+
+                tareas_creadas.append(tarea_financiera.id)
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Se crearon {len(tareas_creadas)} Estados de Pago y Tareas Financieras con éxito',
+            'tareas_ids': tareas_creadas
+        })
+
+    except json.JSONDecodeError:
+        logger.error("Error al decodificar JSON")
+        return JsonResponse({'success': False, 'error': 'Formato de datos inválido'}, status=400)
+    except PROYECTO_CLIENTE.DoesNotExist:
+        logger.error(f"Proyecto con ID {data['idProyecto']} no encontrado")
+        return JsonResponse({'success': False, 'error': 'Proyecto no encontrado'}, status=404)
+    except Exception as e:
+        logger.error(f"Error inesperado: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'Error interno del servidor'}, status=500)
 # ----------TAREA UPDATE DATA--------------
 
 def format_decimal(value):
@@ -4913,6 +5031,7 @@ def EDP_ADDONE(request):
         print(e)
         messages.error(request, f'Error: {str(e)}')
         return redirect('/')
+
 def EDP_UPDATE(request, pk):
     if not has_auth(request.user, 'EDITAR_DOCUMENTOS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
@@ -5617,3 +5736,306 @@ def GOTO_RECORD(request, table, pk):
         messages.error(request, 'Invalid table name')
     return redirect('/')
 
+#--------------------------------------
+#------------QUERY MANAGER-------------
+#--------------------------------------
+
+def CARGA_DATA_PROYECTO(request):
+    if not has_auth(request.user, 'ADD_CARGA_MASIVA'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    # Renderizar la plantilla carga_data.html
+    form = formCargaData()
+    context = {'form': form}  # Puedes añadir variables al contexto si es necesario
+    return render(request, 'home/CARGA_DATA/carga_data.html', context)   
+
+def validar_archivo_excel(archivo_excel):
+    if not archivo_excel:
+        raise ValueError("No se ha subido ningún archivo.")
+    if not archivo_excel.name.endswith('.xlsx'):
+        raise ValueError('El archivo debe ser un Excel (.xlsx).')
+
+def validar_hojas_excel(xls):
+    hojas_requeridas = [
+        'Información General del Congres',
+        'Días del Congreso',
+        'Salas',
+        'Bloques del Día',
+        'Asignación de Salas y Bloques',
+        'Relatores',
+        'Asignación de Relatores',
+        'Material de Relatores'
+    ]
+    hojas_faltantes = [hoja for hoja in hojas_requeridas if hoja not in xls.sheet_names]
+    if hojas_faltantes:
+        raise ValueError(f'Faltan las siguientes hojas en el archivo: {", ".join(hojas_faltantes)}')
+    
+def procesar_valor(value):
+    logger.debug(f"Procesando valor de tipo: {type(value).__name__}")
+    
+    if pd.isna(value) or value is None:
+        return None
+    
+    tipo = type(value).__name__
+    
+    if tipo in ['int', 'float']:
+        return str(value)
+    elif tipo == 'str':
+        return value
+    elif 'datetime' in tipo.lower() or 'timestamp' in tipo.lower():
+        try:
+            return pd.Timestamp(value).isoformat()
+        except:
+            logger.warning(f"No se pudo convertir el valor {value} a timestamp")
+            return str(value)
+    else:
+        logger.warning(f"Tipo de dato no manejado específicamente: {tipo}")
+        return str(value)
+
+
+@require_http_methods(["GET", "POST"])
+def cargar_excel_proyectos(request):
+    if not has_auth(request.user, 'ADD_CARGA_MASIVA'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    # logger.info("Iniciando cargar_excel_proyectos")
+    if request.method == 'POST':
+        # logger.debug(f"Método POST recibido. POST data: {request.POST}")
+        # logger.debug(f"FILES data: {request.FILES}")
+        form = formCargaData(request.POST, request.FILES)
+        # logger.info("Formulario creado")
+        if form.is_valid():
+            # logger.info("Formulario válido")
+            try:
+                archivo_excel = request.FILES['archivo']
+                # logger.info(f"Archivo recibido: {archivo_excel.name}")
+                
+                # Suprimir advertencias específicas de openpyxl
+                warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
+                
+                # Leer el archivo Excel
+                df_ofertas = pd.read_excel(
+                        archivo_excel, 
+                        sheet_name='Ofertas',
+                        header=None,
+                        skiprows=21,  # Empezar desde la fila 22 (21 en base 0)
+                        usecols='C:AD'  # Leer desde la columna C hasta la AD
+                    )
+                
+                # logger.info("Archivo Excel leído correctamente")
+                
+                # Renombrar las columnas para que sean más fáciles de manejar
+                df_ofertas.columns = [f'Col_{i}' for i in range(len(df_ofertas.columns))]
+                
+                # Verificar si hay datos
+                if df_ofertas.empty:
+                    # logger.error("No se encontraron datos en el rango especificado")
+                    return JsonResponse({'error': 'No se encontraron datos en el rango especificado del archivo.'}, status=400)
+                
+                # Filtrar las filas donde la columna 8 (índice 7 en base 0) es igual a 'PG'
+                # y la columna 23 (índice 20 en base 0) no está vacía
+                df_filtrado = df_ofertas[(df_ofertas['Col_15'] == 'PG') & (df_ofertas['Col_23'].notna()) & (df_ofertas['Col_23'] != '')]
+                
+                if df_filtrado.empty:
+                    # logger.warning("No se encontraron filas con estado 'PG' y columna 23 no vacía")
+                    return JsonResponse({
+                        'warning': 'No se encontraron proyectos con estado PG y columna 23 no vacía.',
+                        'redirect': reverse('proycli_listall')
+                    }, status=200)
+                
+                # Obtener todos los códigos de proyecto existentes
+                codigos_existentes = set(PROYECTO_CLIENTE.objects.values_list('PC_CCODIGO', flat=True))
+                
+                # Filtrar los proyectos que no existen en la base de datos
+                df_filtrado = df_filtrado[~df_filtrado['Col_23'].isin(codigos_existentes)]
+                
+                if df_filtrado.empty:
+                    # logger.warning("Todos los proyectos filtrados ya existen en la base de datos")
+                    return JsonResponse({
+                        'warning': 'Todos los proyectos filtrados ya existen en la base de datos.',
+                        'redirect': reverse('proycli_listall')
+                    }, status=200)
+                
+                # Convertir el DataFrame filtrado a una lista de diccionarios
+                datos_filtrados = df_filtrado.to_dict('records')
+                
+                # logger.debug(f"Primeros 5 registros antes del procesamiento: {datos_filtrados[:5]}")
+                
+                # Procesar los datos
+                for dato in datos_filtrados:
+                    for key, value in dato.items():
+                        dato[key] = procesar_valor(value)
+                
+                # logger.debug(f"Primeros 5 registros después del procesamiento: {datos_filtrados[:5]}")
+                
+                # logger.info(f"Número de proyectos nuevos con estado PG y columna 23 no vacía: {len(datos_filtrados)}")
+                
+                # Guardar los datos filtrados en la sesión para usarlos en la siguiente vista
+                request.session['datos_filtrados'] = datos_filtrados
+                # logger.info("Datos guardados en la sesión")
+                
+                return JsonResponse({
+                    'success': True, 
+                    'message': f'Se encontraron {len(datos_filtrados)} proyectos nuevos con estado PG y columna 23 no vacía.',
+                    'redirect': reverse('seleccionar_datos')
+                })
+            except Exception as e:
+                logger.exception(f"Error al procesar el archivo: {str(e)}")
+                return JsonResponse({'error': f'Error al procesar el archivo: {str(e)}'}, status=400)
+        else:
+            logger.error(f"Formulario inválido. Errores: {form.errors}")
+            errors = form.errors.as_json()
+            return JsonResponse({'error': 'Formulario inválido', 'form_errors': errors}, status=400)
+    else:
+        logger.info("Método GET recibido")
+        form = formCargaData()
+    
+    logger.info("Renderizando template")
+    return render(request, 'home/CARGA_DATA/carga_data.html', {'form': form})
+
+def quicksort(arr, low, high):
+    if low < high:
+        pi = partition(arr, low, high)
+        quicksort(arr, low, pi - 1)
+        quicksort(arr, pi + 1, high)
+
+def partition(arr, low, high):
+    i = low - 1
+    pivot = int(arr[high]['Col_0'].split('-')[1])  # Extraer el número después del guion
+    
+    for j in range(low, high):
+        if int(arr[j]['Col_0'].split('-')[1]) > pivot:
+            i += 1
+            arr[i], arr[j] = arr[j], arr[i]
+    
+    arr[i + 1], arr[high] = arr[high], arr[i + 1]
+    return i + 1
+
+def seleccionar_datos(request):
+    if not has_auth(request.user, 'ADD_CARGA_MASIVA'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    datos_filtrados = request.session.get('datos_filtrados', [])
+    
+    # Aplicar QuickSort
+    if datos_filtrados:
+        quicksort(datos_filtrados, 0, len(datos_filtrados) - 1)
+    
+    return render(request, 'home/CARGA_DATA/seleccionar_datos.html', {'datos': datos_filtrados})
+
+def parse_date(date_string):
+    if not date_string:
+        return None
+    try:
+        day, month, year = map(int, date_string.split('/'))
+        return date(year, month, day)
+    except (ValueError, AttributeError):
+        return None
+
+def safe_float(value, default=0.0):
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
+def agregar_proyectos(request):
+    if not has_auth(request.user, 'ADD_CARGA_MASIVA'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    selected_projects = json.loads(request.POST.get('selected_projects', '[]'))
+    
+    try:
+        with transaction.atomic():
+            for dato in selected_projects:
+                # Extracción de datos del proyecto con valores por defecto
+                codigo = dato.get('Col_0', '')
+                fecha_recep = parse_date(dato.get('Col_1')) or date.today()
+                cliente_directo = dato.get('Col_2', 'Cliente Sin Nombre')
+                cliente_final = dato.get('Col_3', '')
+                contacto = dato.get('Col_4', '')
+                email = dato.get('Col_5', '')
+                titulo = dato.get('Col_6', 'Proyecto Sin Título')
+                tipo_serv = dato.get('Col_7', '')
+                tipo_licitacion = dato.get('Col_8', '')
+                ambito = dato.get('Col_9', '')
+                pais = dato.get('Col_10', '')
+                fecha_entrega = parse_date(dato.get('Col_11')) or (date.today() + timedelta(days=30))
+                responsable = dato.get('Col_12', '')
+                unidad_negocio = dato.get('Col_13', '')
+                comentario = dato.get('Col_14', 'Sin comentarios')
+                estado = dato.get('Col_15', 'Nuevo')
+                probabilidad = dato.get('Col_16', '')
+                fecha_estado = parse_date(dato.get('Col_17')) or date.today()
+                hh_lic = safe_float(dato.get('Col_18', 0))
+                monto = safe_float(dato.get('Col_19', 0)) * 1000000  # Convertir a millones
+                tarifa_prom = safe_float(dato.get('Col_20', 0))
+                razon_propuesta_perdida = dato.get('Col_21', '')
+                com_prop_perd_o_gan = dato.get('Col_22', '')
+                codigo_proy = dato.get('Col_23', f'PROJ-{uuid.uuid4().hex[:8].upper()}')
+                fecha_inicio = parse_date(dato.get('Col_24')) or date.today()
+                duracion_serv = dato.get('Col_25', '')
+                coord = dato.get('Col_26', '')
+                seguimiento = dato.get('Col_27', '')
+
+                if not comentario:
+                    comentario = "Comentario predeterminado."
+
+                # Manejo del cliente
+                try:
+                    cliente, created = CLIENTE.objects.get_or_create(
+                        CL_CNOMBRE=cliente_directo,
+                        defaults={
+                            'CL_CRUT': f'PENDIENTE-{uuid.uuid4().hex[:8].upper()}',
+                            'CL_CEMAIL': email,
+                            'CL_CPERSONA_CONTACTO': contacto,
+                            'CL_BPROSPECTO': False,
+                            'CL_CUSUARIO_CREADOR': request.user
+                        }
+                    )
+                    logger.info(f"Cliente {'creado' if created else 'obtenido'}: {cliente.CL_CNOMBRE}")
+
+                    if not created:
+                        # Actualizar información del cliente si es necesario
+                        update_fields = []
+                        if email and not cliente.CL_CEMAIL:
+                            cliente.CL_CEMAIL = email
+                            update_fields.append('CL_CEMAIL')
+                        if contacto and not cliente.CL_CPERSONA_CONTACTO:
+                            cliente.CL_CPERSONA_CONTACTO = contacto
+                            update_fields.append('CL_CPERSONA_CONTACTO')
+                        
+                        if update_fields:
+                            cliente.CL_CUSUARIO_MODIFICADOR = request.user
+                            update_fields.append('CL_CUSUARIO_MODIFICADOR')
+                            cliente.save(update_fields=update_fields)
+                            logger.info(f"Cliente actualizado: {cliente.CL_CNOMBRE}, campos: {update_fields}")
+
+                except IntegrityError as e:
+                    logger.error(f"Error de integridad al crear/obtener cliente: {str(e)}")
+                    # Intenta obtener el cliente existente
+                    cliente = CLIENTE.objects.filter(CL_CNOMBRE=cliente_directo).first()
+                    if not cliente:
+                        raise Exception(f"No se pudo crear ni obtener el cliente: {cliente_directo}")
+                    logger.info(f"Cliente obtenido después de error de integridad: {cliente.CL_CNOMBRE}")
+
+                # Creación del proyecto
+                proyecto = PROYECTO_CLIENTE.objects.create(
+                    PC_CCODIGO=codigo_proy,
+                    PC_CNOMBRE=titulo,
+                    PC_CDESCRIPCION=comentario,
+                    PC_CLIENTE=cliente,
+                    PC_FFECHA_INICIO=fecha_inicio,
+                    PC_FFECHA_FIN_ESTIMADA=fecha_entrega,
+                    PC_CESTADO=estado,
+                    PC_NPRESUPUESTO=monto,
+                    PC_NVALOR_HORA=tarifa_prom,
+                    PC_NHORAS_ESTIMADAS=hh_lic,
+                    PC_NCOSTO_ESTIMADO=0,
+                    PC_NMARGEN=0,
+                )
+                logger.info(f"Proyecto creado: {proyecto.PC_CCODIGO}")
+
+        return JsonResponse({'success': True, 'message': 'Proyectos agregados correctamente.'})
+    except Exception as e:
+        logger.exception("Error al agregar proyectos")
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
