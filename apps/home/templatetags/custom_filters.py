@@ -38,7 +38,7 @@ def make_list(value):
 
 @register.filter(name='json_encode')
 def json_encode(value):
-    return json.dumps(value)@register.filter
+    return json.dumps(value)
 
 @register.filter
 def custom_number_format(value):

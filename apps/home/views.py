@@ -3077,12 +3077,17 @@ def extraer_numero_tarea(codigo):
     return numero_tarea
 
 def generar_codigo_tarea_unico(proyecto, ultimo_numero):
-    while True:
+    max_intentos = 1000
+    for _ in range(max_intentos):
         ultimo_numero += 1
         codigo_propuesto = f"{proyecto.PC_CCODIGO}-{proyecto.PC_CESTADO}-TF{ultimo_numero:03d}"
         if not TAREA_FINANCIERA.objects.filter(TF_CCODIGO=codigo_propuesto).exists():
             return codigo_propuesto, ultimo_numero
+    raise ValueError(f"No se pudo generar un código único después de {max_intentos} intentos")
 
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
 @login_required
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -3095,54 +3100,31 @@ def TAREA_FINANCIERA_EDP(request):
             proyecto = PROYECTO_CLIENTE.objects.get(id=data['idProyecto'])
             estado_tarea = ESTADO_TAREA.objects.get(ET_CNOMBRE='Pendiente')
             
-            # Obtener el último número de tarea financiera para este proyecto
             ultima_tarea = TAREA_FINANCIERA.objects.filter(
                 TF_PROYECTO_CLIENTE=proyecto
             ).order_by('-TF_CCODIGO').first()
 
-            if ultima_tarea:
-                ultimo_numero = extraer_numero_tarea(ultima_tarea.TF_CCODIGO)
-            else:
-                ultimo_numero = 0
-
+            ultimo_numero = extraer_numero_tarea(ultima_tarea.TF_CCODIGO) if ultima_tarea else 0
             logger.debug(f"Último número de tarea encontrado: {ultimo_numero}")
 
-            # Obtener el último número de estado de pago
             ultimo_edp = ESTADO_DE_PAGO.objects.order_by('-EP_CNUMERO').first()
-            if ultimo_edp:
-                match = re.search(r'-(\d+)$', ultimo_edp.EP_CNUMERO)
-                ultimo_numero_edp = int(match.group(1)) if match else 0
-            else:
-                ultimo_numero_edp = 0
+            ultimo_numero_edp = int(re.search(r'-(\d+)$', ultimo_edp.EP_CNUMERO).group(1)) if ultimo_edp else 0
 
             tareas_creadas = []
             año_actual = datetime.datetime.now().year
 
-            for i, fecha_emision in enumerate(data['fechasEmision']):
-                moneda = MONEDA.objects.get(id=data['monedas'][i])
+            # Ordenar las fechas de emisión
+            fechas_ordenadas = sorted(enumerate(data['fechasEmision']), key=lambda x: x[1])
+
+            for i, (index, fecha_emision) in enumerate(fechas_ordenadas):
+                moneda = MONEDA.objects.get(id=data['monedas'][index])
                 fecha_emision_date = datetime.datetime.strptime(fecha_emision, '%Y-%m-%d').date()
 
-                # Incrementar y formatear el número de EDP
                 ultimo_numero_edp += 1
                 numero_edp_formateado = f"{ultimo_numero_edp:04d}"
 
-                # Crear ESTADO_DE_PAGO
-                estado_pago = ESTADO_DE_PAGO.objects.create(
-                    EP_PROYECTO=proyecto,
-                    EP_CNUMERO=f"EP-{año_actual}-{numero_edp_formateado}",
-                    EP_FFECHA=fecha_emision_date,
-                    EP_CESTADO='PENDIENTE',
-                    EP_NTOTAL=data['montos'][i],
-                    EP_MONEDA=moneda,
-                    EP_COBSERVACIONES=data['comentarioGeneral'],
-                    EP_CUSUARIO_CREADOR=request.user,
-                    EP_CESTADO_PAGO='PENDIENTE'
-                )
-
-                # Generar código único para la tarea financiera
                 codigo_tarea, ultimo_numero = generar_codigo_tarea_unico(proyecto, ultimo_numero)
 
-                # Crear TAREA_FINANCIERA asociada
                 tarea_financiera = TAREA_FINANCIERA.objects.create(
                     TF_CCODIGO=codigo_tarea,
                     TF_CNOMBRE=f"EDP {numero_edp_formateado}",
@@ -3150,22 +3132,43 @@ def TAREA_FINANCIERA_EDP(request):
                     TF_FFECHA_INICIO=fecha_emision_date,
                     TF_FFECHA_FIN_ESTIMADA=fecha_emision_date,
                     TF_CESTADO=estado_tarea,
-                    TF_NMONTO=data['montos'][i],
+                    TF_NMONTO=data['montos'][index],
                     TF_MONEDA=moneda,
                     TF_CTIPO_TRANSACCION='Estado de Pago',
-                    TF_COBSERVACIONES=f"Medio de pago: {data['mediosPago'][i]}",
+                    TF_COBSERVACIONES=f"Medio de pago: {data['mediosPago'][index]}",
                     TF_CUSUARIO_CREADOR=request.user,
                     TF_PROYECTO_CLIENTE=proyecto,
                     TF_NDURACION_PLANIFICADA=1,
                     TF_BMILESTONE=True,
                 )
 
-                tareas_creadas.append(tarea_financiera.id)
+                tareas_creadas.append(tarea_financiera)
 
+                ESTADO_DE_PAGO.objects.create(
+                    EP_PROYECTO=proyecto,
+                    EP_TAREA_FINANCIERA=tarea_financiera,
+                    EP_CNUMERO=f"EP-{año_actual}-{numero_edp_formateado}",
+                    EP_FFECHA=fecha_emision_date,
+                    EP_CESTADO='PENDIENTE',
+                    EP_NTOTAL=data['montos'][index],
+                    EP_MONEDA=moneda,
+                    EP_COBSERVACIONES=data['comentarioGeneral'],
+                    EP_CUSUARIO_CREADOR=request.user,
+                    EP_CESTADO_PAGO='PENDIENTE'
+                )
+
+            # Crear dependencias entre las tareas
+            for i in range(1, len(tareas_creadas)):
+                TAREA_FINANCIERA_DEPENDENCIA.objects.create(
+                    TD_TAREA_PREDECESORA=tareas_creadas[i-1],
+                    TD_TAREA_SUCESORA=tareas_creadas[i],
+                    TD_TIPO_DEPENDENCIA='FS'  # Finish-to-Start
+                )
+            
         return JsonResponse({
             'success': True,
             'message': f'Se crearon {len(tareas_creadas)} Estados de Pago y Tareas Financieras con éxito',
-            'tareas_ids': tareas_creadas
+            'tareas_ids': [tarea.id for tarea in tareas_creadas]
         })
 
     except json.JSONDecodeError:
@@ -5766,7 +5769,7 @@ def validar_hojas_excel(xls):
         raise ValueError(f'Faltan las siguientes hojas en el archivo: {", ".join(hojas_faltantes)}')
     
 def procesar_valor(value):
-    logger.debug(f"Procesando valor de tipo: {type(value).__name__}")
+    # logger.debug(f"Procesando valor de tipo: {type(value).__name__}")
     
     if pd.isna(value) or value is None:
         return None
@@ -5875,17 +5878,17 @@ def cargar_excel_proyectos(request):
                     'redirect': reverse('seleccionar_datos')
                 })
             except Exception as e:
-                logger.exception(f"Error al procesar el archivo: {str(e)}")
+                # logger.exception(f"Error al procesar el archivo: {str(e)}")
                 return JsonResponse({'error': f'Error al procesar el archivo: {str(e)}'}, status=400)
         else:
-            logger.error(f"Formulario inválido. Errores: {form.errors}")
+            # logger.error(f"Formulario inválido. Errores: {form.errors}")
             errors = form.errors.as_json()
             return JsonResponse({'error': 'Formulario inválido', 'form_errors': errors}, status=400)
     else:
-        logger.info("Método GET recibido")
+        # logger.info("Método GET recibido")
         form = formCargaData()
     
-    logger.info("Renderizando template")
+    # logger.info("Renderizando template")
     return render(request, 'home/CARGA_DATA/carga_data.html', {'form': form})
 
 def quicksort(arr, low, high):
@@ -5987,7 +5990,7 @@ def agregar_proyectos(request):
                             'CL_CUSUARIO_CREADOR': request.user
                         }
                     )
-                    logger.info(f"Cliente {'creado' if created else 'obtenido'}: {cliente.CL_CNOMBRE}")
+                    # logger.info(f"Cliente {'creado' if created else 'obtenido'}: {cliente.CL_CNOMBRE}")
 
                     if not created:
                         # Actualizar información del cliente si es necesario
@@ -6003,7 +6006,7 @@ def agregar_proyectos(request):
                             cliente.CL_CUSUARIO_MODIFICADOR = request.user
                             update_fields.append('CL_CUSUARIO_MODIFICADOR')
                             cliente.save(update_fields=update_fields)
-                            logger.info(f"Cliente actualizado: {cliente.CL_CNOMBRE}, campos: {update_fields}")
+                            # logger.info(f"Cliente actualizado: {cliente.CL_CNOMBRE}, campos: {update_fields}")
 
                 except IntegrityError as e:
                     logger.error(f"Error de integridad al crear/obtener cliente: {str(e)}")
@@ -6011,7 +6014,7 @@ def agregar_proyectos(request):
                     cliente = CLIENTE.objects.filter(CL_CNOMBRE=cliente_directo).first()
                     if not cliente:
                         raise Exception(f"No se pudo crear ni obtener el cliente: {cliente_directo}")
-                    logger.info(f"Cliente obtenido después de error de integridad: {cliente.CL_CNOMBRE}")
+                    # logger.info(f"Cliente obtenido después de error de integridad: {cliente.CL_CNOMBRE}")
 
                 # Creación del proyecto
                 proyecto = PROYECTO_CLIENTE.objects.create(
@@ -6028,9 +6031,9 @@ def agregar_proyectos(request):
                     PC_NCOSTO_ESTIMADO=0,
                     PC_NMARGEN=0,
                 )
-                logger.info(f"Proyecto creado: {proyecto.PC_CCODIGO}")
+                # logger.info(f"Proyecto creado: {proyecto.PC_CCODIGO}")
 
         return JsonResponse({'success': True, 'message': 'Proyectos agregados correctamente.'})
     except Exception as e:
-        logger.exception("Error al agregar proyectos")
+        # logger.exception("Error al agregar proyectos")
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
