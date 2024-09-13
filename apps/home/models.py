@@ -881,7 +881,7 @@ class TAREA_GENERAL(models.Model):
     TG_BCRITICA = models.BooleanField(default=False, verbose_name='En la ruta crítica')
     TG_PROYECTO_CLIENTE = models.ForeignKey(PROYECTO_CLIENTE, on_delete=models.CASCADE, null=True, blank=True, related_name='tareas_generales_proyecto', verbose_name='Proyecto de Cliente')
     def __str__(self):
-        return f"Tarea General {self.TG_CCODIGO} - {self.TG_CNOMBRE} ({self.TG_ETAPA.ET_CNOMBRE})"
+        return f"Tarea General {self.TG_CCODIGO} - {self.TG_CNOMBRE} "
 
     def get_progreso(self):
         return self.TG_NPROGRESO
@@ -916,7 +916,7 @@ class TAREA_INGENIERIA(models.Model):
     TG_BCRITICA = models.BooleanField(default=False, verbose_name='En la ruta crítica')
     TI_PROYECTO_CLIENTE = models.ForeignKey(PROYECTO_CLIENTE, on_delete=models.CASCADE, null=True, blank=True, related_name='tareas_ingenieria_proyecto', verbose_name='Proyecto de Cliente')
     def __str__(self):
-        return f"Tarea de Ingeniería {self.TI_CCODIGO} - {self.TI_CNOMBRE} ({self.TI_ETAPA.ET_CNOMBRE})"
+        return f"Tarea de Ingeniería {self.TI_CCODIGO} - {self.TI_CNOMBRE} "
 
     def get_progreso(self):
         return self.TI_NPROGRESO
@@ -952,7 +952,7 @@ class TAREA_FINANCIERA(models.Model):
     TG_BCRITICA = models.BooleanField(default=False, verbose_name='En la ruta crítica')
     TF_PROYECTO_CLIENTE = models.ForeignKey(PROYECTO_CLIENTE, on_delete=models.CASCADE, null=True, blank=True, related_name='tareas_financieras_proyecto', verbose_name='Proyecto de Cliente')
     def __str__(self):
-        return f"Tarea Financiera {self.TF_CCODIGO} - {self.TF_CNOMBRE} ({self.TF_ETAPA.ET_CNOMBRE})"
+        return f"Tarea Financiera {self.TF_CCODIGO} - {self.TF_CNOMBRE} "
 
     def get_progreso(self):
         return self.TF_NPROGRESO
