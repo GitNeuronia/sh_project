@@ -1,20 +1,19 @@
 {% extends "layouts/base.html" %}
 {% block title %} Proyectos de Cliente {% endblock %} 
 
-<!-- Specific CSS goes HERE -->
 {% block stylesheets %}
-    <!-- data tables css -->
-    <link rel="stylesheet" href="/static/assets/css/plugins/dataTables.bootstrap4.min.css">
-    <!-- Frappe Gantt CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.css">
-    <!-- SweetAlert2 CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-    {% load humanize %}
     {% load i18n %}
     {% load l10n %}
+    {% load humanize %}
     {% load custom_filters %}
+    <!-- Estilos existentes -->
+    <link rel="stylesheet" href="/static/assets/css/plugins/dataTables.bootstrap4.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    {% comment %} <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.24/css/dataTables.bootstrap4.min.css"/> {% endcomment %}
     
     <style>
+        /* Estilos existentes */
         .progress {
             background-color: #f8f9fa;
             border: 1px solid #dee2e6;
@@ -57,6 +56,74 @@
         .fa-exclamation-triangle:hover {
             color: #e0a800;
         }
+        #edpModal .modal-content {
+            border-radius: 0.5rem;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+        
+        #edpModal .modal-header {
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+        }
+        
+        #edpModal .form-control {
+            border-radius: 0.25rem;
+        }
+        
+        #edpModal .btn {
+            border-radius: 0.25rem;
+        }
+        
+        #edpTable {
+            font-size: 0.9rem;
+        }
+        
+        #edpTable th,
+        #edpTable td {
+            padding: 0.5rem;
+            vertical-align: middle;
+        }
+        
+        #edpTable .form-control {
+            padding: 0.25rem 0.5rem;
+            height: auto;
+        }
+        
+         /* Nuevos estilos para tablas responsivas */
+        {% comment %}.table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        @media screen and (max-width: 992px) {
+            .table-responsive table {
+                min-width: 800px;
+            }
+        }
+        
+        .table th, .table td {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
+        }
+        
+        .table .actions-column {
+            min-width: 200px;
+            width: 200px;
+        }
+        
+        .table .progress-column {
+            min-width: 150px;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            padding: 0.25em 0.5em;
+        }
+        
+        .dataTables_wrapper .dataTables_length select {
+            width: 60px;
+        } {% endcomment %}
     </style>
 {% endblock stylesheets %}
 
@@ -256,204 +323,210 @@
                             <div class="tab-content" id="tareasTabsContent">
                                 <div class="tab-pane fade show active" id="financieras" role="tabpanel">
                                     <h5>Tareas Financieras</h5>
-                                    <table class="table table-striped table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th>Acción</th>
-                                                <th>Nombre</th>
-                                                <th>Descripción</th>
-                                                <th>Progreso</th>
-                                                <th>Estado</th>
-                                                <th>Fecha Inicio</th>
-                                                <th>Fecha Fin</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for tarea in tareas_financiera %}
-                                            <tr>
-                                                <td>
-                                                    <a href="{% url 'tarea_financiera_listone' tarea.id 1 %}" class="btn btn-sm btn-info mr-1" title="Ver detalles"><i class="fas fa-eye"></i></a>
-                                                    <a href="{% url 'tarea_financiera_update' tarea.id 1 %}" class="btn btn-sm btn-primary mr-1" title="Editar"><i class="fas fa-edit"></i></a>
-                                                    <a href="{% url 'tarea_financiera_update_asignaciones' tarea.id 1 %}" class="btn btn-sm btn-info mr-1" title="Asignar recursos">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-people" viewBox="0 0 16 16">
-                                                            <path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8Zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002a.274.274 0 0 1-.014.002H7.022ZM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816ZM4.92 10A5.493 5.493 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275ZM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0Zm3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/>
-                                                        </svg>
-                                                    </a>
-                                                    <a href="{% url 'tarea_financiera_dependencia_addone' tarea.id %}" class="btn btn-sm btn-warning" title="Agregar dependencia">
-                                                        <i class="fas fa-link"></i>
-                                                    </a>
-                                                    <!-- En la sección de tareas financieras -->
-                                                    <a href="#" class="btn btn-sm btn-secondary" title="Actualizar datos" style="background-color: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 3px; transition: background-color 0.3s;" data-toggle="modal" data-target="#updateDataModal" data-url="{% url 'tarea_update_data' 'financiera' tarea.id %}">
-                                                        <i class="fas fa-sync-alt"></i>
-                                                    </a>
-                                                    <a href="#" class="btn btn-sm btn-primary mr-1" title="Adjuntos" onclick="openAdjuntosModal({{ tarea.id }}, 'TAREA_FINANCIERA')">
-                                                        <i class="fas fa-paperclip"></i>
-                                                    </a>
-                                                </td>
-                                                <td>
-                                                    {{ tarea.TF_CNOMBRE }}
-                                                    {% if tarea.tiene_asignacion_cero %}
-                                                    <i class="fas fa-exclamation-triangle text-warning ml-2" title="Esta tarea tiene asignaciones con horas o costo en 0"></i>
-                                                    {% endif %}
-                                                </td>
-                                                <td>{{ tarea.TF_CDESCRIPCION }}</td>                                                
-                                                <td style="width: 150px;">
-                                                    <div class="progress" style="height: 20px; width: 100%;">
-                                                        <div class="progress-bar {% if tarea.TF_NPROGRESO >= 100 %}bg-success{% elif tarea.TF_NPROGRESO >= 50 %}bg-info{% else %}bg-warning{% endif %}" 
-                                                            role="progressbar" 
-                                                            style="width: {% if tarea.TF_NPROGRESO > 100 %}100%{% else %}{{ tarea.TF_NPROGRESO }}%{% endif %};" 
-                                                            aria-valuenow="{{ tarea.TF_NPROGRESO }}" 
-                                                            aria-valuemin="0" 
-                                                            aria-valuemax="100">
-                                                            {{ tarea.TF_NPROGRESO }}%
+                                    <div class="dt-responsive table-responsive">
+                                        <table id="tabla-financieras" class="table table-striped table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Acción</th>
+                                                    <th>Nombre</th>
+                                                    <th>Descripción</th>
+                                                    <th>Progreso</th>
+                                                    <th>Estado</th>
+                                                    <th>Fecha Inicio</th>
+                                                    <th>Fecha Fin</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for tarea in tareas_financiera %}
+                                                <tr>
+                                                    <td>
+                                                        <a href="{% url 'tarea_financiera_listone' tarea.id 1 %}" class="btn btn-sm btn-info mr-1" title="Ver detalles"><i class="fas fa-eye"></i></a>
+                                                        <a href="{% url 'tarea_financiera_update' tarea.id 1 %}" class="btn btn-sm btn-primary mr-1" title="Editar"><i class="fas fa-edit"></i></a>
+                                                        <a href="{% url 'tarea_financiera_update_asignaciones' tarea.id 1 %}" class="btn btn-sm btn-info mr-1" title="Asignar recursos">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-people" viewBox="0 0 16 16">
+                                                                <path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8Zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002a.274.274 0 0 1-.014.002H7.022ZM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816ZM4.92 10A5.493 5.493 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275ZM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0Zm3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/>
+                                                            </svg>
+                                                        </a>
+                                                        <a href="{% url 'tarea_financiera_dependencia_addone' tarea.id %}" class="btn btn-sm btn-warning" title="Agregar dependencia">
+                                                            <i class="fas fa-link"></i>
+                                                        </a>
+                                                        <!-- En la sección de tareas financieras -->
+                                                        <a href="#" class="btn btn-sm btn-secondary" title="Actualizar datos" style="background-color: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 3px; transition: background-color 0.3s;" data-toggle="modal" data-target="#updateDataModal" data-url="{% url 'tarea_update_data' 'financiera' tarea.id %}">
+                                                            <i class="fas fa-sync-alt"></i>
+                                                        </a>
+                                                        <a href="#" class="btn btn-sm btn-primary mr-1" title="Adjuntos" onclick="openAdjuntosModal({{ tarea.id }}, 'TAREA_FINANCIERA')">
+                                                            <i class="fas fa-paperclip"></i>
+                                                        </a>
+                                                    </td>
+                                                    <td>
+                                                        {{ tarea.TF_CNOMBRE }}
+                                                        {% if tarea.tiene_asignacion_cero %}
+                                                        <i class="fas fa-exclamation-triangle text-warning ml-2" title="Esta tarea tiene asignaciones con horas o costo en 0"></i>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>{{ tarea.TF_CDESCRIPCION }}</td>                                                
+                                                    <td style="width: 150px;">
+                                                        <div class="progress" style="height: 20px; width: 100%;">
+                                                            <div class="progress-bar {% if tarea.TF_NPROGRESO >= 100 %}bg-success{% elif tarea.TF_NPROGRESO >= 50 %}bg-info{% else %}bg-warning{% endif %}" 
+                                                                role="progressbar" 
+                                                                style="width: {% if tarea.TF_NPROGRESO > 100 %}100%{% else %}{{ tarea.TF_NPROGRESO }}%{% endif %};" 
+                                                                aria-valuenow="{{ tarea.TF_NPROGRESO }}" 
+                                                                aria-valuemin="0" 
+                                                                aria-valuemax="100">
+                                                                {{ tarea.TF_NPROGRESO }}%
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                </td>
-                                                <td>{{ tarea.TF_CESTADO }}</td>                                                
-                                                <td>{{ tarea.TF_FFECHA_INICIO|date:"d/m/Y" }}</td>
-                                                <td>{{ tarea.TF_FFECHA_FIN_ESTIMADA|date:"d/m/Y" }}</td>
-                                            </tr>
-                                            {% empty %}
-                                            <tr>
-                                                <td colspan="7">No hay tareas financieras registradas.</td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
+                                                    </td>
+                                                    <td>{{ tarea.TF_CESTADO }}</td>                                                
+                                                    <td>{{ tarea.TF_FFECHA_INICIO|date:"d/m/Y" }}</td>
+                                                    <td>{{ tarea.TF_FFECHA_FIN_ESTIMADA|date:"d/m/Y" }}</td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr>
+                                                    <td colspan="7">No hay tareas financieras registradas.</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>   
+                                    </div>
                                 </div>
                                 <div class="tab-pane fade" id="generales" role="tabpanel">
                                     <h5>Tareas Generales</h5>
-                                    <table class="table table-striped table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th>Acción</th>
-                                                <th>Nombre</th>
-                                                <th>Descripción</th>
-                                                <th>Progreso</th>
-                                                <th>Estado</th>
-                                                <th>Fecha Inicio</th>
-                                                <th>Fecha Fin</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for tarea in tareas_general %}
-                                            <tr>
-                                                <td>
-                                                    <a href="{% url 'tarea_general_listone' tarea.id 1 %}" class="btn btn-sm btn-info mr-1" title="Ver detalles"><i class="fas fa-eye"></i></a>
-                                                    <a href="{% url 'tarea_general_update' tarea.id 1 %}" class="btn btn-sm btn-primary mr-1" title="Editar"><i class="fas fa-edit"></i></a>
-                                                    <a href="{% url 'tarea_general_update_asignaciones' tarea.id 1 %}" class="btn btn-sm btn-info mr-1" title="Asignar recursos">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-people" viewBox="0 0 16 16">
-                                                            <path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8Zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002a.274.274 0 0 1-.014.002H7.022ZM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816ZM4.92 10A5.493 5.493 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275ZM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0Zm3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/>
-                                                        </svg>
-                                                    </a>
-                                                    <a href="{% url 'tarea_general_dependencia_addone' tarea.id %}" class="btn btn-sm btn-warning" title="Agregar dependencia">
-                                                        <i class="fas fa-link"></i>
-                                                    </a>
-                                                    <!-- En la sección de tareas generales -->
-                                                    <a href="#" class="btn btn-sm btn-secondary" title="Actualizar datos" style="background-color: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 3px; transition: background-color 0.3s;" data-toggle="modal" data-target="#updateDataModal" data-url="{% url 'tarea_update_data' 'general' tarea.id %}">
-                                                        <i class="fas fa-sync-alt"></i>
-                                                    </a>  
-                                                    <a href="#" class="btn btn-sm btn-primary mr-1" title="Adjuntos" onclick="openAdjuntosModal({{ tarea.id }}, 'TAREA_GENERAL')">
-                                                        <i class="fas fa-paperclip"></i>
-                                                    </a>                                                
-                                                </td>
-                                                <td>
-                                                    {{ tarea.TG_CNOMBRE }}
-                                                    {% if tarea.tiene_asignacion_cero %}
-                                                    <i class="fas fa-exclamation-triangle text-warning ml-2" title="Esta tarea tiene asignaciones con horas o costo en 0"></i>
-                                                    {% endif %}
-                                                </td>
-                                                <td>{{ tarea.TG_CDESCRIPCION }}</td>
-                                                <td style="width: 150px;">
-                                                    <div class="progress" style="height: 20px; width: 100%;">
-                                                        <div class="progress-bar {% if tarea.TG_NPROGRESO >= 100 %}bg-success{% elif tarea.TG_NPROGRESO >= 50 %}bg-info{% else %}bg-warning{% endif %}" 
-                                                            role="progressbar" 
-                                                            style="width: {% if tarea.TG_NPROGRESO > 100 %}100%{% else %}{{ tarea.TG_NPROGRESO }}%{% endif %};" 
-                                                            aria-valuenow="{{ tarea.TG_NPROGRESO }}" 
-                                                            aria-valuemin="0" 
-                                                            aria-valuemax="100">
-                                                            {{ tarea.TG_NPROGRESO }}%
+                                    <div class="dt-responsive table-responsive">
+                                        <table id="tabla-generales" class="table table-striped table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Acción</th>
+                                                    <th>Nombre</th>
+                                                    <th>Descripción</th>
+                                                    <th>Progreso</th>
+                                                    <th>Estado</th>
+                                                    <th>Fecha Inicio</th>
+                                                    <th>Fecha Fin</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for tarea in tareas_general %}
+                                                <tr>
+                                                    <td>
+                                                        <a href="{% url 'tarea_general_listone' tarea.id 1 %}" class="btn btn-sm btn-info mr-1" title="Ver detalles"><i class="fas fa-eye"></i></a>
+                                                        <a href="{% url 'tarea_general_update' tarea.id 1 %}" class="btn btn-sm btn-primary mr-1" title="Editar"><i class="fas fa-edit"></i></a>
+                                                        <a href="{% url 'tarea_general_update_asignaciones' tarea.id 1 %}" class="btn btn-sm btn-info mr-1" title="Asignar recursos">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-people" viewBox="0 0 16 16">
+                                                                <path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8Zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002a.274.274 0 0 1-.014.002H7.022ZM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816ZM4.92 10A5.493 5.493 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275ZM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0Zm3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/>
+                                                            </svg>
+                                                        </a>
+                                                        <a href="{% url 'tarea_general_dependencia_addone' tarea.id %}" class="btn btn-sm btn-warning" title="Agregar dependencia">
+                                                            <i class="fas fa-link"></i>
+                                                        </a>
+                                                        <!-- En la sección de tareas generales -->
+                                                        <a href="#" class="btn btn-sm btn-secondary" title="Actualizar datos" style="background-color: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 3px; transition: background-color 0.3s;" data-toggle="modal" data-target="#updateDataModal" data-url="{% url 'tarea_update_data' 'general' tarea.id %}">
+                                                            <i class="fas fa-sync-alt"></i>
+                                                        </a>  
+                                                        <a href="#" class="btn btn-sm btn-primary mr-1" title="Adjuntos" onclick="openAdjuntosModal({{ tarea.id }}, 'TAREA_GENERAL')">
+                                                            <i class="fas fa-paperclip"></i>
+                                                        </a>                                                
+                                                    </td>
+                                                    <td>
+                                                        {{ tarea.TG_CNOMBRE }}
+                                                        {% if tarea.tiene_asignacion_cero %}
+                                                        <i class="fas fa-exclamation-triangle text-warning ml-2" title="Esta tarea tiene asignaciones con horas o costo en 0"></i>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>{{ tarea.TG_CDESCRIPCION }}</td>
+                                                    <td style="width: 150px;">
+                                                        <div class="progress" style="height: 20px; width: 100%;">
+                                                            <div class="progress-bar {% if tarea.TG_NPROGRESO >= 100 %}bg-success{% elif tarea.TG_NPROGRESO >= 50 %}bg-info{% else %}bg-warning{% endif %}" 
+                                                                role="progressbar" 
+                                                                style="width: {% if tarea.TG_NPROGRESO > 100 %}100%{% else %}{{ tarea.TG_NPROGRESO }}%{% endif %};" 
+                                                                aria-valuenow="{{ tarea.TG_NPROGRESO }}" 
+                                                                aria-valuemin="0" 
+                                                                aria-valuemax="100">
+                                                                {{ tarea.TG_NPROGRESO }}%
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                </td>
-                                                <td>{{ tarea.TG_CESTADO }}</td>
-                                                <td>{{ tarea.TG_FFECHA_INICIO|date:"d/m/Y" }}</td>
-                                                <td>{{ tarea.TG_FFECHA_FIN_ESTIMADA|date:"d/m/Y" }}</td>
-                                            </tr>
-                                            {% empty %}
-                                            <tr>
-                                                <td colspan="7">No hay tareas generales registradas.</td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
+                                                    </td>
+                                                    <td>{{ tarea.TG_CESTADO }}</td>
+                                                    <td>{{ tarea.TG_FFECHA_INICIO|date:"d/m/Y" }}</td>
+                                                    <td>{{ tarea.TG_FFECHA_FIN_ESTIMADA|date:"d/m/Y" }}</td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr>
+                                                    <td colspan="7">No hay tareas generales registradas.</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                                 <div class="tab-pane fade" id="ingenieria" role="tabpanel">
                                     <h5>Tareas de Ingeniería</h5>
-                                    <table class="table table-striped table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th>Acción</th>
-                                                <th>Nombre</th>
-                                                <th>Descripción</th>
-                                                <th>Progreso</th>
-                                                <th>Estado</th>
-                                                <th>Fecha Inicio</th>
-                                                <th>Fecha Fin</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for tarea in tareas_ingenieria %}
-                                            <tr>
-                                                <td>
-                                                    <a href="{% url 'tarea_ingenieria_listone' tarea.id 1 %}" class="btn btn-sm btn-info mr-1" title="Ver detalles"><i class="fas fa-eye"></i></a>
-                                                    <a href="{% url 'tarea_ingenieria_update' tarea.id 1 %}" class="btn btn-sm btn-primary mr-1" title="Editar"><i class="fas fa-edit"></i></a>
-                                                    <a href="{% url 'tarea_ingenieria_update_asignaciones' tarea.id 1 %}" class="btn btn-sm btn-info mr-1" title="Asignar recursos">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-people" viewBox="0 0 16 16">
-                                                            <path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8Zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002a.274.274 0 0 1-.014.002H7.022ZM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816ZM4.92 10A5.493 5.493 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275ZM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0Zm3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/>
-                                                        </svg>
-                                                    </a>
-                                                    <a href="{% url 'tarea_ingenieria_dependencia_addone' tarea.id %}" class="btn btn-sm btn-warning" title="Agregar dependencia">
-                                                        <i class="fas fa-link"></i>
-                                                    </a>
-                                                    <!-- En la sección de tareas de ingeniería -->
-                                                    <a href="#" class="btn btn-sm btn-secondary" title="Actualizar datos" style="background-color: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 3px; transition: background-color 0.3s;" data-toggle="modal" data-target="#updateDataModal" data-url="{% url 'tarea_update_data' 'ingenieria' tarea.id %}">
-                                                        <i class="fas fa-sync-alt"></i>
-                                                    </a>
-                                                    <a href="#" class="btn btn-sm btn-primary mr-1" title="Adjuntos" onclick="openAdjuntosModal({{ tarea.id }}, 'TAREA_INGENIERIA')">
-                                                        <i class="fas fa-paperclip"></i>
-                                                    </a>
-                                                </td>
-                                                <td>
-                                                    {{ tarea.TI_CNOMBRE }}
-                                                    {% if tarea.tiene_asignacion_cero %}
-                                                    <i class="fas fa-exclamation-triangle text-warning ml-2" title="Esta tarea tiene asignaciones con horas o costo en 0"></i>
-                                                    {% endif %}
-                                                </td>
-                                                <td>{{ tarea.TI_CDESCRIPCION }}</td>
-                                                <td style="width: 150px;">
-                                                    <div class="progress" style="height: 20px; width: 100%;">
-                                                        <div class="progress-bar {% if tarea.TI_NPROGRESO >= 100 %}bg-success{% elif tarea.TI_NPROGRESO >= 50 %}bg-info{% else %}bg-warning{% endif %}" 
-                                                            role="progressbar" 
-                                                            style="width: {% if tarea.TI_NPROGRESO > 100 %}100%{% else %}{{ tarea.TI_NPROGRESO }}%{% endif %};" 
-                                                            aria-valuenow="{{ tarea.TI_NPROGRESO }}" 
-                                                            aria-valuemin="0" 
-                                                            aria-valuemax="100">
-                                                            {{ tarea.TI_NPROGRESO }}%
+                                    <div class="dt-responsive table-responsive">
+                                        <table id="tabla-ingenieria" class="table table-striped table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Acción</th>
+                                                    <th>Nombre</th>
+                                                    <th>Descripción</th>
+                                                    <th>Progreso</th>
+                                                    <th>Estado</th>
+                                                    <th>Fecha Inicio</th>
+                                                    <th>Fecha Fin</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for tarea in tareas_ingenieria %}
+                                                <tr>
+                                                    <td>
+                                                        <a href="{% url 'tarea_ingenieria_listone' tarea.id 1 %}" class="btn btn-sm btn-info mr-1" title="Ver detalles"><i class="fas fa-eye"></i></a>
+                                                        <a href="{% url 'tarea_ingenieria_update' tarea.id 1 %}" class="btn btn-sm btn-primary mr-1" title="Editar"><i class="fas fa-edit"></i></a>
+                                                        <a href="{% url 'tarea_ingenieria_update_asignaciones' tarea.id 1 %}" class="btn btn-sm btn-info mr-1" title="Asignar recursos">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-people" viewBox="0 0 16 16">
+                                                                <path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8Zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002a.274.274 0 0 1-.014.002H7.022ZM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816ZM4.92 10A5.493 5.493 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275ZM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0Zm3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/>
+                                                            </svg>
+                                                        </a>
+                                                        <a href="{% url 'tarea_ingenieria_dependencia_addone' tarea.id %}" class="btn btn-sm btn-warning" title="Agregar dependencia">
+                                                            <i class="fas fa-link"></i>
+                                                        </a>
+                                                        <!-- En la sección de tareas de ingeniería -->
+                                                        <a href="#" class="btn btn-sm btn-secondary" title="Actualizar datos" style="background-color: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 3px; transition: background-color 0.3s;" data-toggle="modal" data-target="#updateDataModal" data-url="{% url 'tarea_update_data' 'ingenieria' tarea.id %}">
+                                                            <i class="fas fa-sync-alt"></i>
+                                                        </a>
+                                                        <a href="#" class="btn btn-sm btn-primary mr-1" title="Adjuntos" onclick="openAdjuntosModal({{ tarea.id }}, 'TAREA_INGENIERIA')">
+                                                            <i class="fas fa-paperclip"></i>
+                                                        </a>
+                                                    </td>
+                                                    <td>
+                                                        {{ tarea.TI_CNOMBRE }}
+                                                        {% if tarea.tiene_asignacion_cero %}
+                                                        <i class="fas fa-exclamation-triangle text-warning ml-2" title="Esta tarea tiene asignaciones con horas o costo en 0"></i>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>{{ tarea.TI_CDESCRIPCION }}</td>
+                                                    <td style="width: 150px;">
+                                                        <div class="progress" style="height: 20px; width: 100%;">
+                                                            <div class="progress-bar {% if tarea.TI_NPROGRESO >= 100 %}bg-success{% elif tarea.TI_NPROGRESO >= 50 %}bg-info{% else %}bg-warning{% endif %}" 
+                                                                role="progressbar" 
+                                                                style="width: {% if tarea.TI_NPROGRESO > 100 %}100%{% else %}{{ tarea.TI_NPROGRESO }}%{% endif %};" 
+                                                                aria-valuenow="{{ tarea.TI_NPROGRESO }}" 
+                                                                aria-valuemin="0" 
+                                                                aria-valuemax="100">
+                                                                {{ tarea.TI_NPROGRESO }}%
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                </td>
-                                                <td>{{ tarea.TI_CESTADO }}</td>
-                                                <td>{{ tarea.TI_FFECHA_INICIO|date:"d/m/Y" }}</td>
-                                                <td>{{ tarea.TI_FFECHA_FIN_ESTIMADA|date:"d/m/Y" }}</td>
-                                            </tr>
-                                            {% empty %}
-                                            <tr>
-                                                <td colspan="7">No hay tareas de ingeniería registradas.</td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
+                                                    </td>
+                                                    <td>{{ tarea.TI_CESTADO }}</td>
+                                                    <td>{{ tarea.TI_FFECHA_INICIO|date:"d/m/Y" }}</td>
+                                                    <td>{{ tarea.TI_FFECHA_FIN_ESTIMADA|date:"d/m/Y" }}</td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr>
+                                                    <td colspan="7">No hay tareas de ingeniería registradas.</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -510,11 +583,11 @@
 
     <!-- Modal EDP -->
     <div class="modal fade" id="edpModal" tabindex="-1" role="dialog" aria-labelledby="edpModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-dialog modal-xl" role="document">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title" id="edpModalLabel">Agregar EDP</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
@@ -524,6 +597,7 @@
                             <div class="form-group col-md-4">
                                 <label for="cantidadEdp">Cantidad de EDP</label>
                                 <input type="number" class="form-control" id="cantidadEdp" min="1" max="50" required>
+                                <small class="form-text text-muted">Máximo 50 EDPs</small>
                             </div>
                             <div class="form-group col-md-4">
                                 <label for="diaEmision">Día de emisión</label>
@@ -534,14 +608,14 @@
                                 <input type="date" class="form-control" id="fechaInicio" required>
                             </div>
                         </div>
-                        <div class="table-responsive">
-                            <table class="table table-bordered" id="edpTable">
-                                <thead>
+                        <div class="table-responsive mt-4">
+                            <table class="table table-bordered table-striped" id="edpTable">
+                                <thead class="thead-light">
                                     <tr>
-                                        <th>Fecha</th>
-                                        <th>Monto</th>
-                                        <th>Moneda</th>
-                                        <th>Medio de Pago</th>
+                                        <th width="20%">Fecha</th>
+                                        <th width="25%">Monto</th>
+                                        <th width="20%">Moneda</th>
+                                        <th width="35%">Medio de Pago</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -549,7 +623,7 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group mt-4">
                             <label for="comentarioGeneral">Comentario General</label>
                             <textarea class="form-control" id="comentarioGeneral" rows="3"></textarea>
                         </div>
@@ -581,164 +655,453 @@
     <!-- Frappe Gantt JS -->
     <script src="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- Grafico de avance -->
+    
+    {% comment %} <script type="text/javascript" src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script> {% endcomment %}
+    {% comment %} <script type="text/javascript" src="https://cdn.datatables.net/1.10.24/js/dataTables.bootstrap4.min.js"></script> {% endcomment %}
     <script>
-        // Gráfico de avance
-        {% comment %} var ctx = document.getElementById('avanceChart');
-        if (ctx) {
-            var labels = [];
-            var avanceReal = [];
-            var avancePlanificado = [];
-            var duracionPlanificada = [];
-            var duracionReal = [];
-
-            {% for tarea in tareas_general %}
-                labels.push('{{ tarea.TG_CNOMBRE|escapejs }}');
-                avanceReal.push({{ tarea.TG_NPROGRESO }});
-                avancePlanificado.push(100);
-                duracionPlanificada.push({{ tarea.TG_NDURACION_PLANIFICADA }});
-                duracionReal.push({{ tarea.TG_NDURACION_REAL|default_if_none:0 }});
-            {% endfor %}
-
-            {% for tarea in tareas_ingenieria %}
-                labels.push('{{ tarea.TI_CNOMBRE|escapejs }}');
-                avanceReal.push({{ tarea.TI_NPROGRESO }});
-                avancePlanificado.push(100);
-                duracionPlanificada.push({{ tarea.TI_NDURACION_PLANIFICADA }});
-                duracionReal.push({{ tarea.TI_NDURACION_REAL|default_if_none:0 }});
-            {% endfor %}
-
-            {% for tarea in tareas_financiera %}
-                labels.push('{{ tarea.TF_CNOMBRE|escapejs }}');
-                avanceReal.push({{ tarea.TF_NPROGRESO }});
-                avancePlanificado.push(100);
-                duracionPlanificada.push({{ tarea.TF_NDURACION_PLANIFICADA }});
-                duracionReal.push({{ tarea.TF_NDURACION_REAL|default_if_none:0 }});
-            {% endfor %}
-
-            var chart = new Chart(ctx.getContext('2d'), {
-                type: 'pie',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: avanceReal,
-                        backgroundColor: [
-                            'rgba(255, 99, 132, 0.8)',
-                            'rgba(54, 162, 235, 0.8)',
-                            'rgba(255, 206, 86, 0.8)',
-                            'rgba(75, 192, 192, 0.8)',
-                            'rgba(153, 102, 255, 0.8)',
-                            'rgba(255, 159, 64, 0.8)'
-                        ],
-                        borderColor: [
-                            'rgba(255, 99, 132, 1)',
-                            'rgba(54, 162, 235, 1)',
-                            'rgba(255, 206, 86, 1)',
-                            'rgba(75, 192, 192, 1)',
-                            'rgba(153, 102, 255, 1)',
-                            'rgba(255, 159, 64, 1)'
-                        ],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        },
-                        title: {
-                            display: true,
-                            text: 'Distribución del Avance Real de Tareas'
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    var label = context.label || '';
-                                    var value = context.parsed || 0;
-                                    return label + ': ' + value + '%';
-                                }
-                            }
-                        }
+        // Función para ajustar el ancho de las columnas
+        function adjustColumnWidths() {
+            $('.table-responsive table').each(function() {
+                var $table = $(this);
+                var totalWidth = $table.width();
+                var $columns = $table.find('th');
+                var totalColumns = $columns.length;
+                var availableWidth = totalWidth - 350; // 200px para acciones + 150px para progreso
+                var columnWidth = availableWidth / (totalColumns - 2);
+                
+                $columns.each(function(index) {
+                    if (index !== 0 && index !== 3) { // No ajustar columnas de acciones y progreso
+                        $(this).css('width', columnWidth + 'px');
                     }
+                });
+            });
+        }
+
+        // Variables globales para adjuntos
+        var currentTareaId, currentTipoTarea;
+
+        // Función para abrir el modal de adjuntos
+        function openAdjuntosModal(tareaId, tipoTarea) {
+            currentTareaId = tareaId;
+            currentTipoTarea = tipoTarea;
+            $('#adjuntosModal').modal('show');
+            cargarListaAdjuntos();
+        }
+
+        // Función para cargar la lista de adjuntos
+        function cargarListaAdjuntos() {
+            $.ajax({
+                url: `/tarea_adjuntos/${currentTareaId}/${currentTipoTarea}/`,
+                method: 'GET',
+                success: function(data) {
+                    var tableHtml = '<table class="table table-striped">' +
+                                    '<thead><tr><th>Nombre</th><th>Descripción</th><th>Fecha de Creación</th><th>Acciones</th></tr></thead>' +
+                                    '<tbody>';
+                    
+                    if (data.adjuntos.length === 0) {
+                        tableHtml += '<tr><td colspan="4" class="text-center">No hay adjuntos para esta tarea.</td></tr>';
+                    } else {
+                        data.adjuntos.forEach(function(adjunto) {
+                            tableHtml += `<tr>
+                                <td>${adjunto.nombre}</td>
+                                <td>${adjunto.descripcion}</td>
+                                <td>${adjunto.fecha_creacion}</td>
+                                <td>
+                                    <button onclick="editarAdjunto(${adjunto.id})" class="btn btn-primary btn-sm"><i class="fas fa-edit"></i> Editar</button>
+                                    <button onclick="eliminarAdjunto(${adjunto.id})" class="btn btn-danger btn-sm"><i class="fas fa-trash-alt"></i> Eliminar</button>
+                                    <a href="/tarea_adjunto/descargar/${adjunto.id}/${currentTipoTarea}/" class="btn btn-success btn-sm"><i class="fas fa-download"></i> Descargar</a>
+                                </td>
+                            </tr>`;
+                        });
+                    }
+                    
+                    tableHtml += '</tbody></table>';
+                    $('#lista').html(tableHtml);
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error al cargar los adjuntos:", error);
+                    $('#lista').html('<p class="text-danger">Error al cargar los adjuntos. Por favor, intente nuevamente.</p>');
                 }
             });
         }
-        
-        window.filtrarTareas = function(tipo) {
-            var todasLasTareas = document.querySelectorAll('.tarea-general, .tarea-ingenieria, .tarea-financiera');
-            todasLasTareas.forEach(function(tarea) {
-                if (tipo === 'todas') {
-                    tarea.style.display = '';
-                } else {
-                    tarea.style.display = 'none';
+
+        // Función para editar adjunto
+        function editarAdjunto(adjuntoId) {
+            $.ajax({
+                url: `/tarea_adjunto/editar/${adjuntoId}/${currentTipoTarea}/`,
+                method: 'GET',
+                success: function(data) {
+                    $('#editar').html(data);
+                    $('#editar-tab').show().tab('show');
+                    
+                    $('#adjuntoForm').off('submit').on('submit', function(e) {
+                        e.preventDefault();
+                        var formData = new FormData(this);
+                        
+                        $.ajax({
+                            url: `/tarea_adjunto/editar/${adjuntoId}/${currentTipoTarea}/`,
+                            type: 'POST',
+                            data: formData,
+                            headers: {
+                                'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                            },
+                            success: function(response) {
+                                if (response.success) {
+                                    alert(response.message);
+                                    cargarListaAdjuntos();
+                                    $('#lista-tab').tab('show');
+                                    $('#editar-tab').hide();
+                                } else {
+                                    alert('Error: ' + response.message);
+                                }
+                            },
+                            error: function(xhr, errmsg, err) {
+                                console.log(xhr.status + ": " + xhr.responseText);
+                                alert('Error al editar el adjunto');
+                            },
+                            cache: false,
+                            contentType: false,
+                            processData: false
+                        });
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error al cargar el formulario de edición:", error);
+                    alert('Error al cargar el formulario de edición');
                 }
             });
+        }
 
-            if (tipo === 'generales') {
-                document.querySelectorAll('.tarea-general').forEach(function(tarea) {
-                    tarea.style.display = '';
-                });
-            } else if (tipo === 'ingenieria') {
-                document.querySelectorAll('.tarea-ingenieria').forEach(function(tarea) {
-                    tarea.style.display = '';
-                });
-            } else if (tipo === 'financieras') {
-                document.querySelectorAll('.tarea-financiera').forEach(function(tarea) {
-                    tarea.style.display = '';
+        // Función para eliminar adjunto
+        function eliminarAdjunto(adjuntoId) {
+            if (confirm('¿Está seguro de que desea eliminar este adjunto?')) {
+                $.ajax({
+                    url: `/tarea_adjunto/eliminar/${adjuntoId}/${currentTipoTarea}/`,
+                    method: 'POST',
+                    data: {
+                        csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val()
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            alert(response.message);
+                            cargarListaAdjuntos();
+                        } else {
+                            alert('Error: ' + response.message);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error al eliminar el adjunto:", error);
+                        alert('Error al eliminar el adjunto');
+                    }
                 });
             }
-            
-            actualizarGrafico(tipo);
         }
 
-        function actualizarGrafico(tipo) {
-            var labelsFiltered = [];
-            var avanceRealFiltered = [];
+        // Código principal que se ejecuta cuando el documento está listo
+        $(document).ready(function() {
+            // Llamar a la función de ajuste de columnas al cargar y al cambiar el tamaño de la ventana
+            {% comment %} adjustColumnWidths();
+            $(window).resize(adjustColumnWidths); {% endcomment %}
+
+            {% comment %} $('#tabla-financieras').DataTable({
+            });
             
-            labels.forEach(function(label, index) {
-                var incluir = false;
-                if (tipo === 'todas') {
-                    incluir = true;
-                } else if (tipo === 'generales' && index < {{ tareas_general|length }}) {
-                    incluir = true;
-                } else if (tipo === 'ingenieria' && index >= {{ tareas_general|length }} && index < {{ tareas_general|length }} + {{ tareas_ingenieria|length }}) {
-                    incluir = true;
-                } else if (tipo === 'financieras' && index >= {{ tareas_general|length }} + {{ tareas_ingenieria|length }}) {
-                    incluir = true;
-                }
+            $('#tabla-generales').DataTable({            
+            });
+            
+            $('#tabla-ingenieria').DataTable({               
+            }); {% endcomment %}
+
+            // Manejo del modal de actualización de datos
+            $('#updateDataModal').on('show.bs.modal', function (event) {
+                var button = $(event.relatedTarget);
+                var url = button.data('url');
+                var modal = $(this);
+                modal.find('.modal-body').load(url, function() {
+                    $('#formEditarTarea').append('<div id="mensajeErrorHoras" class="alert alert-danger mt-3" style="display: none;"></div>');
+
+                    $('#formEditarTarea').on('submit', function(e) {
+                        e.preventDefault();
+                        if (horasValidas) {
+                            $.ajax({
+                                url: url,
+                                method: 'POST',
+                                data: $(this).serialize(),
+                                dataType: 'json',
+                                success: function(response) {
+                                    if (response.success) {
+                                        $('#updateDataModal').modal('hide');
+                                        Swal.fire({
+                                            icon: 'success',
+                                            title: 'Éxito',
+                                            text: response.message,
+                                            showConfirmButton: false,
+                                            timer: 1500
+                                        }).then(() => {
+                                            if (response.redirect_url) {
+                                                window.location.href = response.redirect_url;
+                                            } else {
+                                                location.reload();
+                                            }
+                                        });
+                                    } else {
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: 'Error',
+                                            text: response.message
+                                        });
+                                    }
+                                },
+                                error: function(xhr, status, error) {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error',
+                                        text: 'Hubo un problema al procesar la solicitud. Por favor, inténtelo de nuevo.'
+                                    });
+                                }
+                            });
+                        }
+                    });
+
+                    $('input[name^="horas_"], #horasTarea').on('input', validarHoras);
+                    validarHoras();
+                });
+            });
+            
+            // Manejo del modal de información del cliente
+            $('button[data-target="#clienteModal"]').on('click', function(event) {
+                event.preventDefault();
+                var url = $(this).data('url');
+                $('#clienteModal').find('.modal-body').empty();
+                $('#clienteModal').find('.modal-body').load(url, function() {
+                    $('#clienteModal').modal('show');
+                });
+            });
+
+            $('#clienteModal').on('hidden.bs.modal', function () {
+                $(this).find('.modal-body').empty();
+            });
+
+            // Manejo del modal de documentos
+            $('button[data-toggle="modal"][data-target="#documentosModal"]').on('click', function(event) {
+                event.preventDefault();
+                var url = $(this).data('url');
+                $.ajax({
+                    url: url,
+                    method: 'GET',
+                    success: function(response) {
+                        $('#documentosModal').find('.modal-content').html(response);
+                        $('#documentosModal').modal('show');
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error loading modal content:', error);
+                        alert('Error loading modal content. Please try again.');
+                    }
+                });
+            });
+
+            $('#documentosModal').on('hidden.bs.modal', function () {
+                $(this).find('.modal-content').empty();
+            });
+
+            // Manejo de adjuntos
+            $('#formAgregarAdjunto').on('submit', function(e) {
+                e.preventDefault();
+                var formData = new FormData(this);
                 
-                if (incluir) {
-                    labelsFiltered.push(label);
-                    avanceRealFiltered.push(avanceReal[index]);
+                $.ajax({
+                    url: `/tarea_adjunto/agregar/${currentTareaId}/${currentTipoTarea}/`,
+                    type: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        if (response.success) {
+                            alert(response.message);
+                            $('#formAgregarAdjunto')[0].reset();
+                            cargarListaAdjuntos();
+                            $('#lista-tab').tab('show');
+                        } else {
+                            alert('Error: ' + response.message);
+                        }
+                    },
+                    error: function(xhr, errmsg, err) {
+                        console.log(xhr.status + ": " + xhr.responseText);
+                        alert('Error al agregar el adjunto');
+                    },
+                    cache: false,
+                    contentType: false,
+                    processData: false
+                });
+            });
+
+            // Manejo del modal EDP
+            let monedaOptions = [];
+            let clpPresente = false;
+
+            // Generar opciones de moneda
+            {% for md in moneda %}
+                monedaOptions.push('<option value="{{ md.id }}">{{ md.MO_CMONEDA }}</option>');
+                if ('{{ md.MO_CMONEDA }}'.toUpperCase() === 'CLP') {
+                    clpPresente = true;
+                }
+            {% endfor %}
+
+            if (!clpPresente) {
+                monedaOptions.unshift('<option value="CLP" selected>CLP</option>');
+            }
+
+            function generarFilasTabla() {
+                let cantidad = parseInt($('#cantidadEdp').val());
+                let diaEmision = parseInt($('#diaEmision').val());
+                let fechaInicio = $('#fechaInicio').val();
+                
+                if (!cantidad || isNaN(cantidad) || !diaEmision || isNaN(diaEmision) || !fechaInicio) {
+                    $('#edpTable tbody').empty();
+                    return;
+                }
+
+                fechaInicio = new Date(fechaInicio + 'T00:00:00');
+                let tbody = $('#edpTable tbody');
+                tbody.empty();
+            
+                for (let i = 0; i < cantidad; i++) {
+                    let fecha = new Date(fechaInicio);
+                    fecha.setMonth(fecha.getMonth() + i);
+                    
+                    let ultimoDiaMes = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0).getDate();
+                    let diaAjustado = Math.min(diaEmision, ultimoDiaMes);
+                    fecha.setDate(diaAjustado);
+            
+                    let fechaFormateada = fecha.getFullYear() + '-' + 
+                                        String(fecha.getMonth() + 1).padStart(2, '0') + '-' + 
+                                        String(fecha.getDate()).padStart(2, '0');
+                    
+                    let fila = `<tr>
+                        <td>${fechaFormateada}</td>
+                        <td><input type="number" class="form-control form-control-sm monto" required></td>
+                        <td><select class="form-control form-control-sm moneda">${monedaOptions.join('')}</select></td>
+                        <td><input type="text" class="form-control form-control-sm medio-pago" required></td>
+                    </tr>`;
+                    tbody.append(fila);
+                }
+
+                $('.moneda').val('CLP');
+            }
+
+            // Modificar los eventos para los campos
+            $('#cantidadEdp, #diaEmision, #fechaInicio').on('change input', function() {
+                generarFilasTabla();
+            });
+
+            {% comment %} $('#fechaInicio').on('change', generarFilasTabla); {% endcomment %}
+
+            $('#guardarEdp').click(function() {
+                let datos = {
+                    cantidad: $('#cantidadEdp').val(),
+                    diaEmision: $('#diaEmision').val(),
+                    fechaInicio: $('#fechaInicio').val(),
+                    montos: [],
+                    mediosPago: [],
+                    fechasEmision: [],
+                    monedas: [],
+                    comentarioGeneral: $('#comentarioGeneral').val(),
+                    idProyecto: {{ proyecto.id }},
+                };
+
+                let datosValidos = true;
+
+                $('#edpTable tbody tr').each(function() {
+                    let monto = $(this).find('.monto').val();
+                    let medioPago = $(this).find('.medio-pago').val();
+                    let fechaEmision = $(this).find('td:first-child').text();
+                    let moneda = $(this).find('.moneda').val();
+
+                    if (!monto || !medioPago) {
+                        datosValidos = false;
+                        return false;
+                    }
+
+                    datos.montos.push(monto);
+                    datos.mediosPago.push(medioPago);
+                    datos.fechasEmision.push(fechaEmision);
+                    datos.monedas.push(moneda);
+                });
+
+                if (!datosValidos) {
+                    alert('Por favor, complete todos los campos antes de guardar.');
+                    return;
+                }
+
+                console.log('Datos a enviar:', datos);  // Imprimir datos antes de enviar
+
+                $.ajax({
+                    type: 'POST',
+                    url: '/tarea_financiera_add_edp/',
+                    data: JSON.stringify(datos),
+                    contentType: 'application/json',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    success: function(response) {
+                        console.log('Respuesta del servidor:', response);
+                        $('#edpModal').modal('hide');
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Éxito!',
+                            text: 'Los datos se han guardado correctamente.',
+                            confirmButtonText: 'OK'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                location.reload();
+                            }
+                        });
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error al guardar los datos:', error);
+                        alert('Hubo un error al guardar los datos. Por favor, inténtelo de nuevo.');
+                    }
+                });
+            });
+
+            $('#diaEmision').on('input', function() {
+                let valor = $(this).val();
+                if (valor < 1) $(this).val(1);
+                if (valor > 31) $(this).val(31);
+            });
+
+            $('#edpModal').on('shown.bs.modal', function() {
+                $('#edpTable tbody').empty();
+                $('#cantidadEdp').val('');
+                $('#diaEmision').val('');
+                $('#fechaInicio').val('');
+                $('#comentarioGeneral').val('');
+            });
+
+            $('#cantidadEdp').on('input', function() {
+                let valor = parseInt($(this).val());
+                if (valor > 50) {
+                    $(this).val(50);
+                } else if (valor < 1) {
+                    $(this).val(1);
+                }
+                if ($('#diaEmision').val() && $('#fechaInicio').val()) {
+                    generarFilasTabla();
                 }
             });
             
-            chart.data.labels = labelsFiltered;
-            chart.data.datasets[0].data = avanceRealFiltered;
-            chart.update();
-        }
-        // Panel de botones para filtrar tareas
-        var botonesPanel = document.createElement('div');
-        botonesPanel.className = 'btn-group mb-3';
-        botonesPanel.innerHTML = `
-            <button type="button" class="btn btn-primary" onclick="filtrarTareas('todas')">Todas las Tareas</button>
-            <button type="button" class="btn btn-info" onclick="filtrarTareas('financieras')">Tareas Financieras</button>
-            <button type="button" class="btn btn-success" onclick="filtrarTareas('ingenieria')">Tareas de Ingeniería</button>
-            <button type="button" class="btn btn-warning" onclick="filtrarTareas('generales')">Tareas Generales</button>
-        `;
-        document.getElementById('avanceChart').parentNode.insertBefore(botonesPanel, document.getElementById('avanceChart'));
+            $('#diaEmision').on('input', function() {
+                let valor = $(this).val();
+                if (valor < 1) $(this).val(1);
+                if (valor > 31) $(this).val(31);
+                if ($('#cantidadEdp').val() && $('#fechaInicio').val()) {
+                    generarFilasTabla();
+                }
+            });
+        });
 
-        // Inicialmente mostrar todas las tareas
-        filtrarTareas('todas');       {% endcomment %}
-    </script>        
-    <!-- Gantt -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {            
-            // Carta Gantt
+        // Código para el gráfico Gantt
+        document.addEventListener('DOMContentLoaded', function() {
             var tasks = [];
             
-            // Función para obtener las dependencias de una tarea
             function getDependencies(tareaId) {
                 var dependencies = [];
                 {% for dep in dependencias_general %}
@@ -759,7 +1122,6 @@
                 return dependencies.join(',');
             }
 
-            // Modificar la función createTask para incluir las dependencias
             function createTask(id, name, start, end, progress, isMilestone, isCritical) {
                 var dependencies = getDependencies(id);
                 return {
@@ -824,6 +1186,7 @@
                     console.error('Error al crear tarea financiera:', error);
                 }
             {% endfor %}
+
             // Ordenar las tareas por fecha de inicio
             tasks.sort(function(a, b) {
                 return new Date(a.start) - new Date(b.start);
@@ -955,440 +1318,6 @@
                     e.preventDefault();
                     e.stopPropagation();
                 });
-            });
-        });
-    </script>
-    <!-- Validación de horas -->
-    <script>
-        {% comment %} // Variable global para almacenar el estado de validación
-        let horasValidas = true;
-
-        // Función para validar las horas
-        function validarHoras() {
-            const horasTarea = parseFloat($('#horasTarea').val()) || 0;
-            let totalHorasAsignadas = 0;
-
-            // Sumar horas de empleados, contratistas y recursos
-            $('input[name^="horas_"]').each(function() {
-                totalHorasAsignadas += parseFloat($(this).val()) || 0;
-            });
-
-            const mensajeError = $('#mensajeErrorHoras');
-            if (totalHorasAsignadas > horasTarea) {
-                mensajeError.text('La suma de las horas asignadas no puede ser mayor a las horas totales de la tarea.');
-                mensajeError.show();
-                horasValidas = false;
-            } else {
-                mensajeError.hide();
-                horasValidas = true;
-            }
-
-            // Actualizar el estado del botón de envío
-            $('#btnGuardarCambios').prop('disabled', !horasValidas);
-        } {% endcomment %}
-
-        $(document).ready(function() {
-            $('#updateDataModal').on('show.bs.modal', function (event) {
-                var button = $(event.relatedTarget);
-                var url = button.data('url');
-                var modal = $(this);
-                modal.find('.modal-body').load(url, function() {
-                    // Agregar mensaje de error al formulario
-                    $('#formEditarTarea').append('<div id="mensajeErrorHoras" class="alert alert-danger mt-3" style="display: none;"></div>');
-
-                    $('#formEditarTarea').on('submit', function(e) {
-                        e.preventDefault();
-                        if (horasValidas) {
-                            $.ajax({
-                                url: url,
-                                method: 'POST',
-                                data: $(this).serialize(),
-                                dataType: 'json',
-                                success: function(response) {
-                                    if (response.success) {
-                                        $('#updateDataModal').modal('hide');
-                                        Swal.fire({
-                                            icon: 'success',
-                                            title: 'Éxito',
-                                            text: response.message,
-                                            showConfirmButton: false,
-                                            timer: 1500
-                                        }).then(() => {
-                                            if (response.redirect_url) {
-                                                window.location.href = response.redirect_url;
-                                            } else {
-                                                location.reload();
-                                            }
-                                        });
-                                    } else {
-                                        Swal.fire({
-                                            icon: 'error',
-                                            title: 'Error',
-                                            text: response.message
-                                        });
-                                    }
-                                },
-                                error: function(xhr, status, error) {
-                                    Swal.fire({
-                                        icon: 'error',
-                                        title: 'Error',
-                                        text: 'Hubo un problema al procesar la solicitud. Por favor, inténtelo de nuevo.'
-                                    });
-                                }
-                            });
-                        }
-                    });
-
-                    // Agregar evento para validar en tiempo real
-                    $('input[name^="horas_"], #horasTarea').on('input', validarHoras);
-
-                    // Validación inicial
-                    validarHoras();
-                });
-            });
-        });
-    </script>
-    <!-- Información de cliente -->
-    <script>
-        $(document).ready(function() {
-            $('button[data-target="#clienteModal"]').on('click', function(event) {
-                event.preventDefault();
-                var url = $(this).data('url');
-                $('#clienteModal').find('.modal-body').empty();
-                $('#clienteModal').find('.modal-body').load(url, function() {
-                    $('#clienteModal').modal('show');
-                });
-            });
-            $('#clienteModal').on('hidden.bs.modal', function () {
-                $(this).find('.modal-body').empty();
-            });
-        });        
-    </script>
-    <!--Modal de documentos-->
-    <script>
-        // Initialize logger
-        var logger = {
-            log: function(message) {
-                console.log('Logger: ' + message);
-            }
-        };
-
-        $(document).ready(function() {
-            logger.log('Document ready');
-            
-            // Change the selector to target the specific button
-            $('button[data-toggle="modal"][data-target="#documentosModal"]').on('click', function(event) {
-                event.preventDefault();
-                var url = $(this).data('url');
-                logger.log('Modal button clicked. URL: ' + url);
-                
-                // Add error handling for AJAX request
-                $.ajax({
-                    url: url,
-                    method: 'GET',
-                    success: function(response) {
-                        $('#documentosModal').find('.modal-content').html(response);
-                        logger.log('Modal content loaded');
-                        $('#documentosModal').modal('show');
-                    },
-                    error: function(xhr, status, error) {
-                        logger.log('Error loading modal content: ' + error);
-                        alert('Error loading modal content. Please try again.');
-                    }
-                });
-            });
-
-            $('#documentosModal').on('hidden.bs.modal', function () {
-                logger.log('Modal hidden');
-                $(this).find('.modal-content').empty();
-            });
-
-            // Add additional logging
-            logger.log('Event handlers set up');
-        });        
-    </script>
-    <!-- Adjuntos tareas -->
-    <script>
-        var currentTareaId, currentTipoTarea;
-        
-        function openAdjuntosModal(tareaId, tipoTarea) {
-            currentTareaId = tareaId;
-            currentTipoTarea = tipoTarea;
-            $('#adjuntosModal').modal('show');
-            cargarListaAdjuntos();
-        }
-        
-        function cargarListaAdjuntos() {
-            $.ajax({
-                url: `/tarea_adjuntos/${currentTareaId}/${currentTipoTarea}/`,
-                method: 'GET',
-                success: function(data) {
-                    var tableHtml = '<table class="table table-striped">' +
-                                    '<thead><tr><th>Nombre</th><th>Descripción</th><th>Fecha de Creación</th><th>Acciones</th></tr></thead>' +
-                                    '<tbody>';
-                    
-                    if (data.adjuntos.length === 0) {
-                        tableHtml += '<tr><td colspan="4" class="text-center">No hay adjuntos para esta tarea.</td></tr>';
-                    } else {
-                        data.adjuntos.forEach(function(adjunto) {
-                            tableHtml += `<tr>
-                                <td>${adjunto.nombre}</td>
-                                <td>${adjunto.descripcion}</td>
-                                <td>${adjunto.fecha_creacion}</td>
-                                <td>
-                                    <button onclick="editarAdjunto(${adjunto.id})" class="btn btn-primary btn-sm"><i class="fas fa-edit"></i> Editar</button>
-                                    <button onclick="eliminarAdjunto(${adjunto.id})" class="btn btn-danger btn-sm"><i class="fas fa-trash-alt"></i> Eliminar</button>
-                                    <a href="/tarea_adjunto/descargar/${adjunto.id}/${currentTipoTarea}/" class="btn btn-success btn-sm"><i class="fas fa-download"></i> Descargar</a>
-                                </td>
-                            </tr>`;
-                        });
-                    }
-                    
-                    tableHtml += '</tbody></table>';
-                    $('#lista').html(tableHtml);
-                },
-                error: function(xhr, status, error) {
-                    console.error("Error al cargar los adjuntos:", error);
-                    $('#lista').html('<p class="text-danger">Error al cargar los adjuntos. Por favor, intente nuevamente.</p>');
-                }
-            });
-        }
-        
-        $(document).ready(function() {
-            $('#formAgregarAdjunto').on('submit', function(e) {
-                e.preventDefault();
-                var formData = new FormData(this);
-                
-                $.ajax({
-                    url: `/tarea_adjunto/agregar/${currentTareaId}/${currentTipoTarea}/`,
-                    type: 'POST',
-                    data: formData,
-                    success: function(response) {
-                        if (response.success) {
-                            alert(response.message);
-                            $('#formAgregarAdjunto')[0].reset();
-                            cargarListaAdjuntos();
-                            $('#lista-tab').tab('show');
-                        } else {
-                            alert('Error: ' + response.message);
-                        }
-                    },
-                    error: function(xhr, errmsg, err) {
-                        console.log(xhr.status + ": " + xhr.responseText);
-                        alert('Error al agregar el adjunto');
-                    },
-                    cache: false,
-                    contentType: false,
-                    processData: false
-                });
-            });
-        });
-        
-        function editarAdjunto(adjuntoId) {
-            $.ajax({
-                url: `/tarea_adjunto/editar/${adjuntoId}/${currentTipoTarea}/`,
-                method: 'GET',
-                success: function(data) {
-                    $('#editar').html(data);
-                    $('#editar-tab').show().tab('show');
-                    
-                    $('#adjuntoForm').off('submit').on('submit', function(e) {
-                        e.preventDefault();
-                        var formData = new FormData(this);
-                        
-                        $.ajax({
-                            url: `/tarea_adjunto/editar/${adjuntoId}/${currentTipoTarea}/`,
-                            type: 'POST',
-                            data: formData,
-                            headers: {
-                                'X-CSRFToken': formData.get('csrfmiddlewaretoken')
-                            },
-                            success: function(response) {
-                                if (response.success) {
-                                    alert(response.message);
-                                    cargarListaAdjuntos();
-                                    $('#lista-tab').tab('show');
-                                    $('#editar-tab').hide();
-                                } else {
-                                    alert('Error: ' + response.message);
-                                }
-                            },
-                            error: function(xhr, errmsg, err) {
-                                console.log(xhr.status + ": " + xhr.responseText);
-                                alert('Error al editar el adjunto');
-                            },
-                            cache: false,
-                            contentType: false,
-                            processData: false
-                        });
-                    });
-                },
-                error: function(xhr, status, error) {
-                    console.error("Error al cargar el formulario de edición:", error);
-                    alert('Error al cargar el formulario de edición');
-                }
-            });
-        }
-        
-        function eliminarAdjunto(adjuntoId) {
-            if (confirm('¿Está seguro de que desea eliminar este adjunto?')) {
-                $.ajax({
-                    url: `/tarea_adjunto/eliminar/${adjuntoId}/${currentTipoTarea}/`,
-                    method: 'POST',
-                    data: {
-                        csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val()
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            alert(response.message);
-                            cargarListaAdjuntos();
-                        } else {
-                            alert('Error: ' + response.message);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error("Error al eliminar el adjunto:", error);
-                        alert('Error al eliminar el adjunto');
-                    }
-                });
-            }
-        }
-    </script>
-
-    <!-- Modal EDP-->
-    <script>
-        $(document).ready(function() {
-            let monedaOptions = [];
-            let clpPresente = false;
-        
-            {% for md in moneda %}
-                monedaOptions.push('<option value="{{ md.id }}">{{ md.MO_CMONEDA }}</option>');
-                if ('{{ md.MO_CMONEDA }}'.toUpperCase() === 'CLP') {
-                    clpPresente = true;
-                }
-            {% endfor %}
-        
-            if (!clpPresente) {
-                monedaOptions.unshift('<option value="CLP" selected>CLP</option>');
-            }
-        
-            function generarFilasTabla() {
-                let cantidad = parseInt($('#cantidadEdp').val());
-                let diaEmision = parseInt($('#diaEmision').val());
-                let fechaInicio = $('#fechaInicio').val();
-                
-                if (!cantidad || !diaEmision || !fechaInicio) {
-                    $('#edpTable tbody').empty();
-                    return;
-                }
-        
-                fechaInicio = new Date(fechaInicio + 'T00:00:00');
-                let tbody = $('#edpTable tbody');
-                tbody.empty();
-            
-                for (let i = 0; i < cantidad; i++) {
-                    let fecha = new Date(fechaInicio);
-                    fecha.setMonth(fecha.getMonth() + i);
-                    
-                    let ultimoDiaMes = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0).getDate();
-                    let diaAjustado = Math.min(diaEmision, ultimoDiaMes);
-                    fecha.setDate(diaAjustado);
-            
-                    let fechaFormateada = fecha.getFullYear() + '-' + 
-                                          String(fecha.getMonth() + 1).padStart(2, '0') + '-' + 
-                                          String(fecha.getDate()).padStart(2, '0');
-                    
-                    let fila = `<tr>
-                        <td>${fechaFormateada}</td>
-                        <td><input type="number" class="form-control monto" required></td>
-                        <td><select class="form-control moneda">${monedaOptions.join('')}</select></td>
-                        <td><input type="text" class="form-control medio-pago" required></td>
-                    </tr>`;
-                    tbody.append(fila);
-                }
-        
-                $('.moneda').val('CLP');
-            }
-        
-            $('#cantidadEdp, #diaEmision').on('change', function() {
-                if ($('#fechaInicio').val()) {
-                    generarFilasTabla();
-                }
-            });
-        
-            $('#fechaInicio').on('change', generarFilasTabla);
-        
-            $('#guardarEdp').click(function() {
-                let datos = {
-                    cantidad: $('#cantidadEdp').val(),
-                    diaEmision: $('#diaEmision').val(),
-                    fechaInicio: $('#fechaInicio').val(),
-                    montos: [],
-                    mediosPago: [],
-                    fechasEmision: [],
-                    monedas: [],
-                    comentarioGeneral: $('#comentarioGeneral').val(),
-                    idProyecto: {{ proyecto.id }},
-                };
-        
-                let datosValidos = true;
-        
-                $('#edpTable tbody tr').each(function() {
-                    let monto = $(this).find('.monto').val();
-                    let medioPago = $(this).find('.medio-pago').val();
-                    let fechaEmision = $(this).find('td:first-child').text();
-                    let moneda = $(this).find('.moneda').val();
-        
-                    if (!monto || !medioPago) {
-                        datosValidos = false;
-                        return false;
-                    }
-        
-                    datos.montos.push(monto);
-                    datos.mediosPago.push(medioPago);
-                    datos.fechasEmision.push(fechaEmision);
-                    datos.monedas.push(moneda);
-                });
-        
-                if (!datosValidos) {
-                    alert('Por favor, complete todos los campos antes de guardar.');
-                    return;
-                }
-        
-                console.log('Datos a enviar:', datos);  // Imprimir datos antes de enviar
-        
-                $.ajax({
-                    type: 'POST',
-                    url: '/tarea_financiera_add_edp/',
-                    data: JSON.stringify(datos),
-                    contentType: 'application/json',
-                    headers: {
-                        'X-CSRFToken': '{{ csrf_token }}'
-                    },
-                    success: function(response) {
-                        console.log('Respuesta del servidor:', response);
-                        $('#edpModal').modal('hide');
-                        // Aquí puedes agregar código para actualizar la interfaz de usuario
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Error al guardar los datos:', error);
-                        alert('Hubo un error al guardar los datos. Por favor, inténtelo de nuevo.');
-                    }
-                });
-            });
-        
-            $('#diaEmision').on('input', function() {
-                let valor = $(this).val();
-                if (valor < 1) $(this).val(1);
-                if (valor > 31) $(this).val(31);
-            });
-        
-            $('#edpModal').on('shown.bs.modal', function() {
-                $('#edpTable tbody').empty();
-                $('#cantidadEdp').val('');
-                $('#diaEmision').val('');
-                $('#fechaInicio').val('');
-                $('#comentarioGeneral').val('');
             });
         });
     </script>
