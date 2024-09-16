@@ -6,6 +6,18 @@ $(document).ready(function() {
             dom: 'Bfrtip',
             buttons: ['copy', 'csv', 'excel', 'pdf', 'print']
         });
+        $('#tabla-financieras').DataTable({
+            dom: 'Bfrtip',
+            buttons: ['copy', 'csv', 'excel', 'pdf', 'print']
+        });
+        $('#tabla-generales').DataTable({
+            dom: 'Bfrtip',
+            buttons: ['copy', 'csv', 'excel', 'pdf', 'print']
+        });
+        $('#tabla-ingenieria').DataTable({
+            dom: 'Bfrtip',
+            buttons: ['copy', 'csv', 'excel', 'pdf', 'print']
+        });
 
         // [ Column Selectors ]
         $('#cbtn-selectors').DataTable({

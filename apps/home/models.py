@@ -165,7 +165,6 @@ class CATEGORIA_PROYECTO(models.Model):
         verbose_name_plural = 'Categorías'
 
 
-
 class CATEGORIA_CLIENTE(models.Model):
     CA_CNOMBRE = models.CharField(max_length=255, verbose_name='Nombre de la categoría')
     CA_CDESCRIPCION = models.TextField(verbose_name='Descripción de la categoría')
@@ -815,60 +814,6 @@ class ETAPA(models.Model):
         verbose_name = 'Etapa de Proyecto'
         verbose_name_plural = 'Etapas de Proyectos'
 
-class ESTADO_DE_PAGO(models.Model):
-    EP_PROYECTO = models.ForeignKey(PROYECTO_CLIENTE, on_delete=models.CASCADE, related_name='estados_de_pago', verbose_name='Proyecto cliente')
-    EP_CNUMERO = models.CharField(max_length=20, unique=True, verbose_name='Número de estado de pago')
-    EP_FFECHA = models.DateField(verbose_name='Fecha de estado de pago')
-    EP_CESTADO = models.CharField(max_length=20, verbose_name='Estado', choices=[
-        ('PENDIENTE', 'Pendiente'),
-        ('APROBADO', 'Aprobado'),
-        ('RECHAZADO', 'Rechazado'),
-    ])
-    EP_NTOTAL = models.DecimalField(max_digits=20, decimal_places=2, verbose_name='Total')
-    EP_MONEDA = models.ForeignKey(MONEDA, on_delete=models.SET_NULL, null=True, blank=True, related_name='estados_de_pago_moneda', verbose_name='Moneda', default=None)
-    EP_COBSERVACIONES = models.TextField(blank=True, null=True, verbose_name='Observaciones')
-    EP_FFECHA_CREACION = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de creación')
-    EP_FFECHA_MODIFICACION = models.DateTimeField(auto_now=True, verbose_name='Fecha de modificación')
-    EP_CUSUARIO_CREADOR = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='estados_de_pago_creados', verbose_name='Usuario creador')
-    EP_CUSUARIO_MODIFICADOR = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='estados_de_pago_modificados', verbose_name='Usuario modificador')
-    EP_CESTADO_PAGO = models.CharField(max_length=20, verbose_name='Estado de pago', choices=[
-        ('PENDIENTE', 'Pendiente'),
-        ('PARCIAL', 'Parcial'),
-        ('COMPLETO', 'Completo'),
-    ], default='PENDIENTE')
-    EP_NMONTO_PAGADO = models.DecimalField(max_digits=20, decimal_places=2, default=0, verbose_name='Monto pagado')
-    EP_FFECHA_ULTIMO_PAGO = models.DateField(null=True, blank=True, verbose_name='Fecha del último pago')
-
-    def __str__(self):
-        return f"Estado de Pago {self.EP_CNUMERO} - {self.EP_PROYECTO.PC_CNOMBRE}"
-
-    class Meta:
-        db_table = 'ESTADO_DE_PAGO'
-        verbose_name = 'Estado de Pago'
-        verbose_name_plural = 'Estados de Pago'
-
-class ESTADO_DE_PAGO_DETALLE(models.Model):
-    EDD_ESTADO_DE_PAGO = models.ForeignKey(ESTADO_DE_PAGO, on_delete=models.CASCADE, related_name='detalles', verbose_name='Estado de Pago')
-    EDD_PRODUCTO = models.ForeignKey(PRODUCTO, on_delete=models.CASCADE, related_name='detalles_edp', verbose_name='Producto')
-    EDD_NCANTIDAD = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Cantidad')
-    EDD_NPRECIO_UNITARIO = models.DecimalField(max_digits=15, decimal_places=2, verbose_name='Precio unitario')
-    EDD_NSUBTOTAL = models.DecimalField(max_digits=15, decimal_places=2, verbose_name='Subtotal')
-    EDD_NDESCUENTO = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name='Descuento')
-    EDD_NTOTAL = models.DecimalField(max_digits=15, decimal_places=2, verbose_name='Total')
-    EDD_FFECHA_CREACION = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de creación')
-    EDD_FFECHA_MODIFICACION = models.DateTimeField(auto_now=True, verbose_name='Fecha de modificación')
-    EDD_CUSUARIO_CREADOR = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='detalles_edp_creados', verbose_name='Usuario creador')
-    EDD_CUSUARIO_MODIFICADOR = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='detalles_edp_modificados', verbose_name='Usuario modificador')
-
-    def __str__(self):
-        return f"Detalle de EDP {self.EDD_ESTADO_DE_PAGO.EP_CNUMERO} - {self.EDD_ACTIVIDAD}"
-
-    class Meta:
-        db_table = 'EDP_DETALLE'
-        verbose_name = 'Detalle de Estado de Pago'
-        verbose_name_plural = 'Detalles de Estados de Pago'
-        unique_together = ('EDD_ESTADO_DE_PAGO', 'EDD_PRODUCTO')
-
 class FICHA_CIERRE(models.Model):    
     FC_JEFE_DE_PROYECTO = models.CharField(max_length=255, null=True, verbose_name='Jefe de Proyecto')
     FC_NOMBRE_DE_PROYECTO = models.ForeignKey(PROYECTO_CLIENTE, on_delete=models.CASCADE, related_name='fichas_cierre', verbose_name='Nombre de Proyecto')
@@ -936,7 +881,7 @@ class TAREA_GENERAL(models.Model):
     TG_BCRITICA = models.BooleanField(default=False, verbose_name='En la ruta crítica')
     TG_PROYECTO_CLIENTE = models.ForeignKey(PROYECTO_CLIENTE, on_delete=models.CASCADE, null=True, blank=True, related_name='tareas_generales_proyecto', verbose_name='Proyecto de Cliente')
     def __str__(self):
-        return f"Tarea General {self.TG_CCODIGO} - {self.TG_CNOMBRE} ({self.TG_ETAPA.ET_CNOMBRE})"
+        return f"Tarea General {self.TG_CCODIGO} - {self.TG_CNOMBRE} "
 
     def get_progreso(self):
         return self.TG_NPROGRESO
@@ -971,7 +916,7 @@ class TAREA_INGENIERIA(models.Model):
     TG_BCRITICA = models.BooleanField(default=False, verbose_name='En la ruta crítica')
     TI_PROYECTO_CLIENTE = models.ForeignKey(PROYECTO_CLIENTE, on_delete=models.CASCADE, null=True, blank=True, related_name='tareas_ingenieria_proyecto', verbose_name='Proyecto de Cliente')
     def __str__(self):
-        return f"Tarea de Ingeniería {self.TI_CCODIGO} - {self.TI_CNOMBRE} ({self.TI_ETAPA.ET_CNOMBRE})"
+        return f"Tarea de Ingeniería {self.TI_CCODIGO} - {self.TI_CNOMBRE} "
 
     def get_progreso(self):
         return self.TI_NPROGRESO
@@ -1007,7 +952,7 @@ class TAREA_FINANCIERA(models.Model):
     TG_BCRITICA = models.BooleanField(default=False, verbose_name='En la ruta crítica')
     TF_PROYECTO_CLIENTE = models.ForeignKey(PROYECTO_CLIENTE, on_delete=models.CASCADE, null=True, blank=True, related_name='tareas_financieras_proyecto', verbose_name='Proyecto de Cliente')
     def __str__(self):
-        return f"Tarea Financiera {self.TF_CCODIGO} - {self.TF_CNOMBRE} ({self.TF_ETAPA.ET_CNOMBRE})"
+        return f"Tarea Financiera {self.TF_CCODIGO} - {self.TF_CNOMBRE} "
 
     def get_progreso(self):
         return self.TF_NPROGRESO
@@ -1309,6 +1254,61 @@ class ASIGNACION_RECURSO_TAREA_FINANCIERA(models.Model):
         db_table = 'ASIGNACION_RECURSO_TAREA_FINANCIERA'
         verbose_name = 'Asignación de Recurso a Tarea Financiera'
         verbose_name_plural = 'Asignaciones de Recursos a Tareas Financieras'
+
+class ESTADO_DE_PAGO(models.Model):
+    EP_PROYECTO = models.ForeignKey(PROYECTO_CLIENTE, on_delete=models.CASCADE, related_name='estados_de_pago', verbose_name='Proyecto cliente')
+    EP_TAREA_FINANCIERA = models.ForeignKey(TAREA_FINANCIERA, on_delete=models.CASCADE, blank=True, null=True, related_name='estados_de_pago', verbose_name='Tarea financiera')
+    EP_CNUMERO = models.CharField(max_length=20, unique=True, verbose_name='Número de estado de pago')
+    EP_FFECHA = models.DateField(verbose_name='Fecha de estado de pago')
+    EP_CESTADO = models.CharField(max_length=20, verbose_name='Estado', choices=[
+        ('PENDIENTE', 'Pendiente'),
+        ('APROBADO', 'Aprobado'),
+        ('RECHAZADO', 'Rechazado'),
+    ])
+    EP_NTOTAL = models.DecimalField(max_digits=20, decimal_places=2, verbose_name='Total')
+    EP_MONEDA = models.ForeignKey(MONEDA, on_delete=models.SET_NULL, null=True, blank=True, related_name='estados_de_pago_moneda', verbose_name='Moneda', default=None)
+    EP_COBSERVACIONES = models.TextField(blank=True, null=True, verbose_name='Observaciones')
+    EP_FFECHA_CREACION = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de creación')
+    EP_FFECHA_MODIFICACION = models.DateTimeField(auto_now=True, verbose_name='Fecha de modificación')
+    EP_CUSUARIO_CREADOR = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='estados_de_pago_creados', verbose_name='Usuario creador')
+    EP_CUSUARIO_MODIFICADOR = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='estados_de_pago_modificados', verbose_name='Usuario modificador')
+    EP_CESTADO_PAGO = models.CharField(max_length=20, verbose_name='Estado de pago', choices=[
+        ('PENDIENTE', 'Pendiente'),
+        ('PARCIAL', 'Parcial'),
+        ('COMPLETO', 'Completo'),
+    ], default='PENDIENTE')
+    EP_NMONTO_PAGADO = models.DecimalField(max_digits=20, decimal_places=2, default=0, verbose_name='Monto pagado')
+    EP_FFECHA_ULTIMO_PAGO = models.DateField(null=True, blank=True, verbose_name='Fecha del último pago')
+
+    def __str__(self):
+        return f"Estado de Pago {self.EP_CNUMERO} - {self.EP_PROYECTO.PC_CNOMBRE}"
+
+    class Meta:
+        db_table = 'ESTADO_DE_PAGO'
+        verbose_name = 'Estado de Pago'
+        verbose_name_plural = 'Estados de Pago'
+
+class ESTADO_DE_PAGO_DETALLE(models.Model):
+    EDD_ESTADO_DE_PAGO = models.ForeignKey(ESTADO_DE_PAGO, on_delete=models.CASCADE, related_name='detalles', verbose_name='Estado de Pago')
+    EDD_PRODUCTO = models.ForeignKey(PRODUCTO, on_delete=models.CASCADE, related_name='detalles_edp', verbose_name='Producto')
+    EDD_NCANTIDAD = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Cantidad')
+    EDD_NPRECIO_UNITARIO = models.DecimalField(max_digits=15, decimal_places=2, verbose_name='Precio unitario')
+    EDD_NSUBTOTAL = models.DecimalField(max_digits=15, decimal_places=2, verbose_name='Subtotal')
+    EDD_NDESCUENTO = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name='Descuento')
+    EDD_NTOTAL = models.DecimalField(max_digits=15, decimal_places=2, verbose_name='Total')
+    EDD_FFECHA_CREACION = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de creación')
+    EDD_FFECHA_MODIFICACION = models.DateTimeField(auto_now=True, verbose_name='Fecha de modificación')
+    EDD_CUSUARIO_CREADOR = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='detalles_edp_creados', verbose_name='Usuario creador')
+    EDD_CUSUARIO_MODIFICADOR = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='detalles_edp_modificados', verbose_name='Usuario modificador')
+
+    def __str__(self):
+        return f"Detalle de EDP {self.EDD_ESTADO_DE_PAGO.EP_CNUMERO} - {self.EDD_ACTIVIDAD}"
+
+    class Meta:
+        db_table = 'EDP_DETALLE'
+        verbose_name = 'Detalle de Estado de Pago'
+        verbose_name_plural = 'Detalles de Estados de Pago'
+        unique_together = ('EDD_ESTADO_DE_PAGO', 'EDD_PRODUCTO')
 
 class ACTA_REUNION(models.Model):
     AR_ETAPA = models.ForeignKey(ETAPA, on_delete=models.CASCADE, related_name='actas_reunion', verbose_name='Etapa del Proyecto')
