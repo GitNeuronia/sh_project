@@ -1258,7 +1258,7 @@ class ASIGNACION_RECURSO_TAREA_FINANCIERA(models.Model):
 class ESTADO_DE_PAGO(models.Model):
     EP_PROYECTO = models.ForeignKey(PROYECTO_CLIENTE, on_delete=models.CASCADE, related_name='estados_de_pago', verbose_name='Proyecto cliente')
     EP_TAREA_FINANCIERA = models.ForeignKey(TAREA_FINANCIERA, on_delete=models.CASCADE, blank=True, null=True, related_name='estados_de_pago', verbose_name='Tarea financiera')
-    EP_CNUMERO = models.CharField(max_length=20, unique=True, verbose_name='Número de estado de pago')
+    EP_CNUMERO = models.CharField(max_length=20, verbose_name='Número de estado de pago')
     EP_FFECHA = models.DateField(verbose_name='Fecha de estado de pago')
     EP_CESTADO = models.CharField(max_length=20, verbose_name='Estado', choices=[
         ('PENDIENTE', 'Pendiente'),

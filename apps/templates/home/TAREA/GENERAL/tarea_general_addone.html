@@ -310,7 +310,7 @@
             });
         });
     </script>
-    <script>
+    {% comment %} <script>
         document.addEventListener('DOMContentLoaded', function() {
             const proyectoSelect = document.getElementById('{{ form.TG_PROYECTO_CLIENTE.id_for_label }}');
             const tipoCambioInfo = document.getElementById('tipo-cambio-info');
@@ -326,5 +326,5 @@
                 }
             });
         });
-    </script>
+    </script> {% endcomment %}
 {% endblock javascripts %}

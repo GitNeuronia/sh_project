@@ -2140,21 +2140,27 @@ def TAREA_GENERAL_LISTALL(request):
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
-def TAREA_GENERAL_ADDONE(request, page):
+def TAREA_GENERAL_ADDONE(request, page, pk):
     if not has_auth(request.user, 'ADD_TAREAS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
         return redirect('/')
     try:
+        
         form = formTAREA_GENERAL()
         form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_GENERAL()
         form_asignacion_contratista = formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_GENERAL()
         form_asignacion_recurso = formASIGNACION_RECURSO_TAREA_GENERAL()
 
+        if pk == 0:
+            proyect = None
+        else:
+            proyect = PROYECTO_CLIENTE.objects.filter(id=pk).first()
         if request.method == 'POST':
             form = formTAREA_GENERAL(request.POST)
             if form.is_valid():
                 tarea = form.save(commit=False)
-                tarea.TG_CUSUARIO_CREADOR = request.user                                                
+                tarea.TG_CUSUARIO_CREADOR = request.user
+                tarea.TG_PROYECTO_CLIENTE = proyect                                                
                 tarea.save()
                 crear_log(request.user, 'Crear Tarea General', f'Se creó la tarea general: {tarea.TG_CNOMBRE}')
                 # Manejar asignaciones múltiples
@@ -2214,9 +2220,13 @@ def TAREA_GENERAL_ADDONE(request, page):
                     return redirect('/tarea_general_listall/')
             else:
                 messages.error(request, 'Por favor, corrija los errores en el formulario.')
+        else:
+            # Inicializar el formulario con el proyecto si existe
+            initial_data = {}
+            if proyect:
+                initial_data['TG_PROYECTO_CLIENTE'] = proyect
+            form = formTAREA_GENERAL(initial=initial_data)
         
-
-
         ctx = {
             'form': form,
             'form_asignacion_empleado': form_asignacion_empleado,
@@ -2450,7 +2460,7 @@ def TAREA_INGENIERIA_LISTALL(request):
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
-def TAREA_INGENIERIA_ADDONE(request, page):
+def TAREA_INGENIERIA_ADDONE(request, page, pk):
     if not has_auth(request.user, 'ADD_TAREAS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
         return redirect('/')
@@ -2459,6 +2469,11 @@ def TAREA_INGENIERIA_ADDONE(request, page):
         form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_INGENIERIA()
         form_asignacion_contratista = formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_INGENIERIA()
         form_asignacion_recurso = formASIGNACION_RECURSO_TAREA_INGENIERIA()
+
+        if pk == 0:
+            proyect = None
+        else:
+            proyect = PROYECTO_CLIENTE.objects.filter(id=pk).first()
 
         if request.method == 'POST':
             form = formTAREA_INGENIERIA(request.POST)
@@ -2498,7 +2513,7 @@ def TAREA_INGENIERIA_ADDONE(request, page):
                         AEC_FFECHA_FINALIZACION=tarea.TI_FFECHA_FIN_ESTIMADA,
                         AEC_CUSUARIO_CREADOR=request.user
                     )
-                    crear_log(request.user, 'Crear Asignación de Contratista a Tarea de Ingeniería', f'Se creó la asignación de contratista a tarea de ingeniería: {tarea.TI_CNOMBRE} para el contratista: {id_emp.EM_CNOMBRE}')
+                    crear_log(request.user, 'Crear Asignación de Contratista a Tarea de Ingeniería', f'Se creó la asignación de contratista a tarea de ingeniería: {tarea.TI_CNOMBRE} para el contratista: {id_emp.EC_CNOMBRE}')
                     asignacion.save()
 
                 # Procesar recursos                
@@ -2525,7 +2540,12 @@ def TAREA_INGENIERIA_ADDONE(request, page):
                     return redirect('/tarea_ingenieria_listall/')
             else:
                 messages.error(request, 'Por favor, corrija los errores en el formulario.')
-        
+        else:
+            # Inicializar el formulario con el proyecto si existe
+            initial_data = {}
+            if proyect:
+                initial_data['TI_PROYECTO_CLIENTE'] = proyect
+            form = formTAREA_INGENIERIA(initial=initial_data)
 
         
         ctx = {
@@ -2760,7 +2780,7 @@ def Construir_codigo_tarea(request, proyecto_cliente):
     codigo = proyecto_cliente.PC_CCODIGO + '-TF' + str(TAREA_FINANCIERA.objects.filter(TF_PROYECTO_CLIENTE=proyecto_cliente).count() + 1)
     return codigo
 
-def TAREA_FINANCIERA_ADDONE(request, page):
+def TAREA_FINANCIERA_ADDONE(request, page, pk):
     if not has_auth(request.user, 'ADD_TAREAS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')
         return redirect('/')
@@ -2769,6 +2789,12 @@ def TAREA_FINANCIERA_ADDONE(request, page):
         form_asignacion_empleado = formASIGNACION_EMPLEADO_TAREA_FINANCIERA()
         form_asignacion_contratista = formASIGNACION_EMPLEADO_CONTRATISTA_TAREA_FINANCIERA()
         form_asignacion_recurso = formASIGNACION_RECURSO_TAREA_FINANCIERA()        
+        
+        if pk == 0:
+            proyect = None
+        else:
+            proyect = PROYECTO_CLIENTE.objects.filter(id=pk).first()
+
         if request.method == 'POST':
             form = formTAREA_FINANCIERA(request.POST)
             
@@ -2818,7 +2844,7 @@ def TAREA_FINANCIERA_ADDONE(request, page):
                         AEC_FFECHA_FINALIZACION=fecha_fin_estimada,
                         AEC_CUSUARIO_CREADOR=request.user
                     )
-                    crear_log(request.user, 'Crear Asignación de Contratista a Tarea Financiera', f'Se creó la asignación de contratista a tarea financiera: {tarea.TF_CNOMBRE} para el contratista: {id_emp.EM_CNOMBRE}')
+                    crear_log(request.user, 'Crear Asignación de Contratista a Tarea Financiera', f'Se creó la asignación de contratista a tarea financiera: {tarea.TF_CNOMBRE} para el contratista: {id_emp.EC_CNOMBRE}')
                     asignacion.save()
 
                 # Procesar recursos                
@@ -2845,7 +2871,12 @@ def TAREA_FINANCIERA_ADDONE(request, page):
                     return redirect('/tarea_financiera_listall/')
             else:
                 messages.error(request, 'Por favor, corrija los errores en el formulario.')
-
+        else:
+            # Inicializar el formulario con el proyecto si existe
+            initial_data = {}
+            if proyect:
+                initial_data['TF_PROYECTO_CLIENTE'] = proyect
+            form = formTAREA_FINANCIERA(initial=initial_data)
         
         ctx = {
             'form': form,
@@ -3110,7 +3141,7 @@ def TAREA_FINANCIERA_EDP(request):
             ultimo_numero = extraer_numero_tarea(ultima_tarea.TF_CCODIGO) if ultima_tarea else 0
             logger.debug(f"Último número de tarea encontrado: {ultimo_numero}")
 
-            ultimo_edp = ESTADO_DE_PAGO.objects.order_by('-EP_CNUMERO').first()
+            ultimo_edp = ESTADO_DE_PAGO.objects.filter(EP_PROYECTO=proyecto).order_by('-EP_CNUMERO').first()
             ultimo_numero_edp = int(re.search(r'-(\d+)$', ultimo_edp.EP_CNUMERO).group(1)) if ultimo_edp else 0
 
             tareas_creadas = []
