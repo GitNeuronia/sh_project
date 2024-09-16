@@ -3090,9 +3090,7 @@ def generar_codigo_tarea_unico(proyecto, ultimo_numero):
             return codigo_propuesto, ultimo_numero
     raise ValueError(f"No se pudo generar un código único después de {max_intentos} intentos")
 
-@login_required
-@csrf_exempt
-@require_http_methods(["POST"])
+
 @login_required
 @csrf_exempt
 @require_http_methods(["POST"])
