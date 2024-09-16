@@ -311,9 +311,9 @@
                                     Agregar
                                 </button>
                                 <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                                    <a class="dropdown-item" href="{% url 'tarea_financiera_addone' 1 %}">Tarea Financiera</a>
-                                    <a class="dropdown-item" href="{% url 'tarea_general_addone' 1 %}">Tarea General</a>
-                                    <a class="dropdown-item" href="{% url 'tarea_ingenieria_addone' 1%}">Tarea de Ingeniería</a>
+                                    <a class="dropdown-item" href="{% url 'tarea_financiera_addone' 1 proyecto.id %}">Tarea Financiera</a>
+                                    <a class="dropdown-item" href="{% url 'tarea_general_addone' 1 proyecto.id %}">Tarea General</a>
+                                    <a class="dropdown-item" href="{% url 'tarea_ingenieria_addone' 1 proyecto.id %}">Tarea de Ingeniería</a>
                                     <div class="dropdown-divider"></div>
                                     <a class="dropdown-item" href="#" data-toggle="modal" data-target="#edpModal">Agregar EDP</a>
                                 </div>
