@@ -156,14 +156,14 @@ def proyecto_index(request):
         filtrado = 1
 
     if not from_date:
-        from_date = datetime.datetime.now().replace(day=1).strftime('%Y-%m-%d')
+        from_date = datetime.now().replace(day=1).strftime('%Y-%m-%d')
     if not to_date:
-        to_date = datetime.datetime.now().strftime('%Y-%m-%d')
+        to_date = datetime.now().strftime('%Y-%m-%d')
 
     if from_date > to_date:
         from_date, to_date = to_date, from_date
     
-    fecha_actual = datetime.datetime.now()
+    fecha_actual = datetime.now()
     proyectos_all = PROYECTO_CLIENTE.objects.all()
 
     # Calcular estadísticas generales
@@ -277,7 +277,9 @@ def proyecto_index(request):
         'id', 'PC_CCODIGO', 'PC_CNOMBRE', 'PC_FFECHA_INICIO', 'PC_FFECHA_FIN_ESTIMADA', 
         'PC_NPRESUPUESTO', 'PC_NCOSTO_REAL', 'PC_CESTADO', 'porcentaje_avance'
     ))
-
+    total_cobrado = 0
+    total_pagado = 0
+    total_pendiente = 0
     # Convertir las fechas a strings y los Decimales a float
     for proyecto in proyectos_activos:
         if proyecto['PC_FFECHA_INICIO']:
@@ -287,6 +289,29 @@ def proyecto_index(request):
         proyecto['PC_NPRESUPUESTO'] = float(proyecto['PC_NPRESUPUESTO'])
         proyecto['PC_NCOSTO_REAL'] = float(proyecto['PC_NCOSTO_REAL'])
         proyecto['porcentaje_avance'] = min(float(proyecto['porcentaje_avance']), 100)
+
+        estados_pago = ESTADO_DE_PAGO.objects.filter(EP_PROYECTO_id=proyecto['id']).exclude(EP_CESTADO='RECHAZADO')
+        for row in estados_pago:
+            if row.EP_MONEDA.MO_CMONEDA == 'CLP':
+                total_cobrado += row.EP_NTOTAL
+                if row.EP_CESTADO_PAGO in ['PARCIAL', 'COMPLETO']:
+                    if row.EP_CESTADO_PAGO == 'PARCIAL':
+                        total_pendiente += row.EP_NTOTAL - row.EP_NMONTO_PAGADO
+
+                    total_pagado += row.EP_NMONTO_PAGADO
+                else:
+                    total_pendiente += row.EP_NTOTAL
+            else:
+                tipo_cambio_cobro = get_tipo_cambio(row.EP_MONEDA.pk, row.EP_FFECHA)
+                total_cobrado += row.EP_NTOTAL * tipo_cambio_cobro
+                if row.EP_CESTADO_PAGO in ['PARCIAL', 'COMPLETO']:
+                    tipo_cambio_pago = get_tipo_cambio(row.EP_MONEDA.pk, row.EP_FFECHA_ULTIMO_PAGO)
+                    if row.EP_CESTADO_PAGO == 'PARCIAL':
+                        total_pendiente += (row.EP_NTOTAL - row.EP_NMONTO_PAGADO) * tipo_cambio_cobro
+                    total_pagado += row.EP_NMONTO_PAGADO * tipo_cambio_pago
+                else:
+                    total_pendiente += row.EP_NTOTAL * tipo_cambio_cobro
+            
 
     context = {
         'estadisticas': estadisticas,
@@ -299,7 +324,12 @@ def proyecto_index(request):
         'proyectos_edp': proyectos_edp,
         'filtrado': filtrado,
         'from_date': from_date,
-        'to_date': to_date
+        'to_date': to_date,
+        'total_cobrado': round(total_cobrado, 0),
+        'total_pagado': round(total_pagado, 0),
+        'total_pendiente': round(total_pendiente, 0),
+        'saldo_edp': round(total_cobrado - total_pagado, 0)
+
     }
 
     return render(request, 'home/proyecto_index.html', context)
@@ -379,9 +409,9 @@ def PROYECTOS_CERRADOS(request):
         from_date = request.POST.get('fecha_desde', None)
         to_date = request.POST.get('fecha_hasta', None)
         if not from_date:
-            from_date = datetime.datetime.now().replace(day=1).strftime('%Y-%m-%d')
+            from_date = datetime.now().replace(day=1).strftime('%Y-%m-%d')
         if not to_date:
-            to_date = datetime.datetime.now().strftime('%Y-%m-%d') 
+            to_date = datetime.now().strftime('%Y-%m-%d') 
 
         proyectos = get_projects_closed_by_date(from_date, to_date)
 
