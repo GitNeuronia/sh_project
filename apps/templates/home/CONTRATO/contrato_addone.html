@@ -1,6 +1,6 @@
 {% extends "layouts/base.html" %}
 
-{% block title %} ODT de Proyecto {% endblock %} 
+{% block title %} Contrato Cliente {% endblock %} 
 
 <!-- Specific CSS goes HERE -->
 {% block stylesheets %}{% endblock stylesheets %}
@@ -15,12 +15,12 @@
                     <div class="row align-items-center">
                         <div class="col-md-12">
                             <div class="page-header-title">
-                                <h5 class="m-b-10">ODT de Proyectos</h5>
+                                <h5 class="m-b-10">Contratos de Clientes</h5>
                             </div>
                             <ul class="breadcrumb">
                                 <li class="breadcrumb-item"><a href="/"><i class="feather icon-home"></i></a></li>
-                                <li class="breadcrumb-item"><a href="{% url 'proycli_listall' %}">ODT de Proyectos</a></li>
-                                <li class="breadcrumb-item"><a href="#!">Agregar ODT de Proyecto</a></li>
+                                <li class="breadcrumb-item"><a href="{% url 'contrato_listall' %}">Contratos de Clientes</a></li>
+                                <li class="breadcrumb-item"><a href="#!">Agregar contrato de cliente</a></li>
                             </ul>
                         </div>
                     </div>
@@ -33,10 +33,10 @@
                 <div class="col-sm-12">
                     <div class="card">
                         <div class="card-header">
-                            <h5>ODT de Proyectos</h5>
+                            <h5>Contrato Cliente</h5>
                         </div>
                         <div class="card-body">
-                            <h5>Ingrese datos del Proyecto</h5>
+                            <h5>Ingrese datos del contrato de cliente</h5>
                             <hr>
                             <div class="row">
                                 <div class="col-md-12">
@@ -47,7 +47,11 @@
                                             <div class="fieldWrapper">
                                                 {{ field.errors }}
                                                 <label class="my-1 me-2" for="{{ field.id_for_label }}">{{ field.label }}:</label>
-                                                {{ field }}
+                                                {% if field.name == 'CC_FFECHA_INICIO' or field.name == 'CC_FFECHA_FIN' %}
+                                                    <input type="date" name="{{ field.name }}" class="form-control" style="width: 480px;" id="{{ field.auto_id }}" {% if field.value %}value="{{ field.value|date:'Y-m-d' }}"{% endif %}>
+                                                {% else %}
+                                                    {{ field }}
+                                                {% endif %}
                                             </div>
                                         {% endfor %}
                                         {{ form.errors }}
@@ -79,12 +83,5 @@
     <script src="/static/assets/js/plugins/bootstrap-maxlength.js"></script>
     <!-- form-advance custom js -->
     <script src="/static/assets/js/pages/form-advance-custom.js"></script>
-
-    <link rel="stylesheet" href="/static/assets/css/plugins/select2.min.css">
-    <script src="/static/assets/js/plugins/jquery.validate.min.js"></script>
-    <!-- form-picker-custom Js -->
-    <script src="/static/assets/js/pages/form-validation.js"></script>
-    <script src="/static/assets/js/plugins/select2.full.min.js"></script>
-
     
 {% endblock javascripts %}

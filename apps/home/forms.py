@@ -924,17 +924,18 @@ class formCONTRATO_CLIENTE(forms.ModelForm):
         model = CONTRATO_CLIENTE
         fields = [
             'CC_CCODIGO', 'CC_CLIENTE', 'CC_FFECHA_INICIO', 'CC_FFECHA_FIN', 'CC_NESTADO',
-            'CC_NVALOR_TOTAL', 'CC_CTERMS_CONDICIONES', 'CC_COBSERVACIONES'
+            'CC_NVALOR_TOTAL', 'CC_MONEDA', 'CC_CTERMS_CONDICIONES', 'CC_COBSERVACIONES'
         ]
         widgets = {
-            'CC_CCODIGO': forms.TextInput(attrs={'class': 'form-control'}),
-            'CC_CLIENTE': forms.Select(attrs={'class': 'form-control'}),
-            'CC_FFECHA_INICIO': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'CC_FFECHA_FIN': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'CC_NESTADO': forms.Select(attrs={'class': 'form-control'}),
-            'CC_NVALOR_TOTAL': forms.NumberInput(attrs={'class': 'form-control'}),
-            'CC_CTERMS_CONDICIONES': forms.Textarea(attrs={'class': 'form-control'}),
-            'CC_COBSERVACIONES': forms.Textarea(attrs={'class': 'form-control'}),
+            'CC_CCODIGO': forms.TextInput(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'CC_CLIENTE': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'CC_FFECHA_INICIO': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'style': 'width: 480px;'}),
+            'CC_FFECHA_FIN': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'style': 'width: 480px;'}),
+            'CC_NESTADO': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'CC_NVALOR_TOTAL': forms.NumberInput(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'CC_MONEDA': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'CC_CTERMS_CONDICIONES': forms.Textarea(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
+            'CC_COBSERVACIONES': forms.Textarea(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -973,6 +974,7 @@ class formPROYECTO_CLIENTE(forms.ModelForm):
         model = PROYECTO_CLIENTE
         fields = [
             # Basic Project Information
+            'PC_CONTRATO_CLIENTE',
             'PC_CCODIGO', 'PC_CNOMBRE', 'PC_CDESCRIPCION','PC_CLIDER_TECNICO',
             'PC_CCATEGORIA', 'PC_CTIPO', 'PC_CUNIDAD_NEGOCIO',
             
@@ -998,6 +1000,7 @@ class formPROYECTO_CLIENTE(forms.ModelForm):
             'PC_NMARGEN'
         ]
         labels = {
+            'PC_CONTRATO_CLIENTE': 'Contrato Cliente',
             'PC_CCODIGO': 'Código de proyecto',
             'PC_CNOMBRE': 'Nombre del proyecto',
             'PC_CDESCRIPCION': 'Descripción del proyecto',
@@ -1023,6 +1026,7 @@ class formPROYECTO_CLIENTE(forms.ModelForm):
             'PC_NMARGEN': 'Margen (%)'
         }
         widgets = {
+            'PC_CONTRATO_CLIENTE': forms.Select(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
             'PC_CCODIGO': forms.TextInput(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
             'PC_CNOMBRE': forms.TextInput(attrs={'class': 'form-control', 'style': 'width: 480px;'}),
             'PC_CDESCRIPCION': forms.Textarea(attrs={'class': 'form-control', 'style': 'width: 480px;'}),

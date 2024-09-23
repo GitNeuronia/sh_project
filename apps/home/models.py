@@ -134,8 +134,8 @@ class ROL(models.Model):
 
 
 class ESTADO_TAREA(models.Model):
-    ET_CNOMBRE = models.CharField(max_length=255, verbose_name='Nombre de la categoría')
-    ET_CDESCRIPCION = models.TextField(verbose_name='Descripción de la categoría')
+    ET_CNOMBRE = models.CharField(max_length=255, verbose_name='Nombre de la tarea')
+    ET_CDESCRIPCION = models.TextField(verbose_name='Descripción de la tarea')
     ET_BACTIVA = models.BooleanField(default=True, verbose_name='Activa')
     ET_FFECHA_CREACION = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de creación')
     ET_FFECHA_MODIFICACION = models.DateTimeField(auto_now=True, verbose_name='Fecha de modificación')
@@ -147,6 +147,21 @@ class ESTADO_TAREA(models.Model):
         db_table = 'ESTADO_TAREA'
         verbose_name = 'Estado de Tarea'
         verbose_name_plural = 'Estados de Tareas'
+
+class ESTADO_TAREA_FINANCIERA(models.Model):
+    ET_CNOMBRE = models.CharField(max_length=255, verbose_name='Nombre de la tarea')
+    ET_CDESCRIPCION = models.TextField(verbose_name='Descripción de la tarea')
+    ET_BACTIVA = models.BooleanField(default=True, verbose_name='Activa')
+    ET_FFECHA_CREACION = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de creación')
+    ET_FFECHA_MODIFICACION = models.DateTimeField(auto_now=True, verbose_name='Fecha de modificación')
+
+    def __str__(self):
+        return self.ET_CNOMBRE
+
+    class Meta:
+        db_table = 'ESTADO_TAREA_FINANCIERA'
+        verbose_name = 'Estado de Tarea Financiera'
+        verbose_name_plural = 'Estados de Tareas Financieras'
 
 
 class CATEGORIA_PROYECTO(models.Model):
@@ -695,6 +710,7 @@ class CONTRATO_CLIENTE(models.Model):
     ], default='ACTIVO', verbose_name='Estado')
     CC_NVALOR_TOTAL = models.DecimalField(max_digits=15, decimal_places=2, verbose_name='Valor total')
     CC_MONEDA = models.ForeignKey('MONEDA', on_delete=models.SET_NULL, null=True, related_name='contratos', verbose_name='Moneda', default=None)
+    CC_MONEDA = models.ForeignKey('MONEDA', on_delete=models.SET_NULL, null=True, related_name='contratos_moneda', verbose_name='Moneda')
     CC_CTERMS_CONDICIONES = models.TextField(verbose_name='Términos y condiciones')
     CC_COBSERVACIONES = models.TextField(blank=True, null=True, verbose_name='Observaciones')
     CC_FFECHA_CREACION = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de creación')
@@ -787,6 +803,7 @@ class PROYECTO_CLIENTE(models.Model):
     PC_NCOSTO_REAL = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name='Costo real')
     PC_NMARGEN = models.DecimalField(max_digits=5, decimal_places=2, verbose_name='Margen (%)')
     PC_CLIDER_TECNICO = models.CharField(max_length=64, blank=True, null=True, verbose_name='Líder Técnico')
+    PC_CONTRATO_CLIENTE = models.ForeignKey('CONTRATO_CLIENTE', on_delete=models.SET_NULL, null=True, blank=True, related_name='proyectos', verbose_name='Contrato Cliente')
     def __str__(self):
         return f"Proyecto {self.PC_CCODIGO} - {self.PC_CNOMBRE}"
 
@@ -799,7 +816,6 @@ class ETAPA(models.Model):
     ET_CCODIGO = models.CharField(max_length=20, unique=True, verbose_name='Código de etapa')
     ET_CNOMBRE = models.CharField(max_length=255, verbose_name='Nombre de la etapa')
     ET_CDESCRIPCION = models.TextField(verbose_name='Descripción de la etapa')
-    
     
     ET_FFECHA_CREACION = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de creación')
     ET_FFECHA_MODIFICACION = models.DateTimeField(auto_now=True, verbose_name='Fecha de modificación')
@@ -936,9 +952,12 @@ class TAREA_FINANCIERA(models.Model):
     TF_FFECHA_INICIO = models.DateField(verbose_name='Fecha de inicio')
     TF_FFECHA_FIN_ESTIMADA = models.DateField(verbose_name='Fecha de fin estimada')
     TF_FFECHA_FIN_REAL = models.DateField(null=True, blank=True, verbose_name='Fecha de fin real')
-    TF_CESTADO = models.ForeignKey('ESTADO_TAREA', on_delete=models.CASCADE, verbose_name='Estado de la tarea financiera')
+    TF_CESTADO = models.ForeignKey(ESTADO_TAREA_FINANCIERA, on_delete=models.CASCADE, verbose_name='Estado de la tarea financiera')
     TF_NMONTO = models.DecimalField(max_digits=15, decimal_places=2, verbose_name='Monto')
     TF_MONEDA = models.ForeignKey(MONEDA, on_delete=models.CASCADE, related_name='tareas_financieras', verbose_name='Moneda', null=True, blank=True, default=None)
+    TF_NMONTOPAGADO = models.DecimalField(max_digits=15, decimal_places=2, verbose_name='Monto Pagado')
+    TF_FFECHAPAGADO = models.DateField(null=True, blank=True, verbose_name='Fecha pagado')
+    TF_BCOBRO_EMITIDO = models.BooleanField(default=False, verbose_name='Cobro Emitido')
     TF_CTIPO_TRANSACCION = models.CharField(max_length=50, verbose_name='Tipo de transacción')
     TF_COBSERVACIONES = models.TextField(blank=True, null=True, verbose_name='Observaciones')
     TF_FFECHA_CREACION = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de creación')
