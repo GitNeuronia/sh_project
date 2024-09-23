@@ -1,5 +1,7 @@
 from django.db import connection
 
+from datetime import date, datetime
+from decimal import Decimal
 #########################################
 ########         INICIO         #########
 #########################################
@@ -53,6 +55,7 @@ def get_sum_costo_real(from_date, to_date):
                 WHERE
                     "PC_FFECHA_INICIO" BETWEEN %s AND %s
             """
+            print(query)
             cursor.execute(query, [from_date, to_date])
             result = cursor.fetchone()
             if not result:
@@ -105,7 +108,7 @@ def get_sum_presupuesto(from_date, to_date):
         with connection.cursor() as cursor:
             query = """
                 SELECT
-                    SUM("PC_NCOSTO_ESTIMADO")
+                    SUM("PC_NPRESUPUESTO")
                 FROM "PROYECTO_CLIENTE"
                 WHERE
                     "PC_FFECHA_INICIO" BETWEEN %s AND %s
@@ -169,6 +172,50 @@ def get_projects_closed_by_date(from_date, to_date):
     except Exception as e:
         print(e)
         return []
+
+def get_tipo_cambio(moneda_id, fecha):
+    today = date.today()
+    
+    try:
+        with connection.cursor() as cursor:
+            # 1. Buscar el tipo de cambio exacto para la fecha dada
+            cursor.execute("""
+                SELECT "TC_NTASA"
+                FROM "TIPO_CAMBIO"
+                WHERE "TC_CMONEDA_id" = %s AND "TC_FFECHA" = %s
+            """, [moneda_id, fecha])
+            result = cursor.fetchone()
+            
+            if result:
+                return Decimal(result[0])
+
+            # 2. Buscar el tipo de cambio para la fecha actual
+            cursor.execute("""
+                SELECT "TC_NTASA"
+                FROM "TIPO_CAMBIO"
+                WHERE "TC_CMONEDA_id" = %s AND "TC_FFECHA" = %s
+            """, [moneda_id, today])
+            result = cursor.fetchone()
+            
+            if result:
+                return Decimal(result[0])
+
+            # 3. Buscar el tipo de cambio más cercano hacia el pasado desde la fecha actual
+            cursor.execute("""
+                SELECT "TC_NTASA"
+                FROM "TIPO_CAMBIO"
+                WHERE "TC_CMONEDA_id" = %s AND "TC_FFECHA" < %s
+                ORDER BY "TC_FFECHA" DESC
+                LIMIT 1
+            """, [moneda_id, today])
+            result = cursor.fetchone()
+            
+            if result:
+                return Decimal(result[0])
+
+    except Exception as e:
+        print(e)
+        return None
 
 #########################################
 #########################################

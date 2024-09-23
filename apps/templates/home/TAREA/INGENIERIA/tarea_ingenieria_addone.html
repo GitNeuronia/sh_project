@@ -227,9 +227,9 @@
 
             const proyectoSelect = document.getElementById('{{ form.TI_PROYECTO_CLIENTE.id_for_label }}');
             const tipoCambioInfo = document.getElementById('tipo-cambio-info');
-            const tiposCambio = {{ tipos_cambio|safe }};
+            {% comment %} const tiposCambio = {{ tipos_cambio|safe }}; {% endcomment %}
 
-            proyectoSelect.addEventListener('change', function() {
+            {% comment %} proyectoSelect.addEventListener('change', function() {
                 const proyectoId = this.value;
                 if (tiposCambio[proyectoId]) {
                     const tipoCambio = tiposCambio[proyectoId];
@@ -237,7 +237,7 @@
                 } else {
                     tipoCambioInfo.textContent = 'Tipo de cambio: No disponible';
                 }
-            });
+            }); {% endcomment %}
             // Inicializar Select2 para selecciones múltiples
             $('.select2-multiple').select2({
                 placeholder: "Seleccione una o más opciones",

@@ -139,7 +139,7 @@ urlpatterns = [
     
     # URLs para la gestión de tareas generales
     path('tarea_general_listall/', login_required(views.TAREA_GENERAL_LISTALL), name='tarea_general_listall'),
-    path('tarea_general_addone/<int:page>/', login_required(views.TAREA_GENERAL_ADDONE), name='tarea_general_addone'),
+    path('tarea_general_addone/<int:page>/<int:pk>/', login_required(views.TAREA_GENERAL_ADDONE), name='tarea_general_addone'),
     path('tarea_general_update/<int:pk>/', login_required(views.TAREA_GENERAL_UPDATE), name='tarea_general_update'),
     path('tarea_general_update/<int:pk>/<int:page>/', login_required(views.TAREA_GENERAL_UPDATE), name='tarea_general_update'),
     path('tarea_general_update_asignaciones/<int:pk>/<int:page>/', login_required(views.TAREA_GENERAL_UPDATE_ASIGNACIONES), name='tarea_general_update_asignaciones'),
@@ -148,7 +148,7 @@ urlpatterns = [
 
     # URLs para la gestión de tareas de ingeniería
     path('tarea_ingenieria_listall/', login_required(views.TAREA_INGENIERIA_LISTALL), name='tarea_ingenieria_listall'),
-    path('tarea_ingenieria_addone/<int:page>/', login_required(views.TAREA_INGENIERIA_ADDONE), name='tarea_ingenieria_addone'),
+    path('tarea_ingenieria_addone/<int:page>/<int:pk>/', login_required(views.TAREA_INGENIERIA_ADDONE), name='tarea_ingenieria_addone'),
     path('tarea_ingenieria_update/<int:pk>/', login_required(views.TAREA_INGENIERIA_UPDATE), name='tarea_ingenieria_update'),
     path('tarea_ingenieria_update/<int:pk>/<int:page>/', login_required(views.TAREA_INGENIERIA_UPDATE), name='tarea_ingenieria_update'),
     path('tarea_ingenieria_update_asignaciones/<int:pk>/<int:page>/', login_required(views.TAREA_INGENIERIA_UPDATE_ASIGNACIONES), name='tarea_ingenieria_update_asignaciones'),
@@ -157,7 +157,7 @@ urlpatterns = [
     
     # URLs para la gestión de tareas financieras
     path('tarea_financiera_listall/', login_required(views.TAREA_FINANCIERA_LISTALL), name='tarea_financiera_listall'),
-    path('tarea_financiera_addone/<int:page>/', login_required(views.TAREA_FINANCIERA_ADDONE), name='tarea_financiera_addone'),
+    path('tarea_financiera_addone/<int:page>/<int:pk>/', login_required(views.TAREA_FINANCIERA_ADDONE), name='tarea_financiera_addone'),
     path('tarea_financiera_update/<int:pk>/', login_required(views.TAREA_FINANCIERA_UPDATE), name='tarea_financiera_update'),
     path('tarea_financiera_update/<int:pk>/<int:page>/', login_required(views.TAREA_FINANCIERA_UPDATE), name='tarea_financiera_update'),
     path('tarea_financiera_update_asignaciones/<int:pk>/<int:page>/', login_required(views.TAREA_FINANCIERA_UPDATE_ASIGNACIONES), name='tarea_financiera_update_asignaciones'),
