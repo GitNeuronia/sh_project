@@ -1562,6 +1562,68 @@ def EMPLEADO_UPDATE(request, pk):
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
+def CONTRATO_LISTALL(request):
+    if not has_auth(request.user, 'VER_PERSONAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        object_list = CONTRATO_CLIENTE.objects.all()
+        ctx = {
+            'object_list': object_list
+        }
+        return render(request, 'home/CONTRATO/contrato_listall.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def CONTRATO_ADDONE(request):
+    if not has_auth(request.user, 'ADD_PERSONAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        if request.method == 'POST':
+            form = formCONTRATO_CLIENTE(request.POST)
+            if form.is_valid():
+                form.save()
+                crear_log(request.user, 'Crear Contrato Cliente', f'Se creó el contrato cliente: {form.instance.CO_CNOMBRE}')
+                messages.success(request, 'Contrato Cliente guardado correctamente')
+                return redirect('/contrato_listall/')
+        form = formCONTRATO_CLIENTE()
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/CONTRATO/contrato_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+def CONTRATO_UPDATE(request, pk):
+    if not has_auth(request.user, 'UPD_PERSONAS'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        contrato_cliente = CONTRATO_CLIENTE.objects.get(id=pk)
+        if request.method == 'POST':
+            form = formCONTRATO_CLIENTE(request.POST, instance=contrato_cliente)
+            if form.is_valid():
+                form.save()
+                crear_log(request.user, 'Actualizar Contrato Cliente', f'Se actualizó el contrato cliente: {form.instance.CO_CNOMBRE}')
+                messages.success(request, 'Contrato Cliente actualizado correctamente')
+                return redirect('/contrato_listall/')
+        form = formCONTRATO_CLIENTE(instance=contrato_cliente)
+        ctx = {
+            'form': form
+        }
+        return render(request, 'home/CONTRATO/contrato_addone.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
+
+
+
 def CONTRATISTA_LISTALL(request):
     if not has_auth(request.user, 'VER_PERSONAS'):
         messages.error(request, 'No tienes permiso para acceder a esta vista')

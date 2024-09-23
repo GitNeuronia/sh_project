@@ -1,6 +1,6 @@
 {% extends "layouts/base.html" %}
 
-{% block title %} ODT de Proyectos {% endblock %} 
+{% block title %} Contratos de Clientes {% endblock %} 
 
 <!-- Specific CSS goes HERE -->
 {% block stylesheets %}
@@ -22,12 +22,12 @@
                     <div class="row align-items-center">
                         <div class="col-md-12">
                             <div class="page-header-title">
-                                <h5 class="m-b-10">ODT de Proyectos</h5>
+                                <h5 class="m-b-10">Contratos de Clientes</h5>
                             </div>
                             <ul class="breadcrumb">
                                 <li class="breadcrumb-item"><a href="/"><i class="feather icon-home"></i></a></li>
-                                <li class="breadcrumb-item"><a href="/">Gestión de Proyectos</a></li>
-                                <li class="breadcrumb-item"><a href="{% url 'proycli_listall' %}">ODT de Proyectos</a></li>
+                                <li class="breadcrumb-item"><a href="/">Gestión de Contratos</a></li>
+                                <li class="breadcrumb-item"><a href="{% url 'contrato_listall' %}">Contratos de Clientes</a></li>
                             </ul>
                         </div>
                     </div>
@@ -44,8 +44,8 @@
                                 <h5>Opciones de exportación</h5>
                             </div>
                             <div class=" mb-2 mb-md-0" style="margin-right: 50px;margin-top: 20px;">
-                                <a href="{% url 'proycli_addone' %}" class="btn  btn-primary d-inline-flex align-items-center"><i class="fas fa-plus"></i>
-                                    &nbsp&nbsp Nueva ODT de Proyecto
+                                <a href="{% url 'contrato_addone' %}" class="btn  btn-primary d-inline-flex align-items-center"><i class="fas fa-file-contract"></i>
+                                    &nbsp&nbsp Nuevo Contrato
                                 </a>
                             </div>
                         </div>
@@ -56,12 +56,14 @@
                                         <tr>
                                             <th>ACCIONES</th>
                                             <th>CÓDIGO</th>
-                                            <th>NOMBRE</th>
                                             <th>CLIENTE</th>
                                             <th>FECHA INICIO</th>
-                                            <th>FECHA FIN ESTIMADA</th>
+                                            <th>FECHA FIN</th>
                                             <th>ESTADO</th>
-                                            <th>PRESUPUESTO</th>
+                                            <th>VALOR TOTAL</th>
+                                            <th>MONEDA</th>
+                                            <th>TÉRMINOS Y CONDICIONES</th>
+                                            <th>OBSERVACIONES</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -69,31 +71,23 @@
                                         <tr>
                                             <td>
                                                 {% if request.user.is_superuser == 1 %}
-                                                <a class="btn btn-primary" href="{% url 'proycli_update' object.pk 0 %}">
+                                                <a class="btn btn-primary" href="{% url 'contrato_update' object.pk %}">
                                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
                                                         <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
                                                         <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
                                                     </svg>
                                                 </a>
                                                 {% endif %}
-                                                <a class="btn btn-info" href="{% url 'proycli_listone' object.pk %}">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye" viewBox="0 0 16 16">
-                                                        <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
-                                                        <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
-                                                    </svg>
-                                                </a>
                                             </td>
-                                            <td>{{object.PC_CCODIGO|default_if_none:""}}</td>
-                                            <td>{{object.PC_CNOMBRE|default_if_none:""}}</td>
-                                            <td>{{object.PC_CLIENTE.CL_CNOMBRE|default_if_none:""}}</td>
-                                            <td>{{object.PC_FFECHA_INICIO|date:"d/m/Y"|default_if_none:""}}</td>
-                                            <td>{{object.PC_FFECHA_FIN_ESTIMADA|date:"d/m/Y"|default_if_none:""}}</td>
-                                            <td>{{object.PC_CESTADO|default_if_none:""}}</td>
-                                            <td>
-                                                                                                
-                                                {{ object.PC_MONEDA|default_if_none:" " }} {{object.PC_NPRESUPUESTO|floatformat:0|intcomma}}                                                    
-                        
-                                            </td>
+                                            <td>{{object.CC_CCODIGO|default_if_none:""}}</td>
+                                            <td>{{object.CC_CLIENTE|default_if_none:""}}</td>
+                                            <td>{{object.CC_FFECHA_INICIO|default_if_none:""}}</td>
+                                            <td>{{object.CC_FFECHA_FIN|default_if_none:""}}</td>
+                                            <td>{{object.CC_NESTADO|default_if_none:""}}</td>
+                                            <td>{{object.CC_NVALOR_TOTAL|default_if_none:""}}</td>
+                                            <td>{{object.CC_MONEDA|default_if_none:""}}</td>
+                                            <td>{{object.CC_CTERMS_CONDICIONES|default_if_none:""}}</td>
+                                            <td>{{object.CC_COBSERVACIONES|default_if_none:""}}</td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>

@@ -111,6 +111,11 @@ urlpatterns = [
     path('empleado_update/<int:pk>/', login_required(views.EMPLEADO_UPDATE), name='empleado_update'),
 
     # URLs para la gestión de contratistas
+    path('contrato_listall/', login_required(views.CONTRATO_LISTALL), name='contrato_listall'),
+    path('contrato_addone/', login_required(views.CONTRATO_ADDONE), name='contrato_addone'),
+    path('contrato_update/<int:pk>/', login_required(views.CONTRATO_UPDATE), name='contrato_update'),
+
+    # URLs para la gestión de contratistas
     path('contratista_listall/', login_required(views.CONTRATISTA_LISTALL), name='contratista_listall'),
     path('contratista_addone/', login_required(views.CONTRATISTA_ADDONE), name='contratista_addone'),
     path('contratista_update/<int:pk>/', login_required(views.CONTRATISTA_UPDATE), name='contratista_update'),
