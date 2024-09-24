@@ -25,163 +25,212 @@
                     </div>
                 </div>
             </div>
-            <div class="form-group">
-                <label for="horasTarea"><i class="far fa-clock mr-2"></i>Horas de la tarea trabajadas por los recursos:</label>
-                <input type="number" class="form-control" id="horasTarea" name="horasTarea" 
-                    value="{{ horas_tarea }}"
-                    min="0" step="0.01">
-            </div>
             
-            <h6 class="mt-4 mb-3 text-primary"><i class="fas fa-users mr-2"></i>Asignaciones:</h6>
-            <h6 class="mt-4 mb-3 text-primary"><i class="fas fa-user-tie mr-2"></i>Empleados:</h6>
-            {% if empleados_asignados %}
-                {% for empleado in empleados_asignados %}
-                <div class="card mb-3">
-                    <div class="card-header bg-light">
-                        <strong>{{ empleado.AE_EMPLEADO.EM_CNOMBRE }} {{empleado.AE_EMPLEADO.EM_CAPELLIDO}} - {{empleado.AE_EMPLEADO.EM_CRUT}}</strong>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6 mb-2">
-                                <label><small class="text-muted">Costo real por hora</small></label>
-                                <div class="input-group">
-                                    <div class="input-group-prepend">
-                                        <span class="input-group-text"><i class="fas fa-dollar-sign"></i></span>
-                                    </div>
-                                    <input type="number" class="form-control" name="costo_empleado_{{ empleado.id }}" 
-                                        value="{{ empleado.AE_COSTO_REAL|default:'0.0' }}" 
-                                        placeholder="Costo" min="0" step="0.01">
-                                    <div class="input-group-append">
-                                        <span class="input-group-text tipo-cambio-moneda"></span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6 mb-2">
-                                <label><small class="text-muted">Horas reales trabajadas</small></label>
-                                <div class="input-group">
-                                    <div class="input-group-prepend">
-                                        <span class="input-group-text"><i class="far fa-clock"></i></span>
-                                    </div>
-                                    <input type="number" class="form-control" name="horas_empleado_{{ empleado.id }}" 
-                                        value="{{ empleado.AE_HORAS_REALES|default:'0.0' }}" 
-                                        placeholder="Horas" min="0" step="0.01">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mt-2 text-right">
-                            <strong>Total:</strong> <span id="total_empleado_{{ empleado.id }}">0.00</span> <span class="tipo-cambio-moneda"></span>
-                            <input type="hidden" name="total_empleado_{{ empleado.id }}" value="0.00">
+            {% if tipo_tarea == 'financiera' %}
+                <div class="form-group">
+                    <label for="monto"><i class="fas fa-dollar-sign mr-2"></i>Monto:</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="monto" name="monto" 
+                            value="{{ monto|default:'0.0' }}"
+                            data-valor-inicial="{{ monto|default:'0.0' }}"
+                            min="0" step="0.01">
+                        <div class="input-group-append">
+                            <span class="input-group-text tipo-cambio-moneda"></span>
                         </div>
                     </div>
                 </div>
-                {% endfor %}
-            {% else %}
-                <p class="text-muted">No existen asignaciones de empleados para esta tarea.</p>
-            {% endif %}
-            <hr>
-            <h6 class="mt-4 mb-3 text-primary"><i class="fas fa-user-tie mr-2"></i>Contratistas:</h6>
-            {% if contratistas_asignados %}
-                {% for contratista in contratistas_asignados %}
-                <div class="card mb-3">
-                    <div class="card-header bg-light">
-                        <strong>{{ contratista.AEC_EMPLEADO.EC_CNOMBRE }} {{contratista.AEC_EMPLEADO.EC_CAPELLIDO}} - {{contratista.AEC_EMPLEADO.EC_CRUT}} </strong>
-                        <small class="text-muted ml-2">({{ contratista.AEC_EMPLEADO.EC_CONTRATISTA.CO_CNOMBRE }})</small>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6 mb-2">
-                                <label><small class="text-muted">Costo real por hora</small></label>
-                                <div class="input-group">
-                                    <div class="input-group-prepend">
-                                        <span class="input-group-text"><i class="fas fa-dollar-sign"></i></span>
-                                    </div>
-                                    <input type="number" class="form-control" name="costo_contratista_{{ contratista.id }}" 
-                                        value="{{ contratista.AEC_COSTO_REAL|default:'0.0' }}" 
-                                        placeholder="Costo" min="0" step="0.01">
-                                    <div class="input-group-append">
-                                        <span class="input-group-text tipo-cambio-moneda"></span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6 mb-2">
-                                <label><small class="text-muted">Horas reales trabajadas</small></label>
-                                <div class="input-group">
-                                    <div class="input-group-prepend">
-                                        <span class="input-group-text"><i class="far fa-clock"></i></span>
-                                    </div>
-                                    <input type="number" class="form-control" name="horas_contratista_{{ contratista.id }}" 
-                                        value="{{ contratista.AEC_HORAS_REALES|default:'0.0' }}" 
-                                        placeholder="Horas" min="0" step="0.01" oninput="validarHoras()">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mt-2 text-right">
-                            <strong>Total:</strong> $<span id="total_contratista_{{ contratista.id }}">0.00</span>
-                            <input type="hidden" name="total_contratista_{{ contratista.id }}" value="0.00">
-                        </div>
-                        
-                    </div>
+                <div class="form-group">
+                    <label for="moneda"><i class="fas fa-coins mr-2"></i>Moneda:</label>
+                    <select class="form-control" id="moneda" name="moneda">
+                        {% for moneda in lista_moneda %}
+                            <option value="{{ moneda }}" {% if moneda == tarea.TF_MONEDA %}selected{% endif %}>{{ moneda }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
-                {% endfor %}
-            {% else %}
-                <p class="text-muted">No existen asignaciones de contratistas para esta tarea.</p>
-            {% endif %}
-            <hr>
-            <h6 class="mt-4 mb-3 text-primary"><i class="fas fa-user-tie mr-2"></i>Recursos:</h6>
-            {% if recursos_asignados %}
-                {% for recurso in recursos_asignados %}
-                <div class="card mb-3">
-                    <div class="card-header bg-light">
-                        <strong>{{ recurso.ART_PRODUCTO }} </strong>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-4 mb-2">
-                                <label><small class="text-muted">Cantidad utilizada</small></label>
-                                <div class="input-group">
-                                    <div class="input-group-prepend">
-                                        <span class="input-group-text"><i class="fas fa-cubes"></i></span>
-                                    </div>
-                                    <input type="number" step="1" class="form-control" name="cantidad_recurso_{{ recurso.id }}" 
-                                        value="{{ recurso.ART_CANTIDAD|default:'0.0'|floatformat:'0' }}" 
-                                        placeholder="Cantidad (número entero)" min="0">
-                                </div>
-                            </div>
-                            <div class="col-md-4 mb-2">
-                                <label><small class="text-muted">Costo unitario</small></label>
-                                <div class="input-group">
-                                    <div class="input-group-prepend">
-                                        <span class="input-group-text"><i class="fas fa-dollar-sign"></i></span>
-                                    </div>
-                                    <input type="number" class="form-control" name="costo_recurso_{{ recurso.id }}" 
-                                        value="{{ recurso.ART_COSTO_UNITARIO|default:'0.0' }}" 
-                                        placeholder="Costo" min="0" step="0.01">
-                                    <div class="input-group-append">
-                                        <span class="input-group-text tipo-cambio-moneda"></span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4 mb-2">
-                                <label><small class="text-muted">Horas de uso</small></label>
-                                <div class="input-group">
-                                    <div class="input-group-prepend">
-                                        <span class="input-group-text"><i class="far fa-clock"></i></span>
-                                    </div>
-                                    <input type="number" class="form-control" name="horas_recurso_{{ recurso.id }}" 
-                                        value="{{ recurso.ART_HORAS_REALES|default:'0.0' }}" 
-                                        placeholder="Horas" min="0" step="0.01" oninput="validarHoras()">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mt-2 text-right">
-                            <strong>Total:</strong> $<span id="total_recurso_{{ recurso.id }}">0.00</span>
-                            <input type="hidden" name="total_recurso_{{ recurso.id }}" value="0.00">
+                <div class="form-group">
+                    <label for="montoPagado"><i class="fas fa-money-bill-wave mr-2"></i>Monto Pagado:</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="montoPagado" name="montoPagado" 
+                            value="{{ monto_pagado|default:'0.0' }}"
+                            data-valor-inicial="{{ monto_pagado|default:'0.0' }}"
+                            min="0" step="0.01">
+                        <div class="input-group-append">
+                            <span class="input-group-text tipo-cambio-moneda"></span>
                         </div>
                     </div>
                 </div>
-                {% endfor %}
+                <div class="form-group">
+                    <label for="fechaPagado"><i class="far fa-calendar-alt mr-2"></i>Fecha Pagado:</label>
+                    <input type="date" class="form-control" id="fechaPagado" name="fechaPagado" 
+                        value="{{ tarea.TF_FFECHAPAGADO|date:'Y-m-d' }}"
+                        data-valor-inicial="{{ tarea.TF_FFECHAPAGADO|date:'Y-m-d' }}">
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" id="cobroEmitido" name="cobroEmitido" 
+                            {% if cobro_emitido %}checked{% endif %}
+                            data-valor-inicial="{{ cobro_emitido|yesno:'True,False' }}">
+                        <label for="cobroEmitido"><i class="fas fa-file-invoice-dollar mr-2"></i>Cobro Emitido</label>
+                    </div>
+                </div>
             {% else %}
-                <p class="text-muted">No existen asignaciones de recursos para esta tarea.</p>
+                <div class="form-group">
+                    <label for="horasTarea"><i class="far fa-clock mr-2"></i>Horas de la tarea trabajadas por los recursos:</label>
+                    <input type="number" class="form-control" id="horasTarea" name="horasTarea" 
+                        value="{{ horas_tarea }}"
+                        min="0" step="0.01">
+                </div>
+                
+                <h6 class="mt-4 mb-3 text-primary"><i class="fas fa-users mr-2"></i>Asignaciones:</h6>
+                <h6 class="mt-4 mb-3 text-primary"><i class="fas fa-user-tie mr-2"></i>Empleados:</h6>
+                {% if empleados_asignados %}
+                    {% for empleado in empleados_asignados %}
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <strong>{{ empleado.AE_EMPLEADO.EM_CNOMBRE }} {{empleado.AE_EMPLEADO.EM_CAPELLIDO}} - {{empleado.AE_EMPLEADO.EM_CRUT}}</strong>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-2">
+                                    <label><small class="text-muted">Costo real por hora</small></label>
+                                    <div class="input-group">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text"><i class="fas fa-dollar-sign"></i></span>
+                                        </div>
+                                        <input type="number" class="form-control" name="costo_empleado_{{ empleado.id }}" 
+                                            value="{{ empleado.AE_COSTO_REAL|default:'0.0' }}" 
+                                            placeholder="Costo" min="0" step="0.01">
+                                        <div class="input-group-append">
+                                            <span class="input-group-text tipo-cambio-moneda"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label><small class="text-muted">Horas reales trabajadas</small></label>
+                                    <div class="input-group">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text"><i class="far fa-clock"></i></span>
+                                        </div>
+                                        <input type="number" class="form-control" name="horas_empleado_{{ empleado.id }}" 
+                                            value="{{ empleado.AE_HORAS_REALES|default:'0.0' }}" 
+                                            placeholder="Horas" min="0" step="0.01">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2 text-right">
+                                <strong>Total:</strong> <span id="total_empleado_{{ empleado.id }}">0.00</span> <span class="tipo-cambio-moneda"></span>
+                                <input type="hidden" name="total_empleado_{{ empleado.id }}" value="0.00">
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No existen asignaciones de empleados para esta tarea.</p>
+                {% endif %}
+                <hr>
+                <h6 class="mt-4 mb-3 text-primary"><i class="fas fa-user-tie mr-2"></i>Contratistas:</h6>
+                {% if contratistas_asignados %}
+                    {% for contratista in contratistas_asignados %}
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <strong>{{ contratista.AEC_EMPLEADO.EC_CNOMBRE }} {{contratista.AEC_EMPLEADO.EC_CAPELLIDO}} - {{contratista.AEC_EMPLEADO.EC_CRUT}} </strong>
+                            <small class="text-muted ml-2">({{ contratista.AEC_EMPLEADO.EC_CONTRATISTA.CO_CNOMBRE }})</small>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-2">
+                                    <label><small class="text-muted">Costo real por hora</small></label>
+                                    <div class="input-group">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text"><i class="fas fa-dollar-sign"></i></span>
+                                        </div>
+                                        <input type="number" class="form-control" name="costo_contratista_{{ contratista.id }}" 
+                                            value="{{ contratista.AEC_COSTO_REAL|default:'0.0' }}" 
+                                            placeholder="Costo" min="0" step="0.01">
+                                        <div class="input-group-append">
+                                            <span class="input-group-text tipo-cambio-moneda"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <label><small class="text-muted">Horas reales trabajadas</small></label>
+                                    <div class="input-group">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text"><i class="far fa-clock"></i></span>
+                                        </div>
+                                        <input type="number" class="form-control" name="horas_contratista_{{ contratista.id }}" 
+                                            value="{{ contratista.AEC_HORAS_REALES|default:'0.0' }}" 
+                                            placeholder="Horas" min="0" step="0.01" oninput="validarHoras()">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2 text-right">
+                                <strong>Total:</strong> $<span id="total_contratista_{{ contratista.id }}">0.00</span>
+                                <input type="hidden" name="total_contratista_{{ contratista.id }}" value="0.00">
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No existen asignaciones de contratistas para esta tarea.</p>
+                {% endif %}
+                <hr>
+                <h6 class="mt-4 mb-3 text-primary"><i class="fas fa-user-tie mr-2"></i>Recursos:</h6>
+                {% if recursos_asignados %}
+                    {% for recurso in recursos_asignados %}
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <strong>{{ recurso.ART_PRODUCTO }} </strong>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4 mb-2">
+                                    <label><small class="text-muted">Cantidad utilizada</small></label>
+                                    <div class="input-group">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text"><i class="fas fa-cubes"></i></span>
+                                        </div>
+                                        <input type="number" step="1" class="form-control" name="cantidad_recurso_{{ recurso.id }}" 
+                                            value="{{ recurso.ART_CANTIDAD|default:'0.0'|floatformat:'0' }}" 
+                                            placeholder="Cantidad (número entero)" min="0">
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <label><small class="text-muted">Costo unitario</small></label>
+                                    <div class="input-group">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text"><i class="fas fa-dollar-sign"></i></span>
+                                        </div>
+                                        <input type="number" class="form-control" name="costo_recurso_{{ recurso.id }}" 
+                                            value="{{ recurso.ART_COSTO_UNITARIO|default:'0.0' }}" 
+                                            placeholder="Costo" min="0" step="0.01">
+                                        <div class="input-group-append">
+                                            <span class="input-group-text tipo-cambio-moneda"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <label><small class="text-muted">Horas de uso</small></label>
+                                    <div class="input-group">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text"><i class="far fa-clock"></i></span>
+                                        </div>
+                                        <input type="number" class="form-control" name="horas_recurso_{{ recurso.id }}" 
+                                            value="{{ recurso.ART_HORAS_REALES|default:'0.0' }}" 
+                                            placeholder="Horas" min="0" step="0.01" oninput="validarHoras()">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2 text-right">
+                                <strong>Total:</strong> $<span id="total_recurso_{{ recurso.id }}">0.00</span>
+                                <input type="hidden" name="total_recurso_{{ recurso.id }}" value="0.00">
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No existen asignaciones de recursos para esta tarea.</p>
+                {% endif %}
             {% endif %}
             <input type="hidden" name="tipo_tarea" value="{{ tipo_tarea }}">
         </form>
@@ -197,7 +246,10 @@
     let horasValidas = true;
 
     function parseLocalFloat(str) {
-        return parseFloat(str.replace(',', '.')) || 0;
+        if (str === undefined || str === null) {
+            return 0;
+        }
+        return parseFloat(str.toString().replace(',', '.')) || 0;
     }
     
     function formatLocalFloat(num) {
@@ -253,7 +305,7 @@
             horasValidas = true;
         }
     
-        $('#btnGuardarCambios').prop('disabled', !horasValidas);
+        $('button[type="submit"]').prop('disabled', !horasValidas);
     }
 
     function inicializarCalculos() {
@@ -276,46 +328,73 @@
             calcularTotalRecurso(id);
         });
         
-        // Validación inicial
         validarHoras();
         
         console.log('Cálculos iniciales completados');
     }
 
-    $(document).ready(function() {
-        console.log('Documento listo');
-
-        $('input[type="number"]').on('input', function() {
+    function inicializarModal() {
+        console.log('Inicializando modal');
+        var tipoTarea = $('input[name="tipo_tarea"]').val();
+        
+        if (tipoTarea === 'financiera') {
+            inicializarCamposFinancieros();
+        } else {
+            inicializarCalculos();
+        }
+        
+        configurarEventos();
+    }
+    
+    function inicializarCamposFinancieros() {
+        // Asegúrate de que estos campos existan y tengan los valores correctos
+        $('#monto').val($('#monto').data('valor-inicial'));
+        $('#montoPagado').val($('#montoPagado').data('valor-inicial'));
+        $('#fechaPagado').val($('#fechaPagado').data('valor-inicial'));
+        $('#cobroEmitido').prop('checked', $('#cobroEmitido').data('valor-inicial') === 'True');
+        $('.tipo-cambio-moneda').text($('#moneda').val());
+    }
+    
+    function configurarEventos() {
+        var tipoTarea = $('input[name="tipo_tarea"]').val();
+    
+        $('input[type="number"]').off('input').on('input', function() {
             $(this).val($(this).val().replace(',', '.'));
         });
         
-        // Empleados
-        $(document).on('input', 'input[name^="costo_empleado_"], input[name^="horas_empleado_"]', function() {
-            var id = this.name.split('_').pop();
-            calcularTotalEmpleado(id);
-            validarHoras();
-        });
+        if (tipoTarea === 'financiera') {
+            $('#moneda').off('change').on('change', function() {
+                $('.tipo-cambio-moneda').text($(this).val());
+            });
+        } else {
+            $('input[name^="costo_empleado_"], input[name^="horas_empleado_"]').off('input').on('input', function() {
+                var id = this.name.split('_').pop();
+                calcularTotalEmpleado(id);
+                validarHoras();
+            });
+    
+            $('input[name^="costo_contratista_"], input[name^="horas_contratista_"]').off('input').on('input', function() {
+                var id = this.name.split('_').pop();
+                calcularTotalContratista(id);
+                validarHoras();
+            });
+    
+            $('input[name^="cantidad_recurso_"], input[name^="costo_recurso_"], input[name^="horas_recurso_"]').off('input').on('input', function() {
+                var id = this.name.split('_').pop();
+                calcularTotalRecurso(id);
+                validarHoras();
+            });
+        }
+    }
 
-        // Contratistas
-        $(document).on('input', 'input[name^="costo_contratista_"], input[name^="horas_contratista_"]', function() {
-            var id = this.name.split('_').pop();
-            calcularTotalContratista(id);
-            validarHoras();
-        });
-
-        // Recursos
-        $(document).on('input', 'input[name^="cantidad_recurso_"], input[name^="costo_recurso_"], input[name^="horas_recurso_"]', function() {
-            var id = this.name.split('_').pop();
-            calcularTotalRecurso(id);
-            validarHoras();
-        });
-
-        // Inicializar cálculos
-        inicializarCalculos();
+    $(document).ready(function() {
+        console.log('Documento listo');
+        inicializarModal();
     });
 
-    // Asegurarse de que los cálculos se realicen cada vez que se abre el modal
+    {% comment %} // Asegurarse de que los cálculos se realicen cada vez que se abre el modal
     $('#updateDataModal').on('shown.bs.modal', function () {
-        inicializarCalculos();
-    });
+        console.log('Modal mostrado');
+        inicializarModal();
+    }); {% endcomment %}
 </script>

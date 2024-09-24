@@ -1268,8 +1268,8 @@ class formTAREA_FINANCIERA(forms.ModelForm):
         model = TAREA_FINANCIERA
         fields = [
             'TF_CCODIGO', 'TF_PROYECTO_CLIENTE', 'TF_CNOMBRE', 'TF_CDESCRIPCION',  'TF_FFECHA_INICIO',
-            'TF_FFECHA_FIN_ESTIMADA', 'TF_FFECHA_FIN_REAL', 'TF_CESTADO', 'TF_NMONTO','TF_MONEDA',
-            'TF_CTIPO_TRANSACCION', 'TF_COBSERVACIONES', 'TF_BMILESTONE', 'TF_NPROGRESO', 
+            'TF_FFECHA_FIN_ESTIMADA', 'TF_FFECHA_FIN_REAL', 'TF_CESTADO', 'TF_NMONTO' , 'TF_NMONTOPAGADO' ,'TF_MONEDA',
+            'TF_FFECHAPAGADO' , 'TF_BCOBRO_EMITIDO', 'TF_CTIPO_TRANSACCION', 'TF_COBSERVACIONES', 'TF_BMILESTONE', 'TF_NPROGRESO', 
             'TF_NDURACION_PLANIFICADA', 'TF_NDURACION_REAL', 'TG_BCRITICA'
         ]
         widgets = {
@@ -1282,6 +1282,9 @@ class formTAREA_FINANCIERA(forms.ModelForm):
             'TF_CESTADO': forms.Select(attrs={'class': 'form-control'}),
             'TF_NMONTO': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'TF_MONEDA': forms.Select(attrs={'class': 'form-control'}),
+            'TF_NMONTOPAGADO': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'TF_FFECHAPAGADO': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'TF_BCOBRO_EMITIDO': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'}),
             'TF_CTIPO_TRANSACCION': forms.TextInput(attrs={'class': 'form-control'}),
             'TF_COBSERVACIONES': forms.Textarea(attrs={'class': 'form-control'}),
             'TF_BMILESTONE': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'margin-left: 5px;'}),
