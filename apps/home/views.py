@@ -17,7 +17,7 @@ import traceback
 import warnings
 import openpyxl
 import uuid
-import datetime
+# import datetime
 from django.conf import settings
 from decimal import Decimal
 from xhtml2pdf import pisa
@@ -457,7 +457,7 @@ def crear_log(usuario, accion, descripcion):
             USER_CREATOR_ID=usuario,
             LG_ACTION=accion,
             LG_DESCRIPTION=descripcion,
-            LG_TIMESTAMP=datetime.datetime.now()
+            LG_TIMESTAMP=datetime.now()
         )
     except Exception as e:
         print(f"Error al crear el log: {str(e)}")
@@ -3226,7 +3226,7 @@ def TAREA_FINANCIERA_EDP(request):
 
         with transaction.atomic():
             proyecto = PROYECTO_CLIENTE.objects.get(id=data['idProyecto'])
-            estado_tarea = ESTADO_TAREA.objects.get(ET_CNOMBRE='Pendiente')
+            estado_tarea = ESTADO_TAREA_FINANCIERA.objects.get(ET_CNOMBRE='Pendiente')
             
             ultima_tarea = TAREA_FINANCIERA.objects.filter(
                 TF_PROYECTO_CLIENTE=proyecto
@@ -3239,14 +3239,15 @@ def TAREA_FINANCIERA_EDP(request):
             ultimo_numero_edp = int(re.search(r'-(\d+)$', ultimo_edp.EP_CNUMERO).group(1)) if ultimo_edp else 0
 
             tareas_creadas = []
-            año_actual = datetime.datetime.now().year
-
+            año_actual = datetime.now().year
+            # comentario_general = data['comentarioGeneral']
+            comentario_general = "";
             # Ordenar las fechas de emisión
             fechas_ordenadas = sorted(enumerate(data['fechasEmision']), key=lambda x: x[1])
 
             for i, (index, fecha_emision) in enumerate(fechas_ordenadas):
                 moneda = MONEDA.objects.get(id=data['monedas'][index])
-                fecha_emision_date = datetime.datetime.strptime(fecha_emision, '%Y-%m-%d').date()
+                fecha_emision_date = datetime.strptime(fecha_emision, '%Y-%m-%d').date()
 
                 ultimo_numero_edp += 1
                 numero_edp_formateado = f"{ultimo_numero_edp:04d}"
@@ -3256,14 +3257,17 @@ def TAREA_FINANCIERA_EDP(request):
                 tarea_financiera = TAREA_FINANCIERA.objects.create(
                     TF_CCODIGO=codigo_tarea,
                     TF_CNOMBRE=f"EDP {numero_edp_formateado}",
-                    TF_CDESCRIPCION=f"Estado de Pago {numero_edp_formateado}",
+                    TF_CDESCRIPCION=f"{data['mediosPago'][index]}",
                     TF_FFECHA_INICIO=fecha_emision_date,
                     TF_FFECHA_FIN_ESTIMADA=fecha_emision_date,
                     TF_CESTADO=estado_tarea,
                     TF_NMONTO=data['montos'][index],
+                    TF_NMONTOPAGADO=0,
+                    TF_FFECHAPAGADO=None,
+                    TF_BCOBRO_EMITIDO=False,
                     TF_MONEDA=moneda,
-                    TF_CTIPO_TRANSACCION='Estado de Pago',
-                    TF_COBSERVACIONES=f"Medio de pago: {data['mediosPago'][index]}",
+                    TF_CTIPO_TRANSACCION='Transferencia',
+                    TF_COBSERVACIONES=comentario_general,
                     TF_CUSUARIO_CREADOR=request.user,
                     TF_PROYECTO_CLIENTE=proyecto,
                     TF_NDURACION_PLANIFICADA=1,
@@ -3272,18 +3276,18 @@ def TAREA_FINANCIERA_EDP(request):
 
                 tareas_creadas.append(tarea_financiera)
 
-                ESTADO_DE_PAGO.objects.create(
-                    EP_PROYECTO=proyecto,
-                    EP_TAREA_FINANCIERA=tarea_financiera,
-                    EP_CNUMERO=f"EP-{año_actual}-{numero_edp_formateado}",
-                    EP_FFECHA=fecha_emision_date,
-                    EP_CESTADO='PENDIENTE',
-                    EP_NTOTAL=data['montos'][index],
-                    EP_MONEDA=moneda,
-                    EP_COBSERVACIONES=data['comentarioGeneral'],
-                    EP_CUSUARIO_CREADOR=request.user,
-                    EP_CESTADO_PAGO='PENDIENTE'
-                )
+                # ESTADO_DE_PAGO.objects.create(
+                #     EP_PROYECTO=proyecto,
+                #     EP_TAREA_FINANCIERA=tarea_financiera,
+                #     EP_CNUMERO=f"EP-{año_actual}-{numero_edp_formateado}",
+                #     EP_FFECHA=fecha_emision_date,
+                #     EP_CESTADO='PENDIENTE',
+                #     EP_NTOTAL=data['montos'][index],
+                #     EP_MONEDA=moneda,
+                #     EP_COBSERVACIONES=data['comentarioGeneral'],
+                #     EP_CUSUARIO_CREADOR=request.user,
+                #     EP_CESTADO_PAGO='PENDIENTE'
+                # )
 
             # Crear dependencias entre las tareas
             for i in range(1, len(tareas_creadas)):
@@ -3384,26 +3388,50 @@ def tarea_update_data(request, tipo_tarea, pk):
     if request.method == 'POST':
         try:
             # Actualizar datos de la tarea
-            if tipo_tarea == 'general':
-                proyecto_actual = tarea.TG_PROYECTO_CLIENTE
-                if request.POST.get('porcentajeAvance'):
-                    tarea.TG_NPROGRESO = float(request.POST.get('porcentajeAvance'))
-                if request.POST.get('horasTarea'):
-                    tarea.TG_NDURACION_REAL = float(request.POST.get('horasTarea'))
-            elif tipo_tarea == 'ingenieria':
-                proyecto_actual = tarea.TI_PROYECTO_CLIENTE
-                if request.POST.get('porcentajeAvance'):
-                    tarea.TI_NPROGRESO = float(request.POST.get('porcentajeAvance'))
-                if request.POST.get('horasTarea'):
-                    tarea.TI_NDURACION_REAL = float(request.POST.get('horasTarea'))
-            elif tipo_tarea == 'financiera':
+            if tipo_tarea == 'financiera':
                 proyecto_actual = tarea.TF_PROYECTO_CLIENTE
                 if request.POST.get('porcentajeAvance'):
                     tarea.TF_NPROGRESO = float(request.POST.get('porcentajeAvance'))
+                if request.POST.get('moneda'):
+                    moneda_get = MONEDA.objects.get(MO_CMONEDA=request.POST.get('moneda'))
+                    tarea.TF_MONEDA = moneda_get
+                if request.POST.get('monto'):
+                    tarea.TF_NMONTO = float(request.POST.get('monto'))
+                if request.POST.get('montoPagado'):
+                    tarea.TF_NMONTOPAGADO = float(request.POST.get('montoPagado'))
+                if request.POST.get('fechaPagado'):
+                    tarea.TF_FFECHAPAGADO = request.POST.get('fechaPagado')
+                tarea.TF_BCOBRO_EMITIDO = request.POST.get('cobroEmitido') == 'on'
+                if tarea.TF_BCOBRO_EMITIDO:
+                    año_actual = datetime.now().year
+                    ultimo_edp = ESTADO_DE_PAGO.objects.filter(EP_PROYECTO=proyecto).order_by('-EP_CNUMERO').first()
+                    ultimo_numero_edp = int(re.search(r'-(\d+)$', ultimo_edp.EP_CNUMERO).group(1)) if ultimo_edp else 0
+                    ultimo_numero_edp += 1
+                    numero_edp_formateado = f"{ultimo_numero_edp:04d}"
+
+                    ESTADO_DE_PAGO.objects.create(
+                        EP_PROYECTO=proyecto_actual,
+                        EP_TAREA_FINANCIERA=tarea,
+                        EP_CNUMERO=f"EP-{año_actual}-{numero_edp_formateado}",
+                        EP_FFECHA=tarea.TF_FFECHAPAGADO,
+                        EP_CESTADO='PENDIENTE',
+                        EP_NTOTAL=tarea.TF_NMONTO,
+                        EP_NMONTO_PAGADO=tarea.TF_NMONTOPAGADO,
+                        EP_MONEDA=tarea.TF_MONEDA,
+                        EP_COBSERVACIONES="",
+                        EP_CUSUARIO_CREADOR=request.user,
+                        EP_CESTADO_PAGO='PENDIENTE'
+                    )
+            else:
+                # Lógica existente para otros tipos de tareas
+                proyecto_actual = getattr(tarea, proyecto_field)
+                if request.POST.get('porcentajeAvance'):
+                    setattr(tarea, progreso_field, float(request.POST.get('porcentajeAvance')))
                 if request.POST.get('horasTarea'):
-                    tarea.TF_NDURACION_REAL = float(request.POST.get('horasTarea'))
+                    setattr(tarea, duracion_real_field, float(request.POST.get('horasTarea')))
+            
             tarea.save()
-            crear_log(request.user, f'Actualizar Tarea {tipo_tarea}', f'Se actualizó la tarea: {tarea.TG_CNOMBRE if tipo_tarea == "general" else tarea.TI_CNOMBRE if tipo_tarea == "ingenieria" else tarea.TF_CNOMBRE}')
+            crear_log(request.user, f'Actualizar Tarea {tipo_tarea}', f'Se actualizó la tarea: {getattr(tarea, "TF_CNOMBRE" if tipo_tarea == "financiera" else "TG_CNOMBRE" if tipo_tarea == "general" else "TI_CNOMBRE")}')
             # Actualizar asignaciones
             for empleado in empleados_asignados:
                 if request.POST.get(f'costo_empleado_{empleado.id}'):
@@ -3449,18 +3477,51 @@ def tarea_update_data(request, tipo_tarea, pk):
                 'success': False,
                 'message': f'Error al actualizar los datos: {str(e)}'
             }, status=400)
-
+    lista_moneda = MONEDA.objects.all()
     ctx = {
         'tarea': tarea,
-        'empleados_asignados': empleados_formateados,
-        'contratistas_asignados': contratistas_formateados,
-        'recursos_asignados': recursos_formateados,
-        'porcentaje_avance': format_decimal(getattr(tarea, progreso_field)),
-        'horas_tarea': format_decimal(getattr(tarea, duracion_real_field)),
         'tipo_tarea': tipo_tarea,
+        'porcentaje_avance': format_decimal(getattr(tarea, progreso_field)),
     }
+
+    if tipo_tarea == 'financiera':
+        ctx.update({
+            'monto': format_decimal(tarea.TF_NMONTO),
+            'moneda': tarea.TF_MONEDA,
+            'monto_pagado': format_decimal(tarea.TF_NMONTOPAGADO),
+            'fecha_pagado': tarea.TF_FFECHAPAGADO.strftime('%Y-%m-%d') if tarea.TF_FFECHAPAGADO else '',
+            'cobro_emitido': tarea.TF_BCOBRO_EMITIDO,
+            'lista_moneda': lista_moneda
+        })
+    else:
+        ctx.update({
+            'empleados_asignados': empleados_formateados,
+            'contratistas_asignados': contratistas_formateados,
+            'recursos_asignados': recursos_formateados,
+            'horas_tarea': format_decimal(getattr(tarea, duracion_real_field)),
+        })
     return render(request, 'home/TAREA/tarea_update_data.html', ctx)
 # ----------TAREA UPDATE DATA--------------
+
+
+# ----------TAREA EDP DELETE--------------
+@require_POST
+def TAREA_FINANCIERA_EDP_DELETE(request, pk):
+    if not has_auth(request.user, 'ADD_TAREAS'):
+        return JsonResponse({'success': False, 'message': 'No tienes permiso para realizar esta acción'})
+    try:
+        task = TAREA_FINANCIERA.objects.get(id=pk)
+        current_project = task.TF_PROYECTO_CLIENTE.id
+        edp = ESTADO_DE_PAGO.objects.get(EP_TAREA_FINANCIERA=task)
+        edp.delete()
+        task.delete()
+        return JsonResponse({'success': True, 'message': 'Estado de Pago eliminado correctamente.'})
+    except ESTADO_DE_PAGO.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Estado de Pago no encontrado.'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'Error al eliminar el Estado de Pago: {str(e)}'})
+# ----------TAREA EDP DELETE--------------
+
 
 # ----------TAREA DOCUMENTOS--------------
 def get_adjunto_model(tipo_tarea):

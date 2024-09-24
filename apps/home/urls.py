@@ -164,6 +164,7 @@ urlpatterns = [
     path('tarea_financiera_listone/<int:pk>/<int:page>/', login_required(views.TAREA_FINANCIERA_LISTONE), name='tarea_financiera_listone'),
     path('tarea_financiera_dependencia_addone/<int:pk>/', login_required(views.TAREA_FINANCIERA_DEPENDENCIA_ADDONE), name='tarea_financiera_dependencia_addone'),    
     path('tarea_financiera_add_edp/', login_required(views.TAREA_FINANCIERA_EDP), name='tarea_financiera_add_edp'),    
+    path('tarea_financiera_delete_edp/<int:pk>/', login_required(views.TAREA_FINANCIERA_EDP_DELETE), name='tarea_financiera_delete_edp'),    
     
     # URL para la gestión de actualización de datos de tareas
     path('tarea/<str:tipo_tarea>/<int:pk>/update_data/', login_required(views.tarea_update_data), name='tarea_update_data'),
