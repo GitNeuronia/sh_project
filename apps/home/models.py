@@ -1476,3 +1476,57 @@ class QUERY(models.Model):
 
     class Meta:
         db_table = "QUERY"
+
+class HH_CONTROL(models.Model):
+    HH_CONTROL_ID = models.IntegerField(blank = True, null = True)
+    HH_CONTROL_USER_ID = models.CharField(max_length=50)
+    HH_CONTROL_PROY_ID = models.CharField(max_length=10)
+    HH_CONTROL_PCOD = models.CharField(max_length=1, null=True, blank=True)
+    HH_CONTROL_ODS_ID = models.CharField(max_length=10, null=True, blank=True)
+    HH_CONTROL_DET_ID = models.CharField(max_length=55, null=True, blank=True)
+    HH_CONTROL_REV_ID = models.CharField(max_length=10, null=True, blank=True)
+    HH_CONTROL_GLOSA_DESC = models.TextField(null=True, blank=True)
+    HH_CONTROL_FECHA = models.DateField(null=True, blank=True)
+    HH_CONTROL_HORAS = models.DecimalField(max_digits=3, decimal_places=1, null=True, blank=True)
+
+
+    class Meta:
+        db_table = 'HH_CONTROL'
+        verbose_name = 'Control de Horas'
+        verbose_name_plural = 'Controles de Horas'
+
+    def __str__(self):
+        return f"Control de Horas {self.HH_CONTROL_ID}"
+
+class COSTOS_PERSONA(models.Model):
+    CP_CNOMBRE = models.CharField(max_length=255, verbose_name='Nombre')
+    CP_CCODIGO = models.CharField(max_length=20, verbose_name='Código')
+    CP_NAÑO = models.IntegerField(verbose_name='Año')
+    CP_NMES = models.IntegerField(choices=[
+        (1, 'Enero'),
+        (2, 'Febrero'),
+        (3, 'Marzo'),
+        (4, 'Abril'),
+        (5, 'Mayo'),
+        (6, 'Junio'),
+        (7, 'Julio'),
+        (8, 'Agosto'),
+        (9, 'Septiembre'),
+        (10, 'Octubre'),
+        (11, 'Noviembre'),
+        (12, 'Diciembre'),
+    ], verbose_name='Mes')
+    CP_NVALOR = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Valor')
+    CP_CMONEDA = models.CharField(max_length=10, verbose_name='Tipo de Moneda')
+
+    class Meta:
+        db_table = 'COSTOS_PERSONA'
+        verbose_name = 'Costo Personal'
+        verbose_name_plural = 'Costos Personal'
+
+    def __str__(self):
+        return f"Costo Personal {self.NOMBRE} - {self.CODIGO} - {self.AÑO} - {self.MES} - {self.VALOR} - {self.MONEDA}"
+
+
+
+
