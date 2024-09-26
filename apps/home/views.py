@@ -395,6 +395,7 @@ def api_proyectos_edp(request):
             logger.debug("--------------------")
 
             data.append({
+                'PC_CCODIGO': proyecto.PC_CCODIGO,
                 'PC_CNOMBRE': proyecto.PC_CNOMBRE,
                 'total_edp': total_edp,
                 'pendiente': float(proyecto.pendiente),

@@ -271,6 +271,7 @@
                             <table id="tabla-edp" class="table table-hover table-edp">
                                 <thead>
                                     <tr>
+                                        <th>Codigo Proyecto</th>
                                         <th>Proyecto</th>
                                         <th>Total EdP</th>
                                         <th>Pendiente</th>
@@ -516,6 +517,7 @@
                     }
                 },
                 "columns": [
+                    {"data": "PC_CCODIGO"},
                     {"data": "PC_CNOMBRE"},
                     {"data": "total_edp", "render": $.fn.dataTable.render.number(',', '.', 2, '$')},
                     {"data": "pendiente", "render": $.fn.dataTable.render.number(',', '.', 2, '$')},
