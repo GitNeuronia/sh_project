@@ -207,7 +207,7 @@
                 <div class="card bg-c-green order-card">
                     <div class="card-body">
                         <h6 class="text-white">Costos</h6>
-                        <h2 class="text-right text-white"><i class="fas fa-money-bill float-left"></i><span>${{ estadisticas.total_costo_real|custom_number_format }}</span></h2>
+                        <h2 class="text-right text-white"><i class="fas fa-money-bill float-left"></i><span>${{ estadisticas.total_costo_real_global|custom_number_format  }}</span></h2>
                         <p class="m-b-0">Proyectado<span class="float-right">${{ estadisticas.total_costo_proyectado|custom_number_format }}</span></p>
                     </div>
                 </div>
@@ -216,7 +216,7 @@
                 <div class="card bg-c-yellow order-card">
                     <div class="card-body">
                         <h6 class="text-white">Horas</h6>
-                        <h2 class="text-right text-white"><i class="fas fa-clock float-left"></i><span>{{ estadisticas.total_horas_reales|custom_number_format }}</span></h2>
+                        <h2 class="text-right text-white"><i class="fas fa-clock float-left"></i><span>{{ estadisticas.total_horas_costo_real_global|custom_number_format  }}</span></h2>
                         <p class="m-b-0">Proyectado<span class="float-right">{{ estadisticas.total_horas_proyectadas|custom_number_format }}</span></p>
                     </div>
                 </div>
@@ -227,6 +227,7 @@
                         <h6 class="text-white">Margen Promedio</h6>
                         <h2 class="text-right text-white"><i class="fa fa-users  float-left"></i><span>{{ estadisticas.promedio_margen|custom_number_format }}%</span></h2>
                         <p class="m-b-0"><span class="float-right"></span></p>
+                        <br>
                     </div>
                 </div>
             </div>
@@ -243,17 +244,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-6 col-xl-3">
-                <div class="card bg-c-red order-card">
-                    <div class="card-body">
-                        <h6 class="text-white">Pendiente por cobrar</h6>
-                        <h2 class="text-right text-white" style="font-size: 1.5rem;">
-                            <i class="fas fa-money-bill-alt float-left"></i>
-                            <span>${{ saldo_edp|custom_number_format  }}</span>
-                        </h2>
-                    </div>
-                </div>
-            </div>
+
         </div>
 
         <div class="row mt-4">
@@ -290,6 +281,59 @@
                                 </thead>
                                 <tbody>
                                     <!-- Los datos se cargarán dinámicamente via AJAX -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>    
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Estados de Pago por Proyecto</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table id="tabla-tareas-financieras" class="table table-hover table-edp">
+                                <thead>
+                                    <tr>
+                                        <th>Codigo</th>
+                                        <th>Descripción</th>
+                                        <th>Fecha de Inicio</th>
+                                        <th>Monto</th>
+                                        <th>Monto Pagado</th>
+                                        <th>Porcentaje Avance</th>
+                                        <th>Cobro Emitido</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                  {% for tarea in tareas_financiera %}
+                                  <tr>
+
+                                    <td>
+                                        {{ tarea.TF_CCODIGO }}                                                        
+                                    </td>
+                                    <td>{{ tarea.TF_CDESCRIPCION }}</td>                                                
+                                    <td>{{ tarea.TF_FFECHA_INICIO|date:"d-m-Y" }}</td>                                                                
+                                    <td> {{ tarea.TF_MONEDA.MO_CMONEDA }} {{ tarea.TF_NMONTO|floatformat:2 }}</td>                                                
+                                    <td>{{ tarea.TF_MONEDA.MO_CMONEDA }} {{ tarea.TF_NMONTOPAGADO|floatformat:2 }}</td>                                                
+                                    <td style="width: 150px;">
+                                        <div class="progress" style="height: 20px; width: 100%;">
+                                            <div class="progress-bar {% if tarea.TF_NPROGRESO >= 100 %}bg-success{% elif tarea.TF_NPROGRESO >= 50 %}bg-info{% else %}bg-warning{% endif %}" 
+                                                role="progressbar" 
+                                                style="width: {% if tarea.TF_NPROGRESO > 100 %}100%{% else %}{{ tarea.TF_NPROGRESO }}%{% endif %};" 
+                                                aria-valuenow="{{ tarea.TF_NPROGRESO }}" 
+                                                aria-valuemin="0" 
+                                                aria-valuemax="100">
+                                                {{ tarea.TF_NPROGRESO }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{% if tarea.TF_BCOBRO_EMITIDO %}SI{% else %}NO{% endif %}</td>  
+                                </tr>
+                                  {% endfor %}
                                 </tbody>
                             </table>
                         </div>
@@ -396,6 +440,18 @@
     <script src="/static/assets/js/plugins/buttons.bootstrap4.min.js"></script>
     <script src="/static/assets/js/pages/data-export-custom.js"></script>
     <script>
+        $(document).ready(function() {
+            $('#tabla-tareas-financieras').DataTable({
+                "paging": true,
+                "ordering": true,
+                "info": true,
+                "searching": true,
+                "lengthChange": true,
+                "pageLength": 30,
+                "responsive": true,
+                "autoWidth": false,
+            })
+        })
         document.addEventListener("DOMContentLoaded", function() {
             var options = {
                 series: [{
@@ -446,7 +502,7 @@
         
             var chart = new ApexCharts(document.querySelector("#proyecto-chart"), options);
             chart.render();
-            
+
             // Inicializar DataTable para la tabla de EdP
             $('#tabla-edp').DataTable({
                 "processing": true,

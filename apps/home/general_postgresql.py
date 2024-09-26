@@ -83,6 +83,48 @@ def get_costo_real(contrato_id):
     except Exception as e:
         print(e)
         return 0
+# funcion para obtener calcular costos en base al costo de la persona contra la cantidad de horas del proyecto
+def get_costo_real_global(from_date,to_date):
+    try:
+        with connection.cursor() as cursor:
+            query = """
+                select
+                    SUM((
+                        SELECT 
+                    "CP_NVALOR"
+                    FROM "COSTOS_PERSONA"
+                    WHERE "CP_CNOMBRE" = USUARIO
+                    AND "CP_NAÑO" = AÑO
+                    AND "CP_NMES" = MES
+                ) * HORAS) AS "VALOR"
+            from (
+                Select
+                "HH_CONTROL_USER_ID" AS USUARIO,
+                SUM("HH_CONTROL_HORAS") AS HORAS,
+                EXTRACT(YEAR  from "HH_CONTROL_FECHA")::int AS AÑO,
+                EXTRACT(MONTH  from "HH_CONTROL_FECHA")::int AS MES	
+                    
+                FROM "PROYECTO_CLIENTE"
+                LEFT JOIN "CONTRATO_CLIENTE" ON "CONTRATO_CLIENTE"."id" = "PC_CONTRATO_CLIENTE_id"
+                LEFT JOIN "HH_CONTROL" ON "CONTRATO_CLIENTE"."CC_CCODIGO" = "HH_CONTROL"."HH_CONTROL_PROY_ID"
+                WHERE
+				"PC_CESTADO" != 'Cerrado'
+                and "PC_FFECHA_INICIO" >= %s
+				and "PC_FFECHA_INICIO" <= %s
+                GROUP BY "HH_CONTROL_USER_ID",
+                EXTRACT(YEAR  from "HH_CONTROL_FECHA")::int,
+                EXTRACT(MONTH  from "HH_CONTROL_FECHA")::int
+            ) AS DATOS
+
+            """
+            cursor.execute(query, [from_date,to_date])
+            result = cursor.fetchone()
+            if not result:
+                return 0
+            return result[0]
+    except Exception as e:
+        print(e)
+        return 0
 def get_horas_costo_real(contrato_id):
     try:
         with connection.cursor() as cursor:
@@ -95,6 +137,29 @@ def get_horas_costo_real(contrato_id):
                 WHERE "PC_CONTRATO_CLIENTE_id"  = %s
             """
             cursor.execute(query, [contrato_id])
+            result = cursor.fetchone()
+            if not result:
+                return 0
+            return result[0]
+    except Exception as e:
+        print(e)
+        return 0
+
+def get_horas_costo_real_global(from_date,to_date):
+    try:
+        with connection.cursor() as cursor:
+            query = """          
+                Select
+                    SUM("HH_CONTROL_HORAS") AS "HORAS"
+                FROM "PROYECTO_CLIENTE"
+                    LEFT JOIN "CONTRATO_CLIENTE" ON "CONTRATO_CLIENTE"."id" = "PC_CONTRATO_CLIENTE_id"
+                    LEFT JOIN "HH_CONTROL" ON "CONTRATO_CLIENTE"."CC_CCODIGO" = "HH_CONTROL"."HH_CONTROL_PROY_ID"
+                WHERE 
+                "PC_CESTADO" != 'Cerrado'
+                and "PC_FFECHA_INICIO" >= %s
+                and "PC_FFECHA_INICIO" <= %s
+            """
+            cursor.execute(query, [from_date,to_date])
             result = cursor.fetchone()
             if not result:
                 return 0
@@ -241,6 +306,7 @@ def get_sum_monto_pendiente_tf(proyecto_id):
     except Exception as e:
         print(e)
         return 0
+
 def get_sum_costo_real(from_date, to_date):
     try:
         with connection.cursor() as cursor:
