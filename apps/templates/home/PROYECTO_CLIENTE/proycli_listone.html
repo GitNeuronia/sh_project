@@ -234,7 +234,7 @@
                                         </li>
                                         {% comment %} <li class="mb-2"><i class="fas fa-clock mr-2 text-muted"></i><strong>Valor/hora:</strong> ${{ proyecto.PC_NVALOR_HORA|floatformat:0|intcomma }}</li> {% endcomment %}
                                         <li class="mb-2"><i class="fas fa-percentage mr-2 text-muted"></i><strong>Margen:</strong> {{ proyecto.PC_NMARGEN|floatformat:0 }}%</li>
-                                        <li class="mb-2"><i class="fas fa-hourglass-half mr-2 text-muted"></i><strong>Horas est/real:</strong> {{ proyecto.PC_NHORAS_ESTIMADAS }} / {{ proyecto.PC_NHORAS_REALES }}</li>
+                                        <li class="mb-2"><i class="fas fa-hourglass-half mr-2 text-muted"></i><strong>Horas est/real:</strong> {{ proyecto.PC_NHORAS_ESTIMADAS }} / {{ horas_utilizadas |floatformat:0  }}</li>
                                     </ul>
                                 </div>
                             </div>
@@ -245,17 +245,20 @@
                                         <div class="col-md-6 col-xl-4">
                                             <div class="card bg-c-red order-card" data-toggle="modal" data-target="#detalleCostoModal">
                                                 <div class="card-body" id="proyectos-activos-card">
-                                                    <h6 class="text-white">Costo Real</h6>
-                                                    <h2 class="text-right text-white"><i class="fas fa-dollar-sign float-left"></i><span>{{ costo_real|floatformat:0|intcomma }}</span></h2>
+                                                    <h6 class="text-white">Costo de ODT</h6>
+                                                    <h2 class="text-right text-white"><i class="fas fa-money-bill float-left"></i><span>{{ costo_real|floatformat:0|intcomma }}</span></h2>
+                                                    <p class="text-right text-white"><span>Horas utilizadas: {{ horas_utilizadas|floatformat:0|intcomma }}</span></p>
                                                     <p class="m-b-0"><span class="float-right"></span></p>
                                                 </div>
                                             </div>
                                         </div>
+                                        
                                         <div class="col-md-6 col-xl-4">
                                             <div class="card bg-c-green order-card" >
                                                 <div class="card-body" id="proyectos-activos-card">
-                                                    <h6 class="text-white">Monto Total</h6>
-                                                    <h2 class="text-right text-white"><span>{{ monto_pendiente.0 }} {{ monto_pendiente.1|floatformat:0|intcomma }}</span></h2>
+                                                    <h6 class="text-white">Monto EDP Emitido</h6>
+                                                    <h2 class="text-right text-white"><i class="fas fa-money-bill float-left"></i><span>{{ monto_pendiente.0 }} {{ monto_pendiente.1|floatformat:0|intcomma }}</span></h2>
+                                                    <p class="text-right text-white"><span>Cantidad de documentos: {{ cantidad_doc_edp }}</span></p>
                                                     <p class="m-b-0"><span class="float-right"></span></p>
                                                 </div>
                                             </div>
@@ -263,12 +266,14 @@
                                         <div class="col-md-6 col-xl-4">
                                             <div class="card bg-c-blue order-card">
                                                 <div class="card-body" id="proyectos-activos-card">
-                                                    <h6 class="text-white">Monto Pagado</h6>
-                                                    <h2 class="text-right text-white"><span>{{ monto_pagado.0 }} {{ monto_pagado.1|floatformat:0|intcomma }}</span></h2>
+                                                    <h6 class="text-white">Monto EDP Pagado</h6>
+                                                    <h2 class="text-right text-white"><i class="fas fa-money-bill float-left"></i><span>{{ monto_pagado.0 }} {{ monto_pagado.1|floatformat:0|intcomma }}</span></h2>
+                                                    <p class="text-right text-white"><span>Saldo pendiente: {{ saldo_pendiente|floatformat:0|intcomma }}</span></p>
                                                     <p class="m-b-0"><span class="float-right"></span></p>
                                                 </div>
                                             </div>
                                         </div>
+                                        
                                     </div>
 
                                     <!-- Modal -->
@@ -419,11 +424,11 @@
                                     Agregar
                                 </button>
                                 <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                                    <a class="dropdown-item" href="{% url 'tarea_financiera_addone' 1 proyecto.id %}">Tarea Financiera</a>
+                                    {% comment %} <a class="dropdown-item" href="{% url 'tarea_financiera_addone' 1 proyecto.id %}">Tarea Financiera</a> {% endcomment %}
+                                    <a class="dropdown-item" href="#" data-toggle="modal" data-target="#edpModal">Tarea Financiera</a>
+                                    <div class="dropdown-divider"></div>
                                     <a class="dropdown-item" href="{% url 'tarea_general_addone' 1 proyecto.id %}">Tarea General</a>
                                     <a class="dropdown-item" href="{% url 'tarea_ingenieria_addone' 1 proyecto.id %}">Tarea de Ingeniería</a>
-                                    <div class="dropdown-divider"></div>
-                                    <a class="dropdown-item" href="#" data-toggle="modal" data-target="#edpModal">Agregar Elemento</a>
                                 </div>
                             </div>
                         </div>

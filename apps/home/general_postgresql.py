@@ -83,6 +83,26 @@ def get_costo_real(contrato_id):
     except Exception as e:
         print(e)
         return 0
+def get_horas_costo_real(contrato_id):
+    try:
+        with connection.cursor() as cursor:
+            query = """          
+                Select
+                    SUM("HH_CONTROL_HORAS") AS "HORAS"
+                FROM "PROYECTO_CLIENTE"
+                    LEFT JOIN "CONTRATO_CLIENTE" ON "CONTRATO_CLIENTE"."id" = "PC_CONTRATO_CLIENTE_id"
+                    LEFT JOIN "HH_CONTROL" ON "CONTRATO_CLIENTE"."CC_CCODIGO" = "HH_CONTROL"."HH_CONTROL_PROY_ID"
+                WHERE "PC_CONTRATO_CLIENTE_id"  = %s
+            """
+            cursor.execute(query, [contrato_id])
+            result = cursor.fetchone()
+            if not result:
+                return 0
+            return result[0]
+    except Exception as e:
+        print(e)
+        return 0
+
 def get_detalle_costo_real(contrato_id):
     try:
         with connection.cursor() as cursor:

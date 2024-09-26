@@ -1940,6 +1940,7 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
     try:
         proyecto = PROYECTO_CLIENTE.objects.get(id=pk)
         costo_real = get_costo_real(proyecto.PC_CONTRATO_CLIENTE_id)
+        horas_costo_real = get_horas_costo_real(proyecto.PC_CONTRATO_CLIENTE_id)
         monto_pagado = get_sum_monto_pagado_tf(proyecto.id)
         monto_pendiente = get_sum_monto_pendiente_tf(proyecto.id)
         detalle_costo_real = get_detalle_costo_real(proyecto.PC_CONTRATO_CLIENTE_id)
@@ -1947,6 +1948,9 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
         tareas_general = TAREA_GENERAL.objects.filter(TG_PROYECTO_CLIENTE=proyecto).order_by('id')
         tareas_ingenieria = TAREA_INGENIERIA.objects.filter(TI_PROYECTO_CLIENTE=proyecto).order_by('id')
         tareas_financiera = TAREA_FINANCIERA.objects.filter(TF_PROYECTO_CLIENTE=proyecto).order_by('id')
+
+
+
         
         dependencias_general = TAREA_GENERAL_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_general)
         dependencias_ingenieria = TAREA_INGENIERIA_DEPENDENCIA.objects.filter(TD_TAREA_SUCESORA__in=tareas_ingenieria)
@@ -2044,6 +2048,10 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
             proyecto.save()
         max_costo = max(proyecto.PC_NCOSTO_REAL, proyecto.PC_NCOSTO_ESTIMADO)
 
+        proyecto.PC_NHORAS_REALES = horas_costo_real if horas_costo_real is not None and isinstance(horas_costo_real, (int, float)) else 0
+        proyecto.PC_NCOSTO_REAL = costo_real if costo_real is not None and isinstance(costo_real, (int, float)) else 0
+        proyecto.save()
+
         moneda = MONEDA.objects.filter(MO_BACTIVA=True)
         ctx = {
             'proyecto': proyecto,
@@ -2061,7 +2069,11 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
             'monto_pendiente': monto_pendiente,
             'detalle_costo_real': detalle_costo_real,
             'detalle_apertura_costo_real': detalle_apertura_costo_real,
-            'moneda': moneda
+            'moneda': moneda,
+            'cantidad_doc_edp': tareas_financiera.count(),
+            'horas_utilizadas': horas_costo_real,
+            'saldo_pendiente': monto_pendiente[1] - monto_pagado[1] if monto_pendiente and monto_pagado else 0,
+
         }
         return render(request, 'home/PROYECTO_CLIENTE/proycli_listone.html', ctx)
     except Exception as e:
