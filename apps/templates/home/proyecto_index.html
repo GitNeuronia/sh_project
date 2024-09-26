@@ -207,7 +207,7 @@
                 <div class="card bg-c-green order-card">
                     <div class="card-body">
                         <h6 class="text-white">Costos</h6>
-                        <h2 class="text-right text-white"><i class="fas fa-money-bill float-left"></i><span>${{ estadisticas.total_costo_real|custom_number_format }}</span></h2>
+                        <h2 class="text-right text-white"><i class="fas fa-money-bill float-left"></i><span>${{ estadisticas.total_costo_real_global|custom_number_format  }}</span></h2>
                         <p class="m-b-0">Proyectado<span class="float-right">${{ estadisticas.total_costo_proyectado|custom_number_format }}</span></p>
                     </div>
                 </div>
@@ -216,7 +216,7 @@
                 <div class="card bg-c-yellow order-card">
                     <div class="card-body">
                         <h6 class="text-white">Horas</h6>
-                        <h2 class="text-right text-white"><i class="fas fa-clock float-left"></i><span>{{ estadisticas.total_horas_reales|custom_number_format }}</span></h2>
+                        <h2 class="text-right text-white"><i class="fas fa-clock float-left"></i><span>{{ estadisticas.total_horas_costo_real_global|custom_number_format  }}</span></h2>
                         <p class="m-b-0">Proyectado<span class="float-right">{{ estadisticas.total_horas_proyectadas|custom_number_format }}</span></p>
                     </div>
                 </div>
@@ -250,6 +250,28 @@
                         <h2 class="text-right text-white" style="font-size: 1.5rem;">
                             <i class="fas fa-money-bill-alt float-left"></i>
                             <span>${{ saldo_edp|custom_number_format  }}</span>
+                        </h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="card bg-c-red order-card">
+                    <div class="card-body">
+                        <h6 class="text-white">Costo Real Global</h6>
+                        <h2 class="text-right text-white" style="font-size: 1.5rem;">
+                            <i class="fas fa-money-bill-alt float-left"></i>
+                            <span>$</span>
+                        </h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="card bg-c-red order-card">
+                    <div class="card-body">
+                        <h6 class="text-white">Horas Costo Real Global</h6>
+                        <h2 class="text-right text-white" style="font-size: 1.5rem;">
+                            <i class="fas fa-money-bill-alt float-left"></i>
+                            <span>$</span>
                         </h2>
                     </div>
                 </div>
