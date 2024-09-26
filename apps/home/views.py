@@ -164,8 +164,8 @@ def proyecto_index(request):
         from_date, to_date = to_date, from_date
     
     fecha_actual = datetime.now()
-    proyectos_all = PROYECTO_CLIENTE.objects.all()
-
+    proyectos_all = PROYECTO_CLIENTE.objects.filter(PC_FFECHA_INICIO__range=(from_date, to_date))
+    tareas_financiera = TAREA_FINANCIERA.objects.filter(TF_PROYECTO_CLIENTE__in=proyectos_all.values('id')).order_by('id')
     # Calcular estadísticas generales
     estadisticas = proyectos_all.aggregate(
         total_proyectos=Count('id'),
@@ -236,7 +236,9 @@ def proyecto_index(request):
     ).order_by('-alerta_prioridad', 'PC_FFECHA_FIN_ESTIMADA')
 
     # Preparar datos de EdP por proyecto
-    proyectos_edp = PROYECTO_CLIENTE.objects.annotate(
+    proyectos_edp = PROYECTO_CLIENTE.objects.filter(
+        PC_FFECHA_INICIO__range=(from_date, to_date)
+    ).annotate(
         total_edp=Coalesce(Sum('estados_de_pago__EP_NTOTAL'), Decimal('0')),
         pendiente=Coalesce(Sum(Case(
             When(estados_de_pago__EP_CESTADO='PENDIENTE', then=F('estados_de_pago__EP_NTOTAL')),
@@ -334,7 +336,8 @@ def proyecto_index(request):
         'total_cobrado': round(total_cobrado, 0),
         'total_pagado': round(total_pagado, 0),
         'total_pendiente': round(total_pendiente, 0),
-        'saldo_edp': round(total_cobrado - total_pagado, 0)
+        'saldo_edp': round(total_cobrado - total_pagado, 0),
+        'tareas_financiera': tareas_financiera
 
     }
 
