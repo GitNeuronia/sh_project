@@ -182,6 +182,7 @@ def proyecto_index(request):
     estadisticas['total_horas_proyectadas'] = get_sum_horas_proyectadas(from_date, to_date)
     estadisticas['total_horas_reales'] = get_sum_horas_reales(from_date, to_date)
     estadisticas['total_presupuesto'] = get_sum_presupuesto(from_date, to_date)
+    costos = get_sum_monto_pagado_tf_global(from_date, to_date)
     #graficos marco
     estadisticas['total_costo_real_global'] = get_costo_real_global(from_date, to_date)
     estadisticas['total_horas_costo_real_global'] = get_horas_costo_real_global(from_date, to_date)
@@ -337,7 +338,8 @@ def proyecto_index(request):
         'total_pagado': round(total_pagado, 0),
         'total_pendiente': round(total_pendiente, 0),
         'saldo_edp': round(total_cobrado - total_pagado, 0),
-        'tareas_financiera': tareas_financiera
+        'tareas_financiera': tareas_financiera,
+        'costos': costos
 
     }
 
