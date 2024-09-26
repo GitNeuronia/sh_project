@@ -1939,6 +1939,11 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
         return redirect('/')
     try:
         proyecto = PROYECTO_CLIENTE.objects.get(id=pk)
+        costo_real = get_costo_real(proyecto.PC_CONTRATO_CLIENTE_id)
+        monto_pagado = get_sum_monto_pagado_tf(proyecto.id)
+        monto_pendiente = get_sum_monto_pendiente_tf(proyecto.id)
+        detalle_costo_real = get_detalle_costo_real(proyecto.PC_CONTRATO_CLIENTE_id)
+        detalle_apertura_costo_real = get_detalle_apertura_costo_real(proyecto.PC_CONTRATO_CLIENTE_id)
         tareas_general = TAREA_GENERAL.objects.filter(TG_PROYECTO_CLIENTE=proyecto).order_by('id')
         tareas_ingenieria = TAREA_INGENIERIA.objects.filter(TI_PROYECTO_CLIENTE=proyecto).order_by('id')
         tareas_financiera = TAREA_FINANCIERA.objects.filter(TF_PROYECTO_CLIENTE=proyecto).order_by('id')
@@ -2051,6 +2056,11 @@ def PROYECTO_CLIENTE_LISTONE(request, pk):
             'costo_real_proyecto': costo_real_proyecto,
             'horas_reales_proyecto': horas_reales_proyecto,
             'max_costo': max_costo,
+            'costo_real': costo_real,
+            'monto_pagado': monto_pagado,
+            'monto_pendiente': monto_pendiente,
+            'detalle_costo_real': detalle_costo_real,
+            'detalle_apertura_costo_real': detalle_apertura_costo_real,
             'moneda': moneda
         }
         return render(request, 'home/PROYECTO_CLIENTE/proycli_listone.html', ctx)
@@ -3210,7 +3220,7 @@ def generar_codigo_tarea_unico(proyecto, ultimo_numero):
     max_intentos = 1000
     for _ in range(max_intentos):
         ultimo_numero += 1
-        codigo_propuesto = f"{proyecto.PC_CCODIGO}-{proyecto.PC_CESTADO}-TF{ultimo_numero:03d}"
+        codigo_propuesto = f"{proyecto.PC_CCODIGO}-TF{ultimo_numero:03d}"
         if not TAREA_FINANCIERA.objects.filter(TF_CCODIGO=codigo_propuesto).exists():
             return codigo_propuesto, ultimo_numero
     raise ValueError(f"No se pudo generar un código único después de {max_intentos} intentos")

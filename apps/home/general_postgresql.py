@@ -44,7 +44,183 @@ def get_sum_costo_proyectado(from_date, to_date):
     except Exception as e:
         print(e)
         return 0
+# funcion para obtener calcular costos en base al costo de la persona contra la cantidad de horas del proyecto
+def get_costo_real(contrato_id):
+    try:
+        with connection.cursor() as cursor:
+            query = """
+            select
+                SUM((
+                    SELECT 
+                    "CP_NVALOR"
+                    FROM "COSTOS_PERSONA"
+                    WHERE "CP_CNOMBRE" = USUARIO
+                    AND "CP_NAÑO" = AÑO
+                    AND "CP_NMES" = MES
+                ) * HORAS) AS "VALOR"
+            from (
+                Select
+                "HH_CONTROL_USER_ID" AS USUARIO,
+                SUM("HH_CONTROL_HORAS") AS HORAS,
+                EXTRACT(YEAR  from "HH_CONTROL_FECHA")::int AS AÑO,
+                EXTRACT(MONTH  from "HH_CONTROL_FECHA")::int AS MES	
+                    
+                FROM "PROYECTO_CLIENTE"
+                LEFT JOIN "CONTRATO_CLIENTE" ON "CONTRATO_CLIENTE"."id" = "PC_CONTRATO_CLIENTE_id"
+                LEFT JOIN "HH_CONTROL" ON "CONTRATO_CLIENTE"."CC_CCODIGO" = "HH_CONTROL"."HH_CONTROL_PROY_ID"
+                WHERE "PC_CONTRATO_CLIENTE_id"  = %s
+                GROUP BY "HH_CONTROL_USER_ID",
+                EXTRACT(YEAR  from "HH_CONTROL_FECHA")::int,
+                EXTRACT(MONTH  from "HH_CONTROL_FECHA")::int
+            ) AS DATOS
 
+            """
+            cursor.execute(query, [contrato_id])
+            result = cursor.fetchone()
+            if not result:
+                return 0
+            return result[0]
+    except Exception as e:
+        print(e)
+        return 0
+def get_detalle_costo_real(contrato_id):
+    try:
+        with connection.cursor() as cursor:
+            query = """
+            select
+                USUARIO,
+                MAX((
+                    SELECT 
+                        "CP_CMONEDA"
+                    FROM "COSTOS_PERSONA"
+                    WHERE "CP_CNOMBRE" = USUARIO
+                    AND "CP_NAÑO" = AÑO
+                    AND "CP_NMES" = MES
+                ))  AS "MONEDA",
+                SUM((
+                    SELECT 
+                        "CP_NVALOR"
+                    FROM "COSTOS_PERSONA"
+                    WHERE "CP_CNOMBRE" = USUARIO
+                    AND "CP_NAÑO" = AÑO
+                    AND "CP_NMES" = MES
+                ) * HORAS) AS "VALOR"
+            from (
+                Select
+                "HH_CONTROL_USER_ID" AS USUARIO,
+                SUM("HH_CONTROL_HORAS") AS HORAS,
+                EXTRACT(YEAR  from "HH_CONTROL_FECHA")::int AS AÑO,
+                EXTRACT(MONTH  from "HH_CONTROL_FECHA")::int AS MES
+
+                    
+                FROM "PROYECTO_CLIENTE"
+                LEFT JOIN "CONTRATO_CLIENTE" ON "CONTRATO_CLIENTE"."id" = "PC_CONTRATO_CLIENTE_id"
+                LEFT JOIN "HH_CONTROL" ON "CONTRATO_CLIENTE"."CC_CCODIGO" = "HH_CONTROL"."HH_CONTROL_PROY_ID"
+                WHERE "PC_CONTRATO_CLIENTE_id"  = 2
+                GROUP BY "HH_CONTROL_USER_ID",
+                EXTRACT(YEAR  from "HH_CONTROL_FECHA")::int,
+                EXTRACT(MONTH  from "HH_CONTROL_FECHA")::int
+            ) AS DATOS
+            GROUP BY USUARIO
+
+
+            """
+            cursor.execute(query, [contrato_id])
+            result = cursor.fetchall()
+            return result
+    except Exception as e:
+        print(e)
+        return 0
+def get_detalle_apertura_costo_real(contrato_id):
+    try:
+        with connection.cursor() as cursor:
+            query = """
+                Select
+                "HH_CONTROL_USER_ID",
+                "HH_CONTROL_FECHA",
+                "HH_CONTROL_HORAS",
+                (
+                    SELECT 
+                    "CP_NVALOR"
+                    FROM "COSTOS_PERSONA"
+                    WHERE "CP_CNOMBRE" = "HH_CONTROL_USER_ID"
+                    AND "CP_NAÑO" = EXTRACT(YEAR  from "HH_CONTROL_FECHA")::int
+                    AND "CP_NMES" = EXTRACT(MONTH  from "HH_CONTROL_FECHA")::int
+                ) AS "VALOR",
+                (
+                    SELECT 
+                    "CP_NVALOR"
+                    FROM "COSTOS_PERSONA"
+                    WHERE "CP_CNOMBRE" = "HH_CONTROL_USER_ID"
+                    AND "CP_NAÑO" = EXTRACT(YEAR  from "HH_CONTROL_FECHA")::int
+                    AND "CP_NMES" = EXTRACT(MONTH  from "HH_CONTROL_FECHA")::int
+                ) * "HH_CONTROL_HORAS" AS "VALOR_TOTAL",
+                (
+                    SELECT 
+                    "CP_CMONEDA"
+                    FROM "COSTOS_PERSONA"
+                    WHERE "CP_CNOMBRE" = "HH_CONTROL_USER_ID"
+                    AND "CP_NAÑO" = EXTRACT(YEAR  from "HH_CONTROL_FECHA")::int
+                    AND "CP_NMES" = EXTRACT(MONTH  from "HH_CONTROL_FECHA")::int
+                ) AS "MONEDA"		
+                FROM "PROYECTO_CLIENTE"
+                LEFT JOIN "CONTRATO_CLIENTE" ON "CONTRATO_CLIENTE"."id" = "PC_CONTRATO_CLIENTE_id"
+                LEFT JOIN "HH_CONTROL" ON "CONTRATO_CLIENTE"."CC_CCODIGO" = "HH_CONTROL"."HH_CONTROL_PROY_ID"
+                WHERE "PC_CONTRATO_CLIENTE_id"  = %s
+                ORDER BY "HH_CONTROL_USER_ID","HH_CONTROL_FECHA"
+
+            """
+            cursor.execute(query, [contrato_id])
+            result = cursor.fetchall()
+            return result
+    except Exception as e:
+        print(e)
+        return 0
+
+def get_sum_monto_pagado_tf(proyecto_id):
+    try:
+        with connection.cursor() as cursor:
+            query = """
+            SELECT 
+                "MO_CMONEDA",
+                SUM("TF_NMONTOPAGADO") 
+            FROM "TAREA_FINANCIERA"
+            LEFT JOIN "MONEDA" on "MONEDA".id = "TAREA_FINANCIERA"."TF_MONEDA_id"
+            WHERE "TF_PROYECTO_CLIENTE_id" = %s
+            GROUP BY "MO_CMONEDA"
+
+            """
+            print(query)
+            cursor.execute(query, [proyecto_id])
+            result = cursor.fetchone()
+            if not result:
+                return 0
+            return result
+    except Exception as e:
+        print(e)
+        return 0
+def get_sum_monto_pendiente_tf(proyecto_id):
+    try:
+        with connection.cursor() as cursor:
+            query = """
+                SELECT 
+                    "MO_CMONEDA",
+                    SUM("TF_NMONTO") 
+                FROM "TAREA_FINANCIERA"
+                LEFT JOIN "MONEDA" on "MONEDA".id = "TAREA_FINANCIERA"."TF_MONEDA_id"
+                WHERE "TF_PROYECTO_CLIENTE_id" = %s
+                GROUP BY "MO_CMONEDA"
+
+            """
+            print(query)
+            cursor.execute(query, [proyecto_id])
+            result = cursor.fetchone()
+            if not result:
+                return 0
+            return result
+    except Exception as e:
+        print(e)
+        return 0
 def get_sum_costo_real(from_date, to_date):
     try:
         with connection.cursor() as cursor:

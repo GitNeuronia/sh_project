@@ -240,8 +240,115 @@
                             </div>
                             <div class="row mt-4">
                                 <div class="col-md-12">
-                                    <h5 class="mb-3 text-primary"><i class="fas fa-calculator mr-2"></i>Resumen de Costos</h5>
-                                    <div class="progress-group">
+                                    <h5 class="mb-3 text-primary"><i class="fas fa-calculator mr-2"></i> Resumen de Costos</h5>
+                                    <div class="row">
+                                        <div class="col-md-6 col-xl-4">
+                                            <div class="card bg-c-red order-card" data-toggle="modal" data-target="#detalleCostoModal">
+                                                <div class="card-body" id="proyectos-activos-card">
+                                                    <h6 class="text-white">Costo Real</h6>
+                                                    <h2 class="text-right text-white"><i class="fas fa-dollar-sign float-left"></i><span>{{ costo_real|floatformat:0|intcomma }}</span></h2>
+                                                    <p class="m-b-0"><span class="float-right"></span></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 col-xl-4">
+                                            <div class="card bg-c-green order-card" >
+                                                <div class="card-body" id="proyectos-activos-card">
+                                                    <h6 class="text-white">Monto Total</h6>
+                                                    <h2 class="text-right text-white"><span>{{ monto_pendiente.0 }} {{ monto_pendiente.1|floatformat:0|intcomma }}</span></h2>
+                                                    <p class="m-b-0"><span class="float-right"></span></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 col-xl-4">
+                                            <div class="card bg-c-blue order-card">
+                                                <div class="card-body" id="proyectos-activos-card">
+                                                    <h6 class="text-white">Monto Pagado</h6>
+                                                    <h2 class="text-right text-white"><span>{{ monto_pagado.0 }} {{ monto_pagado.1|floatformat:0|intcomma }}</span></h2>
+                                                    <p class="m-b-0"><span class="float-right"></span></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Modal -->
+                                    <div class="modal fade" id="detalleCostoModal" tabindex="-1" role="dialog" aria-labelledby="detalleCostoModalLabel" aria-hidden="true">
+                                        <div class="modal-dialog modal-lg" role="document">
+                                            <div class="modal-content">
+                                                <div class="modal-header bg-primary text-white">
+                                                    <h5 class="modal-title text-white" id="detalleCostoModalLabel">Detalle de Costo Real</h5>
+                                                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                                                        <span aria-hidden="true">&times;</span>
+                                                    </button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <table class="table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Usuario</th>
+                                                                <th>Costo Total</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for detalle in detalle_costo_real %}
+                                                                <tr>
+                                                                    <td>{{ detalle.0 }}</td>
+                                                                    <td>{{ detalle.1 }} {{ detalle.2|floatformat:0|intcomma }}</td>
+                                                                </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                                                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#detalleAperturaModal" data-dismiss="modal">Ver Detalle Apertura Costo Real</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Modal Detalle Apertura Costo Real -->
+                                    <div class="modal fade" id="detalleAperturaModal" tabindex="-1" role="dialog" aria-labelledby="detalleAperturaModalLabel" aria-hidden="true">
+                                        <div class="modal-dialog modal-lg" role="document">
+                                            <div class="modal-content">
+                                                <div class="modal-header bg-primary text-white">
+                                                    <h5 class="modal-title text-white" id="detalleAperturaModalLabel">Detalle Apertura Costo Real</h5>
+                                                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                                                        <span aria-hidden="true">&times;</span>
+                                                    </button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <!-- Aquí se cargará la información de detalle_apertura_costo_real -->
+                                                    <table class="table" id ='tabla_detalle_apertura'>
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Usuario</th>
+                                                                <th>Fecha</th>
+                                                                <th>Horas</th>
+                                                                <th>Costo por hora</th>
+                                                                <th>Total</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for detalle in detalle_apertura_costo_real %}
+                                                                <tr>
+                                                                    <td>{{ detalle.0 }}</td>
+                                                                    <td>{{ detalle.1|date:"d/m/Y" }}</td>
+                                                                    <td>{{ detalle.2|floatformat:0|intcomma }}</td>
+                                                                    <td>{{ detalle.5|default_if_none:" " }} {{ detalle.3|floatformat:0|intcomma }}</td>
+                                                                    <td>{{ detalle.5|default_if_none:" " }} {{ detalle.4|floatformat:0|intcomma }}</td>
+                                                                </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- <div class="progress-group">
                                         <div class="mb-2">
                                             <strong>Costo Real:</strong>
                                             
@@ -271,7 +378,7 @@
                                             <div class="progress-bar bg-info" role="progressbar" style="width: {% widthratio proyecto.PC_NCOSTO_ESTIMADO max_costo 100 %}%" aria-valuenow="{{ proyecto.PC_NCOSTO_ESTIMADO }}" aria-valuemin="0" aria-valuemax="{{ max_costo }}">
                                             </div>
                                         </div>
-                                    </div>
+                                    </div> -->
                                 </div>
                             </div>
                         </div>
@@ -664,6 +771,20 @@
     {% comment %} <script type="text/javascript" src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script> {% endcomment %}
     {% comment %} <script type="text/javascript" src="https://cdn.datatables.net/1.10.24/js/dataTables.bootstrap4.min.js"></script> {% endcomment %}
     <script>
+        $(document).ready(function() {
+            $('#tabla_detalle_apertura').DataTable({
+                "paging": true,
+                "ordering": true,
+                "info": true,
+                "searching": true,
+                "lengthChange": true,
+                "pageLength": 30,
+                "responsive": true,
+                "autoWidth": false,
+               
+            });
+        });
+
         // Función para ajustar el ancho de las columnas
         function adjustColumnWidths() {
             $('.table-responsive table').each(function() {
