@@ -237,10 +237,10 @@
                         <h6 class="text-white">Saldo Total EdP</h6>
                         <h2 class="text-right text-white" style="font-size: 1.5rem;">
                             <i class="fas fa-money-bill float-left"></i>
-                            <span>${{ saldo_edp|custom_number_format  }}</span>
+                            <span>${{ costos.1|custom_number_format }}</span>
                         </h2>
-                        <p class="m-b-0">Total Cobrado<span class="float-right">${{ total_cobrado|custom_number_format  }}</span></p>
-                        <p class="m-b-0">Total Pagado<span class="float-right">${{ total_pagado|custom_number_format  }}</span></p>
+                        <p class="m-b-0">Total Pagado<span class="float-right">${{ costos.0|custom_number_format }}</span></p>
+                        <p class="m-b-0">Total Pendiente<span class="float-right">${{ costos.2|custom_number_format }}</span></p>
                     </div>
                 </div>
             </div>

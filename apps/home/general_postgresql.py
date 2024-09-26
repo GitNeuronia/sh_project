@@ -125,6 +125,56 @@ def get_costo_real_global(from_date,to_date):
     except Exception as e:
         print(e)
         return 0
+def get_sum_monto_pagado_tf_global(from_date,to_date):
+    try:
+        with connection.cursor() as cursor:
+            query = """
+            SELECT 
+                SUM(CASE 
+                    WHEN "MO_CMONEDA" = 'CLP' THEN "TF_NMONTOPAGADO"
+                    ELSE "TF_NMONTOPAGADO" * COALESCE((SELECT 
+                                                    "TC_NTASA" 
+                                                    FROM "TIPO_CAMBIO" 
+                                                    WHERE "TC_CMONEDA_id" = "MONEDA"."id"
+                                                    ORDER BY "id" DESC
+                                                    LIMIT 1 ), 1)
+                END) AS "PAGADO",
+                SUM(CASE 
+                    WHEN "MO_CMONEDA" = 'CLP' THEN "TF_NMONTO"
+                    ELSE "TF_NMONTO" * COALESCE((SELECT 
+                                                    "TC_NTASA" 
+                                                    FROM "TIPO_CAMBIO" 
+                                                    WHERE "TC_CMONEDA_id" = "MONEDA"."id"
+                                                    ORDER BY "id" DESC
+                                                    LIMIT 1), 1)
+                END) AS "MONTO_TOTAL",
+                SUM(CASE 
+                    WHEN "MO_CMONEDA" = 'CLP' THEN "TF_NMONTO" - "TF_NMONTOPAGADO"
+                    ELSE ("TF_NMONTO" - "TF_NMONTOPAGADO") * COALESCE((SELECT 
+                                                    "TC_NTASA" 
+                                                    FROM "TIPO_CAMBIO" 
+                                                    WHERE "TC_CMONEDA_id" = "MONEDA"."id"
+                                                    ORDER BY "id" DESC
+                                                    LIMIT 1
+                                                                    ), 1)
+                END) AS "PENDIENTE"
+            FROM "TAREA_FINANCIERA"
+            LEFT JOIN "MONEDA" on "MONEDA".id = "TAREA_FINANCIERA"."TF_MONEDA_id"
+            LEFT JOIN "PROYECTO_CLIENTE" ON "TAREA_FINANCIERA"."TF_PROYECTO_CLIENTE_id" = "PROYECTO_CLIENTE"."id"
+
+            WHERE "PROYECTO_CLIENTE"."PC_CESTADO" != 'Cerrado'
+            and "PC_FFECHA_INICIO" >= %s
+            and "PC_FFECHA_INICIO" <= %s
+
+            """
+            cursor.execute(query, [from_date,to_date])
+            result = cursor.fetchone()
+            if not result:
+                return 0
+            return result
+    except Exception as e:
+        print(e)
+        return 0
 def get_horas_costo_real(contrato_id):
     try:
         with connection.cursor() as cursor:
@@ -369,11 +419,22 @@ def get_sum_presupuesto(from_date, to_date):
     try:
         with connection.cursor() as cursor:
             query = """
-                SELECT
-                    SUM("PC_NPRESUPUESTO")
-                FROM "PROYECTO_CLIENTE"
-                WHERE
-                    "PC_FFECHA_INICIO" BETWEEN %s AND %s
+            SELECT
+                    SUM(CASE 
+                    WHEN "MO_CMONEDA" = 'CLP' THEN "PC_NPRESUPUESTO"
+                    ELSE "PC_NPRESUPUESTO" * COALESCE((SELECT 
+                                                    "TC_NTASA" 
+                                                    FROM "TIPO_CAMBIO" 
+                                                    WHERE "TC_CMONEDA_id" = "MONEDA"."id"
+                                                    ORDER BY "id" DESC
+                                                    LIMIT 1
+                                                                    ), 1)
+                END) 
+            FROM "PROYECTO_CLIENTE"
+            LEFT JOIN "MONEDA" on "MONEDA".id = "PROYECTO_CLIENTE"."PC_MONEDA_id"
+            WHERE
+            "PC_FFECHA_INICIO" >= %s
+            and "PC_FFECHA_INICIO" <= %s
             """
             cursor.execute(query, [from_date, to_date])
             result = cursor.fetchone()
