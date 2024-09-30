@@ -5970,6 +5970,15 @@ def CARGA_DATA_PROYECTO(request):
     context = {'form': form}  # Puedes añadir variables al contexto si es necesario
     return render(request, 'home/CARGA_DATA/carga_data.html', context)   
 
+def CARGA_DATA_COSTO_HORA(request):
+    if not has_auth(request.user, 'ADD_CARGA_MASIVA'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    # Renderizar la plantilla carga_data.html
+    form = formCargaData()
+    context = {'form': form}  # Puedes añadir variables al contexto si es necesario
+    return render(request, 'home/CARGA_DATA/carga_data_costo_hora.html', context)   
+
 def validar_archivo_excel(archivo_excel):
     if not archivo_excel:
         raise ValueError("No se ha subido ningún archivo.")
@@ -6113,7 +6122,103 @@ def cargar_excel_proyectos(request):
     
     # logger.info("Renderizando template")
     return render(request, 'home/CARGA_DATA/carga_data.html', {'form': form})
-
+ 
+def cargar_excel_costo_hora(request):
+    if not has_auth(request.user, 'ADD_CARGA_MASIVA'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    if request.method == 'POST':
+        form = formCargaData(request.POST, request.FILES)
+        if form.is_valid():
+            try:
+                archivo_excel = request.FILES['archivo']
+                año = request.POST.get('year',datetime.now().year)
+                warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
+                
+                # Leer el archivo Excel
+                df_costos = pd.read_excel(
+                        archivo_excel, 
+                        sheet_name='Hoja1',
+                        header=1,
+                        usecols='A:N'  # Leer desde la columna B hasta la M
+                    )
+                
+                # Verificar si hay datos
+                if df_costos.empty:
+                    return JsonResponse({'error': 'No se encontraron datos en el archivo.'}, status=400)
+                
+                # Renombrar las columnas para que coincidan con el modelo
+                df_costos.columns = [
+                    'Nombre HH','Nombre', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+                ]
+                
+                # Setear los valores nan o none como 0
+                df_costos.iloc[:, 2:14] = df_costos.iloc[:, 2:14].fillna(0)
+                
+                # Convertir el DataFrame a una lista de diccionarios
+                datos_costos = df_costos.to_dict('records')
+                
+                # Procesar los datos
+                for dato in datos_costos:
+                    for key, value in dato.items():
+                        if key != 'Nombre' and key != 'Nombre HH':
+                            dato[key] = safe_float(value)
+                        else:
+                            dato[key] = str(value).strip()  # Corregir el nombre eliminando espacios en blanco
+                        
+                registros_omitidos = 0
+                for dato in datos_costos:
+                    if pd.isna(dato['Nombre']) or pd.isna(dato['Nombre HH']):
+                        registros_omitidos += 1
+                        continue
+                    
+                    # Guardar nombres como constantes
+                    nombre_hh = dato['Nombre HH']
+                    codigo = dato['Nombre']
+                    dict_meses = {
+                        "Enero":1,
+                        "Febrero":2,
+                        "Marzo":3,
+                        "Abril":4,
+                        "Mayo":5,
+                        "Junio":6,
+                        "Julio":7,
+                        "Agosto":8,
+                        "Septiembre":9,
+                        "Octubre":10,
+                        "Noviembre":11,
+                        "Diciembre":12
+                    }
+                    # Iterar sobre los meses y guardar cada uno como una fila
+                    for mes in ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                                'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']:
+                        valor = dato[mes]
+                        costo_persona, created = COSTOS_PERSONA.objects.update_or_create(
+                            CP_CNOMBRE=nombre_hh,
+                            CP_CCODIGO=codigo,
+                            CP_NAÑO=año,
+                            CP_NMES=dict_meses[mes],
+                            defaults={
+                                'CP_NVALOR': valor, 
+                                'CP_CMONEDA': 'CLP'
+                                }
+                        )
+                if registros_omitidos > 0:
+                    messages.warning(request, f'Se omitieron {registros_omitidos} registros debido a que "Nombre" o "Nombre HH" estaban vacíos.')
+                return JsonResponse({
+                    'success': True, 
+                    'message': f'Se encontraron {len(datos_costos)} registros de costos por hora.'
+                })
+            except Exception as e:
+                return JsonResponse({'error': f'Error al procesar el archivo: {str(e)}'}, status=400)
+        else:
+            errors = form.errors.as_json()
+            return JsonResponse({'error': 'Formulario inválido', 'form_errors': errors}, status=400)
+    else:
+        form = formCargaData()
+    
+    return render(request, 'home/CARGA_DATA/carga_data.html', {'form': form})
 def quicksort(arr, low, high):
     if low < high:
         pi = partition(arr, low, high)
@@ -6192,7 +6297,11 @@ def agregar_proyectos(request):
                 tarifa_prom = safe_float(dato.get('Col_20', 0))
                 razon_propuesta_perdida = dato.get('Col_21', '')
                 com_prop_perd_o_gan = dato.get('Col_22', '')
-                codigo_proy = dato.get('Col_23', f'PROJ-{uuid.uuid4().hex[:8].upper()}')
+                codigos = dato.get('Col_23', f'PROJ-{uuid.uuid4().hex[:8].upper()}')
+                
+                codigo_contrato = codigos.split(' ')[0] if codigos != '' and codigos != None else f'CON-{uuid.uuid4().hex[:8].upper()}'
+
+                
                 fecha_inicio = parse_date(dato.get('Col_24')) or date.today()
                 duracion_serv = dato.get('Col_25', '')
                 coord = dato.get('Col_26', '')
@@ -6239,7 +6348,39 @@ def agregar_proyectos(request):
                         raise Exception(f"No se pudo crear ni obtener el cliente: {cliente_directo}")
                     # logger.info(f"Cliente obtenido después de error de integridad: {cliente.CL_CNOMBRE}")
 
-                # Creación del proyecto
+  
+                contrato, creado = CONTRATO_CLIENTE.objects.get_or_create(
+                    CC_CCODIGO=codigo_contrato,
+                    defaults={
+                        'CC_CLIENTE': cliente,
+                        'CC_FFECHA_INICIO': fecha_inicio,
+                        'CC_NESTADO': 'Activo',
+                        'CC_FFECHA_FIN': fecha_entrega,
+                        'CC_NVALOR_TOTAL': monto
+                    }
+                )
+
+                if len(codigos.split(' ')) > 1:
+                    if 'ODS' in codigos.split(' ')[1] or 'ODT' in codigos.split(' ')[1]:
+                        codigo_proy = codigos.split(' ')[1]
+                    else:
+                        codigo_proy_aux = get_codigo_proyecto_generico(codigo_contrato)
+                        if codigo_proy_aux:
+                            codigo_proy = codigo_proy_aux.split('-')[0]
+                            numero = int(codigo_proy_aux.split('-')[1]) + 1
+                            codigo_proy = f"ODS-{numero:02d}"
+                        else:
+                            codigo_proy = "ODS-00"
+                else:
+                    codigo_proy_aux = get_codigo_proyecto_generico(codigo_contrato)
+                    if codigo_proy_aux:
+                        codigo_proy = codigo_proy_aux.split('-')[0]
+                        numero = int(codigo_proy_aux.split('-')[1]) + 1
+                        codigo_proy = f"ODS-{numero:02d}"
+                    else:
+                        codigo_proy = "ODS-00"
+
+                            
                 proyecto = PROYECTO_CLIENTE.objects.create(
                     PC_CCODIGO=codigo_proy,
                     PC_CNOMBRE=titulo,
@@ -6253,7 +6394,9 @@ def agregar_proyectos(request):
                     PC_NHORAS_ESTIMADAS=hh_lic,
                     PC_NCOSTO_ESTIMADO=0,
                     PC_NMARGEN=0,
+                    PC_CONTRATO_CLIENTE=contrato,
                 )
+                
                 # logger.info(f"Proyecto creado: {proyecto.PC_CCODIGO}")
 
         return JsonResponse({'success': True, 'message': 'Proyectos agregados correctamente.'})

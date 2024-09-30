@@ -264,6 +264,10 @@ urlpatterns = [
     #Url para carga masiva
     path('carga_data/', login_required(views.CARGA_DATA_PROYECTO), name='carga_data'),
     path('cargar-excel-proyectos/', login_required(views.cargar_excel_proyectos), name='cargar_excel_proyectos'),
+    
+    path('carga_data_costo_hora/', login_required(views.CARGA_DATA_COSTO_HORA), name='carga_data_costo_hora'),
+    path('cargar-excel-costo-hora/', login_required(views.cargar_excel_costo_hora), name='cargar_excel_costo_hora'),
+    
     path('seleccionar-datos/', login_required(views.seleccionar_datos), name='seleccionar_datos'),
     path('agregar-proyectos/', login_required(views.agregar_proyectos), name='agregar_proyectos'),
 

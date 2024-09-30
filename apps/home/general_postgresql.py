@@ -444,6 +444,26 @@ def get_sum_presupuesto(from_date, to_date):
     except Exception as e:
         print(e)
         return 0
+    
+def get_codigo_proyecto_generico(codigo_contrato):
+    try:
+        with connection.cursor() as cursor:
+            query = """
+                SELECT
+                "PC_CCODIGO"
+                FROM "PROYECTO_CLIENTE"
+                LEFT JOIN "CONTRATO_CLIENTE" ON "CONTRATO_CLIENTE"."id" = "PC_CONTRATO_CLIENTE_id"
+                WHERE "CC_CCODIGO" = %s
+                ORDER BY "PC_CCODIGO" DESC 
+            """
+            cursor.execute(query, [codigo_contrato])
+            result = cursor.fetchone()
+            if not result:
+                return 0
+            return result[0]
+    except Exception as e:
+        print(e)
+        return 0
 
 def get_sum_edp(from_date, to_date):
     try:

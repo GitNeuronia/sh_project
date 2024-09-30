@@ -53,7 +53,8 @@
                 </li>
                 <li><a href="#!"><i class="fas fa-upload fa-xs mr-2"></i>Carga Masiva</a>
                     <ul class="pcoded-submenu">
-                        <li><a href="{% url 'carga_data' %}">Subir Archivo</a></li>                        
+                        <li><a href="{% url 'carga_data' %}">Subir Proyectos</a></li>                        
+                        <li><a href="{% url 'carga_data_costo_hora' %}">Subir Costos</a></li>                        
                     </ul>
                 </li>
                 <li><a href="{% url 'query_listall' %}"><i class="fas fa-database fa-xs mr-2"></i>Consultas</a></li>
@@ -64,7 +65,7 @@
             <ul class="pcoded-submenu">
                 <li><a href="#!"><i class="fas fa-ruler fa-xs mr-2"></i>Proyectos</a>
                     <ul class="pcoded-submenu">
-                        <li><a href="{% url 'contrato_listall' %}">Proyectos de Cliente</a></li>
+                        <li><a href="{% url 'contrato_listall' %}">Contratos de Cliente</a></li>
                         <li><a href="{% url 'proycli_listall' %}">ODT de Proyectos</a></li>
                         <li><a href="{% url 'etapa_listall' %}">Etapas de Proyecto</a></li>
                         
