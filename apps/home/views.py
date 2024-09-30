@@ -6300,7 +6300,7 @@ def agregar_proyectos(request):
                 codigos = dato.get('Col_23', f'PROJ-{uuid.uuid4().hex[:8].upper()}')
                 
                 codigo_contrato = codigos.split(' ')[0] if codigos != '' and codigos != None else f'CON-{uuid.uuid4().hex[:8].upper()}'
-                codigo_proy = codigo_contrato.split(' ')[1] if len(codigo_contrato.split(' ')) > 1 else f'ODS-00'
+
                 
                 fecha_inicio = parse_date(dato.get('Col_24')) or date.today()
                 duracion_serv = dato.get('Col_25', '')
@@ -6348,15 +6348,39 @@ def agregar_proyectos(request):
                         raise Exception(f"No se pudo crear ni obtener el cliente: {cliente_directo}")
                     # logger.info(f"Cliente obtenido después de error de integridad: {cliente.CL_CNOMBRE}")
 
-                # Creación del contrato
-                contrato = CONTRATO_CLIENTE.objects.create(
+  
+                contrato, creado = CONTRATO_CLIENTE.objects.get_or_create(
                     CC_CCODIGO=codigo_contrato,
-                    CC_CLIENTE=cliente,
-                    CC_FFECHA_INICIO=fecha_inicio,
-                    CC_NESTADO='Activo',
-                    CC_FFECHA_FIN = fecha_entrega,
+                    defaults={
+                        'CC_CLIENTE': cliente,
+                        'CC_FFECHA_INICIO': fecha_inicio,
+                        'CC_NESTADO': 'Activo',
+                        'CC_FFECHA_FIN': fecha_entrega,
+                        'CC_NVALOR_TOTAL': monto
+                    }
                 )
-                
+
+                if len(codigos.split(' ')) > 1:
+                    if 'ODS' in codigos.split(' ')[1] or 'ODT' in codigos.split(' ')[1]:
+                        codigo_proy = codigos.split(' ')[1]
+                    else:
+                        codigo_proy_aux = get_codigo_proyecto_generico(codigo_contrato)
+                        if codigo_proy_aux:
+                            codigo_proy = codigo_proy_aux.split('-')[0]
+                            numero = int(codigo_proy_aux.split('-')[1]) + 1
+                            codigo_proy = f"ODS-{numero:02d}"
+                        else:
+                            codigo_proy = "ODS-00"
+                else:
+                    codigo_proy_aux = get_codigo_proyecto_generico(codigo_contrato)
+                    if codigo_proy_aux:
+                        codigo_proy = codigo_proy_aux.split('-')[0]
+                        numero = int(codigo_proy_aux.split('-')[1]) + 1
+                        codigo_proy = f"ODS-{numero:02d}"
+                    else:
+                        codigo_proy = "ODS-00"
+
+                            
                 proyecto = PROYECTO_CLIENTE.objects.create(
                     PC_CCODIGO=codigo_proy,
                     PC_CNOMBRE=titulo,
@@ -6370,7 +6394,7 @@ def agregar_proyectos(request):
                     PC_NHORAS_ESTIMADAS=hh_lic,
                     PC_NCOSTO_ESTIMADO=0,
                     PC_NMARGEN=0,
-                    PC_CONTRATO=contrato,
+                    PC_CONTRATO_CLIENTE=contrato,
                 )
                 
                 # logger.info(f"Proyecto creado: {proyecto.PC_CCODIGO}")

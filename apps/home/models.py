@@ -776,7 +776,7 @@ class UNIDAD_NEGOCIO(models.Model):
         verbose_name_plural = 'Unidades de Negocio'
     
 class PROYECTO_CLIENTE(models.Model):
-    PC_CCODIGO = models.CharField(max_length=100, unique=True, verbose_name='Código de proyecto')
+    PC_CCODIGO = models.CharField(max_length=100, verbose_name='Código de proyecto')
     PC_CNOMBRE = models.CharField(max_length=255, verbose_name='Nombre del proyecto')
     PC_CDESCRIPCION = models.TextField(verbose_name='Descripción del proyecto')
     PC_CLIENTE = models.ForeignKey('CLIENTE', on_delete=models.CASCADE, related_name='proyectos', verbose_name='Cliente')
