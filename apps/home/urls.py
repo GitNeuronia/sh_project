@@ -45,6 +45,9 @@ urlpatterns = [
     path('mon_update/<int:pk>/', login_required(views.MONEDA_UPDATE), name='mon_update'),
 
     # URLs para la gestión de tipos de cambio
+    path('costo_listall/', login_required(views.COSTO_LISTALL), name='costo_listall'),
+
+    # URLs para la gestión de tipos de cambio
     path('tc_listall/', login_required(views.TC_LISTALL), name='tc_listall'),
     path('tc_addone/', login_required(views.TC_ADDONE), name='tc_addone'),
     path('tc_update/<int:pk>/', login_required(views.TC_UPDATE), name='tc_update'),
