@@ -563,6 +563,20 @@ def MONEDA_UPDATE(request, pk):
         messages.error(request, f'Error, {str(e)}')
         return redirect('/')
 
+def COSTO_LISTALL(request):
+    if not has_auth(request.user, 'VER_CONFIGURACIONES'):
+        messages.error(request, 'No tienes permiso para acceder a esta vista')
+        return redirect('/')
+    try:
+        object_list = COSTOS_PERSONA.objects.all()
+        ctx = {
+            'object_list': object_list
+        }
+        return render(request, 'home/COSTOS/costo_listall.html', ctx)
+    except Exception as e:
+        print(e)
+        messages.error(request, f'Error, {str(e)}')
+        return redirect('/')
 
 def REGION_LISTALL(request):
     if not has_auth(request.user, 'VER_UBICACIONES'):
